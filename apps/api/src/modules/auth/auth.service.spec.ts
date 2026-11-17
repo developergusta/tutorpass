@@ -51,6 +51,23 @@ describe('AuthService — JWT + refresh rotativo com detecção de reuso', () =>
       expect(result.roles).toEqual([]);
     });
 
+    it('login sem escola com UMA escola só já nasce nela (sessão utilizável)', () => {
+      const user = registerUser();
+      service.addMembership(user.id, 'school-1', 'ADMIN');
+      const result = loginOk();
+      expect(result.schoolId).toBe('school-1');
+      expect(result.roles).toEqual(['ADMIN']);
+    });
+
+    it('login sem escola com DUAS escolas segue sem escola até escolher', () => {
+      const user = registerUser();
+      service.addMembership(user.id, 'school-1', 'ADMIN');
+      service.addMembership(user.id, 'school-2', 'TEACHER');
+      const result = loginOk();
+      expect(result.schoolId).toBeNull();
+      expect(result.roles).toEqual([]);
+    });
+
     it('login com escola exige vínculo ATIVO e carrega os papéis', () => {
       const user = registerUser();
       service.addMembership(user.id, 'school-1', 'ADMIN');

@@ -355,16 +355,28 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
       throw new UnauthorizedException('E-mail ou senha inválidos');
     }
     let roles: Role[] = [];
-    if (schoolId) {
+    let resolvedSchoolId = schoolId ?? null;
+    if (!resolvedSchoolId) {
+      // Sem escola pedida: vínculo ativo com UMA escola só → a sessão
+      // já nasce nela. Sem isso, o login comum (a tela não pede escola)
+      // devolvia schoolId null e a sessão "sem escola" quebrava a
+      // portaria, o telão e o tempo real — o socket exige schoolId no
+      // handshake (bug de 17/11/2026, "tempo real conectando…"
+      // eterno). Com 2+ escolas, segue null até a pessoa escolher.
+      const active = this.listMemberships(user.id).filter((m) => m.status === 'ACTIVE');
+      const schools = [...new Set(active.map((m) => m.schoolId))];
+      if (schools.length === 1) resolvedSchoolId = schools[0];
+    }
+    if (resolvedSchoolId) {
       roles = this.listMemberships(user.id)
-        .filter((m) => m.schoolId === schoolId && m.status === 'ACTIVE')
+        .filter((m) => m.schoolId === resolvedSchoolId && m.status === 'ACTIVE')
         .map((m) => m.role);
       if (roles.length === 0) {
         throw new ForbiddenException('Usuário sem vínculo ativo com esta escola');
       }
     }
     this.failedLogins.delete(normalized);
-    return { user, schoolId: schoolId ?? null, roles };
+    return { user, schoolId: resolvedSchoolId, roles };
   }
 
   /** Passo 2 do login: emite access + refresh p/ um usuário já autenticado. */

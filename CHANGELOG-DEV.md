@@ -227,6 +227,20 @@ tempo real conectando…", para sempre.
   + role da sessão, na forma de função (relê a sessão a cada
   reconexão — token renovado entra sozinho).
 - API (`pickup.gateway`): ADMIN também entra na room do portão.
+- API (`AuthService.loginStep1`): **a causa decisiva, achada na
+  rechecagem das 17:06** — a tela de login NÃO pede escola, então a
+  sessão nascia com `schoolId: null` e `roles: []`, e nem o web
+  corrigido tinha o que mandar no handshake. Agora, quem tem vínculo
+  ativo com UMA escola só já nasce logado nela (2+ escolas: segue
+  null até existir seletor). Specs novas cobrem os dois casos. Quem
+  já está logado precisa sair e entrar de novo p/ pegar a sessão
+  nova (o refresh preserva a escola da sessão original).
+
+**Prova parcial (17:08)** — cliente socket.io de verdade contra
+produção, com schoolId explícito: conectou, entrou na fila (201) e
+recebeu `queue.entry.created` como ADMIN. A prova do fluxo real
+(login SEM escola → sessão já vem com a escola) roda após o deploy
+desta terceira correção.
 
 **Verificação** — jest realtime + app.module (17 testes) e `next
 build` OK; prova ao vivo com cliente socket.io de verdade (login →
