@@ -461,10 +461,12 @@ input:focus {
   padding-left: max(clamp(16px, 2.5vw, 36px), env(safe-area-inset-left, 0px));
   padding-right: max(clamp(16px, 2.5vw, 36px), env(safe-area-inset-right, 0px));
   color: #eef7f2;
-  background:
-    radial-gradient(1100px 700px at 15% -10%, rgba(16, 122, 87, 0.38) 0%, transparent 60%),
-    radial-gradient(900px 650px at 110% 115%, rgba(14, 90, 120, 0.30) 0%, transparent 55%),
-    linear-gradient(160deg, #081711 0%, #050d0a 70%);
+  /* Chapado (unslop, ciclo UI 7 — gradiente só num momento): as duas
+     manchas radiais e o degradê escuro saíram. Numa TV barata, gradiente
+     sutil some ou vira faixa; fundo quase-preto chapado + texto branco é
+     o par mais seguro a metros de distância (tvpilot, 2026). O único
+     momento de cor do telão é o painel "Pode retirar agora". */
+  background: #050d0a;
 }
 .telao-top {
   display: flex;
@@ -480,9 +482,11 @@ input:focus {
   width: 56px;
   height: 56px;
   border-radius: 16px;
-  background: linear-gradient(140deg, #0e7f5c, #0b6e4f);
+  /* Chapado (unslop, ciclo UI 7): a marca era um tile em gradiente com
+     sombra colorida com brilho — sinal clássico de template. Agora é
+     verde da marca sólido; o glifo do escudo continua. */
+  background: #0b6e4f;
   color: #d9f7e8;
-  box-shadow: 0 8px 28px rgba(14, 127, 92, 0.45);
 }
 .telao-brand-text { display: flex; flex-direction: column; line-height: 1.1; }
 .telao-brand-text strong { font-size: clamp(1.5rem, 2.6vw, 2.2rem); letter-spacing: -0.01em; }
@@ -534,6 +538,9 @@ input:focus {
   min-height: 0;
 }
 .telao-panel.is-ready {
+  /* O ÚNICO gradiente do produto (unslop, ciclo UI 7): uma variação de
+     tom dentro do mesmo verde — permitida pela skill — e só aqui, no
+     painel que a família procura. Todo o resto do telão é chapado. */
   background: linear-gradient(180deg, rgba(13, 84, 58, 0.62), rgba(8, 52, 37, 0.62));
   border: 1px solid rgba(52, 211, 153, 0.38);
   box-shadow: 0 18px 50px rgba(6, 40, 27, 0.55), inset 0 1px 0 rgba(167, 243, 208, 0.12);
@@ -581,7 +588,10 @@ input:focus {
 .telao-panel.is-ready .telao-name { font-size: clamp(1.9rem, 3.8vw, 3.4rem); color: #ffffff; }
 .telao-panel.is-route .telao-name { font-size: clamp(1.5rem, 3vw, 2.5rem); color: #dcebf5; }
 .telao-list li.is-now {
-  background: linear-gradient(90deg, rgba(52, 211, 153, 0.20), transparent 75%);
+  /* Chapado (unslop, ciclo UI 7): o destaque da linha AGORA era um wash
+     em gradiente — virou um degrau de superfície sólido, mesmo verde,
+     sem perder o contraste com o nome branco. */
+  background: rgba(52, 211, 153, 0.14);
   border-radius: 14px;
   padding-left: 14px;
   padding-right: 14px;

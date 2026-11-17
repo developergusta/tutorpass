@@ -1526,6 +1526,41 @@ Fontes: web-developpeur.com "Mobile CSS Best Practices 2026: Touch Targets and i
   sandbox; a checagem foi por inspeção de CSS + build); fica p/ a
   verificação ao vivo no celular do usuário.
 
+## Semeado em 17/11/2026 — telão/TV: gradiente só num momento (frente a, ciclo UI 7)
+Fontes: tvpilot.app "Digital Signage Color Contrast: What Works on a Real TV" e "Digital Signage Design Best Practices for Readability" (2026); billiie.co "Best Colors for Digital Signage" (2026); juuno.co "Digital Sign Board Design: 13 Tips" (2026).
+
+- **Gradiente sutil some na TV de verdade** (tvpilot, 2026): TVs são
+  calibradas p/ filme/esporte, com saturação e nitidez empurradas — um
+  degradê fino, um pastel sobre pastel ou uma marca de baixa saturação
+  que lê bem no MacBook desaparece num painel comercial barato. Não
+  desenhar em volta da sutileza. Impacto 4, Esforço 1 — **aplicado
+  neste ciclo** (fundo do telão: 2 manchas radiais + degradê escuro →
+  chapado #050d0a; linha AGORA: wash em gradiente → degrau sólido
+  rgba(52,211,153,0.14)).
+- **Fundo quase-preto + texto branco é o par mais seguro** (tvpilot;
+  billiie, 2026): mirar 7:1 no texto corrido de sinalização (não o
+  4.5:1 da web) e branco quase puro nos títulos; meio-tom sobre
+  meio-tom (cinza sobre azul-acinzentado) é o erro clássico de painel.
+  Impacto 3, Esforço 1 — **verificado neste ciclo: já era o caso**
+  (nomes brancos #fff sobre o painel verde escuro; o fundo chapado
+  #050d0a só aumentou o contraste real na TV).
+- **Fundos animados e movimento roubam o olho do texto** (tvpilot,
+  2026): transições e fundos em movimento atraem o olhar — até o
+  momento em que afastam o olhar do texto que precisa ser lido. Uma
+  a três zonas por tela, não cinco ou seis. Impacto 2, Esforço 1 —
+  **verificado neste ciclo: já era o caso** (2 zonas: prontos e a
+  caminho; só o selo AGORA e o ponto "Ao vivo" pulsam, e o pulso
+  desliga em `prefers-reduced-motion`).
+- **Rótulos em caixa alta com tracking largo são sinal de template**
+  (skill unslop, `references/signs.md`): "PODE RETIRAR AGORA" e "A
+  CAMINHO" (uppercase + 0.14em) e "PAINEL DE SAÍDA" (0.22em) ainda
+  vivem no telão — numa TV o caixa alta ajuda a leitura a distância,
+  mas a skill pede sentence case em tudo. Impacto 2, Esforço 1 —
+  **não feito neste ciclo** (fora do escopo "gradiente só num
+  momento"); candidato p/ o próximo ciclo da passada anti-genérica:
+  testar os títulos em sentence case com Sora e medir se a leitura a
+  distância se mantém.
+
 ## Diferencial TutorPass (tese)
 Concorrente BR forte é suite ampla (comunicação/ERP/facial). TutorPass vence sendo **o melhor só em saída**:
 mais rápido de implantar, QR dinâmico anti-fraude (eles usam QR estático), auditoria imutável com hash

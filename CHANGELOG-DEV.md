@@ -1,3 +1,75 @@
+## 2026-11-17 17:24–17:35 — Ciclo UI 7: passada anti-genérica — gradiente só num momento (telão)
+
+**Pesquisa do ciclo (frente a — telão/TV, design de painéis)**
+- **Gradiente sutil some na TV de verdade** (tvpilot, 2026): TVs são
+  calibradas p/ filme/esporte, com saturação e nitidez empurradas —
+  degradê fino, pastel sobre pastel ou marca de baixa saturação que lê
+  bem no MacBook desaparece num painel comercial barato; não desenhar
+  em volta da sutileza.
+- **Fundo quase-preto + texto branco é o par mais seguro** (tvpilot;
+  billiie, 2026): mirar 7:1 no texto corrido de sinalização (não o
+  4.5:1 da web) e branco quase puro nos títulos; meio-tom sobre
+  meio-tom é o erro clássico de painel.
+- **Fundos em movimento roubam o olho do texto** (tvpilot, 2026): uma
+  a três zonas por tela, não cinco ou seis; só o que é vivo se move.
+- Achados registrados em `docs/product/IDEAS.md` (frente a, ciclo UI 7);
+  o item implementado era o da fila UI: **gradiente só num momento**
+  (3º sinal da auditoria anti-genérica de 17/11/2026 — os dois
+  primeiros, fonte de display Sora e fim da grade de cartões da home,
+  já tinham entrado no commit 8b1b709 da tarde).
+
+**Direção (unslop)** — Produto: o telão da TV da escola, lido a metros
+de distância, mostra quem já pode retirar e quem está a caminho.
+Caráter: calmo, exato, luminoso só onde importa. Mundo: pátio da
+escola no fim da tarde — verde profundo da marca como luz de "pode
+retirar", fundo quase preto. Momento: um só — o painel "Pode retirar
+agora", verde aceso; todo o resto é superfície quieta. Assinatura: o
+selo AGORA pulsante e o ponto "Ao vivo" (já existiam; mantidos).
+
+**Auditoria de gradientes (o que restava no produto)** — 4 ocorrências,
+todas no telão: (1) fundo com 2 manchas radiais (verde + azul-petróleo)
++ degradê escuro; (2) marca em tile com gradiente 140° + sombra colorida
+com brilho; (3) painel "Pode retirar agora" com variação de tom no
+mesmo verde; (4) linha AGORA com wash em gradiente 90°. Hero, faixa
+CTA e cartão de destaque já estavam chapados desde a passada de cor da
+tarde.
+
+**O que foi feito**
+- **Fundo do telão chapado** (`globals.css`): as 2 manchas radiais e o
+  degradê escuro saíram — fundo `#050d0a` sólido. Numa TV barata o
+  gradiente sutil vira faixa ou some; o chapado quase-preto + nomes
+  brancos é o par de maior contraste a metros de distância.
+- **Marca chapada**: o tile da marca perdeu o gradiente e a sombra
+  colorida com brilho — agora é verde da marca sólido `#0b6e4f`, com o
+  glifo do escudo. Era o sinal clássico de logo em tile com gradiente
+  da skill.
+- **Linha AGORA em degrau sólido**: o wash em gradiente virou
+  `rgba(52, 211, 153, 0.14)` chapado — mesmo verde, mesmo destaque, sem
+  degradê.
+- **O único gradiente do produto ficou no painel "Pode retirar agora"**:
+  variação de tom dentro do mesmo verde (permitida pela skill), marcada
+  em comentário como o momento único. Verificação por grep: só 1
+  declaração `linear-gradient` real restante em todo o web (a do painel).
+- Nenhuma regra de negócio, preço ou API tocada. Sem mudança de
+  estrutura — só cor/superfície, então o layout do telão não se move.
+
+**Arquivos alterados**
+- `apps/web/app/globals.css` (fundo do telão, marca, linha AGORA,
+  comentário do momento único no painel)
+- `docs/product/IDEAS.md` (frente a, ciclo UI 7), `BACKLOG.md` (fila UI/UX)
+
+**Verificação** — `next build` em apps/web: **OK** (tipos válidos, 10
+rotas: /, /cadastro, /escola, /esqueci-senha, /login, /planos,
+/portaria, /redefinir-senha, /telao, /_not-found). Limitação: sem TV
+real neste sandbox — a checagem foi por inspeção de CSS + build; o
+teste numa TV de verdade fica p/ a verificação ao vivo.
+
+**Próximo (fila UI)** — passada anti-genérica, próximo sinal: rótulos
+em caixa alta com tracking largo no telão ("PODE RETIRAR AGORA"
+0.14em, "PAINEL DE SAÍDA" 0.22em) — testar sentence case com Sora e
+medir se a leitura a distância se mantém; depois o app do tutor quando
+existir.
+
 ## 2026-11-17 16:54–16:59 — Ciclo UI 6: revisão mobile geral de todas as telas
 
 **Pesquisa do ciclo (frente c — acessibilidade e mobile)**
