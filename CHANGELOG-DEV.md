@@ -34,9 +34,14 @@ buscar — virou feature no mesmo pacote.
   `NTFY_TOKEN`. O celular da portaria assina o tópico da escola no app
   ntfy (Android pleno; iOS via relay).
 
-**Verificação** — suíte da API e `next build` (rodar antes do push);
-prova ao vivo do join → ntfy depende de uma escola real na API (junto do
-teste do cadastro, pendente de aprovação do usuário).
+**Verificação** — Jest **499/499** (41 suítes, +4 do gate-alert) e
+`next build` OK antes do push; deploys de `6e64cde` (kit) e `387a0ba`
+(gate-alert + analytics + volume) concluídos pelo auto-deploy. Ao vivo:
+site/cadastro/telão 200, script do Umami presente na home, Dozzle
+401 sem senha e 200 com, backup `tutorpass-20261117.sql.gz` gravado no
+volume, publicação ntfy OK, stack inteira (10 containers) em ~600 MB de
+RAM dos 4 GB. Prova ao vivo do join → ntfy depende de uma escola real na
+API (junto do teste do cadastro, pendente de aprovação do usuário).
 
 ## 2026-11-17 14:22–14:40 — Cadastro completo (pedido do usuário) + telão com design único
 
