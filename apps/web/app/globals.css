@@ -1345,6 +1345,32 @@ input:focus {
 .queue-actions { display: flex; justify-content: center; margin: 4px 0 0; }
 .queue-actions .btn { min-height: 48px; }
 
+/* Alerta de irmãos em portões diferentes (ciclo UI 12): o único âmbar da
+   portaria — tom de aviso (--warn-*, nos dois temas), alinhado à esquerda
+   como um aviso operacional, não centrado como os estados. Fica entre o
+   selo de conexão e o resumo da fila, e só existe quando há conflito. */
+.gate-alert {
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin: 4px 0 16px;
+}
+.gate-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: var(--warn-text);
+  margin: 0 0 4px;
+}
+.gate-alert-icon { display: inline-flex; flex-shrink: 0; }
+.gate-alert-text { color: var(--warn-text); margin: 0 0 8px; }
+.gate-alert-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.gate-alert-list li + li { border-top: 1px solid var(--warn-border); padding-top: 8px; }
+.gate-alert-list li { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.gate-alert-gate { color: var(--warn-text); }
+
 /* ————————————————————————————————————————————————————————————
    MOVIMENTO (pedido do usuário, 17/11/2026: "animações interativas
    bem maneiras"). Regra da casa (unslop, passada de movimento): a

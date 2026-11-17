@@ -50,6 +50,23 @@ mesmo do login: **o motor existe e é testado; falta a camada de uso**.
   produto usável; hoje o tutor não tem como entrar na fila.
 
 ## Bugs descobertos (topo)
+- [ ] **CRÍTICO — A fila em tempo real nunca recebe entradas (API).**
+  Descoberto no ciclo UI 12, 17/11/2026, por inspeção de código:
+  `RealtimeService.entryCreated`/`entryStatus` (que emitem
+  `queue.entry.created` / `queue.entry.status_changed`) NÃO têm nenhum
+  chamador em todo o repo; `PickupModule` nem importa o
+  `RealtimeModule` e `PickupService` nunca injeta o `RealtimeService`.
+  Consequência: a portaria e o telão conectam o socket ("Tempo real
+  conectado") mas nenhuma entrada jamais chega — a fila fica vazia p/
+  sempre, e as ações (chamar/validar/liberar) rodam por REST sem a tela
+  refletir. A verificação ao vivo de 17/11/2026 ("0 na fila") não
+  provou o fluxo com entradas reais — só o transporte. Correção é de
+  API (fora do escopo da rotina UI): ligar as emissões no join/call/
+  validate/release/cancel do PickupService (ou do controller) e cobrir
+  com teste de integração socket. Agravante: o payload da entrada não
+  traz nome do aluno nem turma — quando os eventos passarem a sair, as
+  linhas vão ler "Aluno" (fallback do hook) até a API enriquecer o
+  payload ou o web resolver o nome via roster.
 - [x] QR: assinatura truncada/adulterada virava 500 (`RangeError` no `timingSafeEqual`) em vez de 401 — corrigido em 16/11/2026, com teste de regressão.
 - [x] Geofencing: regra "ARRIVAL exige 2 pings" nunca valia — 1º ping já emitia `ENTER_ARRIVAL` — corrigido em 16/11/2026 com flag `confirmed`, com testes.
 - [x] Prisma: `schema.prisma` inteiro inválido (campos separados por `;` na mesma linha + enums de uma linha) — `prisma validate` dava 110 erros e `prisma generate` nunca tinha rodado. Corrigido em 16/11/2026 (reformatado + `prisma format`); schema válido e Prisma Client gerado.
@@ -81,6 +98,21 @@ mesmo do login: **o motor existe e é testado; falta a camada de uso**.
 - [ ] Observabilidade: logs estruturados, métricas de fila, alerta de fila > N
 
 ## Fila UI/UX (rotina de 30 min — ordem: login → portaria → telão → planos → estados vazios/erro → mobile)
+- [x] **Irmãos em portões diferentes (ciclo UI 12, 17/11/2026): alerta na
+  portaria** — a API já tinha GET sibling-gate-conflicts e o web não
+  mostrava (fase 2 registrada no ciclo 24). Agora a portaria lê por REST
+  (a cada 30 s e quando a fila muda) e mostra um cartão em tom de aviso
+  entre o selo de conexão e o resumo da fila, só quando há conflito:
+  "N responsáveis com filhos em portões diferentes", a orientação
+  ("Combine um só portão com o responsável antes de liberar") e, por
+  responsável, os portões com os nomes dos alunos — ou a contagem ("2
+  alunos") quando o nome não resolve; nunca nome inventado (a API só
+  devolve ids e o "Aluno" do hook é placeholder, não nome). Sem
+  permissão (TUTOR, 403) ou fora do ar, o alerta some em silêncio e a
+  fila segue. `next build` OK (16 rotas). Fase 2: o mesmo sinal no
+  telão (decidir antes o que exibir — o telão é público e mostra nomes)
+  e o join em grupo (1 pedido p/ os irmãos — falta na API). Ver
+  docs/product/IDEAS.md, frente b, ciclo UI 12.
 - [x] **Segurança/2FA (ciclo UI 11, 17/11/2026): página /seguranca** —
   2FA em 3 passos (QR gerado no navegador do otpauthUrl + chave manual
   copiável, confirmação com código de 6 dígitos, códigos de recuperação

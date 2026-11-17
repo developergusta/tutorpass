@@ -1,3 +1,100 @@
+## 2026-11-17 19:54–20:05 — Ciclo UI 12: alerta de irmãos em portões diferentes na portaria
+
+**Pesquisa do ciclo (frente b — UX de fluxos de atendimento/check-in)**
+- **Irmãos divididos entre faixas são sinalizados no painel** (AuthExit,
+  2026): "Siblings split across lanes are flagged on the dashboard" — e
+  um pedido só traz os irmãos de salas diferentes p/ o mesmo ponto, numa
+  única parada.
+- **Manter os irmãos juntos é o padrão do setor** (GoHome Dismissal,
+  2026): "GoHome connects the ride to the correct students and keeps
+  siblings together" — a placa do carro liga os irmãos num só pedido.
+- **O pedido do responsável traz os irmãos juntos na fila** (ReadyBell,
+  2026): o pedido cai na fila com o nome do responsável, os avatares dos
+  irmãos e o tempo estimado — chegam como um grupo, não como entradas
+  soltas.
+- Achados registrados em `docs/product/IDEAS.md` (frente b, ciclo UI 12);
+  o item implementado era o da fila UI: **badge no painel/telão da
+  portaria** (fase 2 do `listSiblingGateConflicts`, ciclo 24 — a API
+  tinha a rota e o web não mostrava nada).
+
+**Direção (unslop)** — Produto: a portaria na hora da saída, decidindo
+quem sai por qual portão. Caráter: calmo, exato. Momento: um só — o
+cartão âmbar entre o selo de conexão e o resumo da fila, o único aviso
+quente da tela; o resto segue quieto. Assinatura: o triângulo de aviso
+em traço 2, o mesmo gesto dos estados de erro.
+
+**O que foi feito**
+- **Alerta de conflito na portaria** (`portaria/page.tsx`,
+  `SiblingGateAlert`): lê GET `/pickup/schools/:schoolId/
+  sibling-gate-conflicts` por REST (não depende do socket da fila) a
+  cada 30 s e quando a fila muda; só aparece quando há conflito.
+  Título com a contagem ("1 responsável com filhos em portões
+  diferentes"), 1 linha de orientação ("Combine um só portão com o
+  responsável antes de liberar — um filho pode ficar esperando no
+  portão errado") e, por responsável, os portões com os alunos: nomes
+  quando a fila ao vivo resolve o `studentId`, contagem ("2 alunos")
+  quando não resolve — nunca nome inventado (a API só devolve ids, e o
+  "Aluno" do hook é placeholder, não nome, então não conta como
+  resolvido).
+- **Falha silenciosa de propósito**: sem permissão (TUTOR recebe 403 —
+  a rota é só GATE_AGENT/COORDINATOR/ADMIN/TEACHER) ou com a API fora
+  do ar, o alerta some sem erro na tela — a fila segue. `role="status"`
+  (anúncio educado, não assertivo).
+- `lib/api.ts`: `SiblingGateConflict` + `listSiblingGateConflicts()` no
+  mesmo padrão das ações da fila (schoolId da sessão, `authedJson`).
+- `lib/use-pickup-queue.ts`: `QueueItem` ganhou `studentId` (da entrada
+  — o `id` é o da entrada, não do aluno) p/ o cruzamento com o conflito.
+- `globals.css`: `.gate-alert` em tom de aviso (`--warn-*`, nos dois
+  temas), alinhado à esquerda, com divisor entre responsáveis quando há
+  mais de um conflito. Nenhuma regra de negócio, preço ou API tocada.
+- **Telão fora deste ciclo de propósito**: o alerta é só da portaria
+  (equipe); o telão é público e mostra nomes — decidir o que exibir lá
+  antes de levar. Registrado em IDEAS.md/BACKLOG.
+
+**Bug crítico de API descoberto no meio do ciclo (fora do escopo desta
+rotina — registrado no BACKLOG, não corrigido aqui)**
+- `RealtimeService.entryCreated`/`entryStatus` NÃO têm nenhum chamador
+  em todo o repo; `PickupModule` nem importa o `RealtimeModule` e
+  `PickupService` nunca injeta o `RealtimeService`. Ou seja: a portaria
+  e o telão conectam o socket ("Tempo real conectado") mas nenhuma
+  entrada jamais chega — a fila fica vazia p/ sempre, e as ações
+  (chamar/validar/liberar) rodam por REST sem a tela refletir. A
+  verificação ao vivo de 17/11/2026 ("0 na fila") provou só o
+  transporte, não o fluxo com entradas reais. Correção é de API: ligar
+  as emissões no join/call/validate/release/cancel e cobrir com teste
+  de integração socket. Agravante: o payload da entrada não traz nome
+  do aluno nem turma — quando os eventos passarem a sair, as linhas vão
+  ler "Aluno" (fallback do hook) até a API enriquecer o payload ou o
+  web resolver o nome via roster.
+- O alerta deste ciclo NÃO depende desse caminho: ele lê por REST direto
+  das entradas ativas no servidor, então funciona mesmo com o socket sem
+  eventos (só os nomes ficam em contagem até o payload trazer nomes).
+
+**Arquivos alterados**
+- `apps/web/app/portaria/page.tsx` (`SiblingGateAlert` + renderização)
+- `apps/web/app/globals.css` (+ `.gate-alert`)
+- `docs/product/IDEAS.md` (frente b, ciclo UI 12), `BACKLOG.md` (alerta
+  feito; bug crítico de API registrado; fase 2 do telão/join em grupo)
+- `apps/web/lib/api.ts` (+ `SiblingGateConflict`,
+  `listSiblingGateConflicts`) e `apps/web/lib/use-pickup-queue.ts` (+
+  `studentId` no `QueueItem`) — escritos neste ciclo, mas já publicados
+  dentro do commit paralelo `59ee53d` ("Landing clássica de UX"), que
+  fez `git add -A` às 20:03 e varreu os dois arquivos antes deste commit
+  (o mesmo incidente do ciclo UI 5, com o ciclo "Login completo"); o
+  código foi conferido dentro do `59ee53d` (blocos byte-idênticos ao
+  escrito aqui) e este commit leva o resto.
+
+**Verificação** — `next build` em apps/web: **OK** (tipos válidos, 16
+rotas; `/portaria` 2,9 kB). Limitação: sem navegador neste sandbox e sem
+entradas ativas na escola de teste — o cartão só aparece com conflito
+real; a prova ao vivo (dois irmãos em portões diferentes na portaria)
+fica p/ a verificação ao vivo, e depende da API emitir a fila (ver o
+bug acima) p/ os nomes resolverem.
+
+**Próximo (fila UI)** — app do tutor (quando existir o esqueleto mobile
+— hoje só README + package.json no apps/mobile); candidatas: o mesmo
+sinal no telão e Segurança/Equipe fase 2 (ambas com falta na API).
+
 ## 2026-11-17 19:25–22:43 — Ciclo UI 11: tela de Segurança/2FA (a tela que o login prometia e não existia)
 
 **Pesquisa do ciclo (frente b/c — cadastro de 2FA e telas de segurança em SaaS)**

@@ -1703,6 +1703,31 @@ Fontes: tvpilot.app "Digital Signage Color Contrast: What Works on a Real TV" e 
   esses campos, a tela não inventa. Impacto 2, Esforço 3 — **registrado
   no BACKLOG (Segurança, fase 2)**.
 
+## Semeado em 17/11/2026 — irmãos em portões diferentes: o alerta no painel (frente b, ciclo UI 12)
+- **Irmãos divididos entre faixas são sinalizados no painel** (AuthExit,
+  2026): "Siblings split across lanes are flagged on the dashboard" — e
+  um pedido só traz os irmãos de salas diferentes p/ o mesmo ponto, numa
+  única parada. Impacto 4, Esforço 2 — **implementado neste ciclo**
+  (alerta na portaria com os portões e os nomes/contagem por portão, lido
+  por REST a cada 30 s e quando a fila muda; sem permissão ou fora do ar,
+  some em silêncio).
+- **Manter os irmãos juntos é o padrão do setor** (GoHome Dismissal,
+  2026): "GoHome connects the ride to the correct students and keeps
+  siblings together" — a placa do carro liga os irmãos num só pedido.
+  Impacto 3, Esforço 2 — **fase 2**: o join do tutor aceitar os irmãos
+  num só pedido (hoje é 1 entrada por aluno) — falta na API, registrado
+  no BACKLOG.
+- **O pedido do responsável traz os irmãos juntos na fila** (ReadyBell,
+  2026): o pedido cai na fila do professor com o nome do responsável, os
+  avatares dos irmãos e o tempo estimado — os irmãos chegam como um
+  grupo, não como entradas soltas. Impacto 3, Esforço 2 — **fase 2**
+  (mesma dependência do join em grupo acima).
+- **O que falta p/ o padrão completo (não neste ciclo)**: o telão
+  sinalizar o conflito também — o alerta hoje é só da portaria, que é da
+  equipe; o telão é público e mostra nomes, então decidir o que exibir
+  lá antes de levar. Impacto 2, Esforço 1 — **registrado no BACKLOG
+  (fila UI)**.
+
 ## Diferencial TutorPass (tese)
 Concorrente BR forte é suite ampla (comunicação/ERP/facial). TutorPass vence sendo **o melhor só em saída**:
 mais rápido de implantar, QR dinâmico anti-fraude (eles usam QR estático), auditoria imutável com hash
