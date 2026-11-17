@@ -52,8 +52,14 @@ Tudo sobe com `docker-compose.prod.yml` (5 serviços):
 ## Operação
 
 - Logs: `docker compose --env-file .env.production -f docker-compose.prod.yml logs -f api`
-- Atualizar p/ uma versão nova do GitHub:
-  `git pull && docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build`
+- Atualização é AUTOMÁTICA (desde 17/11/2026): o timer systemd
+  `tutorpass-deploy.timer` roda `/usr/local/bin/tutorpass-deploy.sh` a cada
+  ~3 min; havendo commit novo na `main`, ele faz `git reset --hard origin/main`
+  e `docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build`.
+  O VPS lê o repositório com uma deploy key SOMENTE LEITURA
+  (`/root/.ssh/github_deploy`, cadastrada em Settings → Deploy keys do repo).
+  Log dos deploys: `/var/log/tutorpass-deploy.log`. O comando manual continua
+  valendo p/ forçar: `git pull && docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build`
 - Backup do banco (mínimo):
   `docker compose --env-file .env.production -f docker-compose.prod.yml exec postgres pg_dump -U tutorpass tutorpass | gzip > backup-$(date +%F).sql.gz`
   e copiar o arquivo p/ fora do VPS. Automatizar é item de backlog.
