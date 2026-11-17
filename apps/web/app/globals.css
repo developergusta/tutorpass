@@ -491,10 +491,15 @@ input:focus {
 .telao-brand-text { display: flex; flex-direction: column; line-height: 1.1; }
 .telao-brand-text strong { font-size: clamp(1.5rem, 2.6vw, 2.2rem); letter-spacing: -0.01em; }
 .telao-brand-text span {
+  /* Sentence case (unslop, ciclo UI 8): era "PAINEL DE SAÍDA" em caixa
+     alta com 0.22em — o rótulo virava um retângulo sem forma de palavra.
+     Em sentence case, com Sora 700, a mesma largura rende letras ~25%
+     maiores e a leitura a distância é por forma, não por decodificação
+     letra a letra (FHWA/MUTCD 2009; sinalização). */
+  font-family: var(--font-display), var(--font-inter), system-ui, sans-serif;
   color: #9fc4b2;
-  text-transform: uppercase;
-  letter-spacing: 0.22em;
-  font-size: clamp(0.65rem, 1vw, 0.8rem);
+  letter-spacing: 0;
+  font-size: clamp(0.8rem, 1.25vw, 1rem);
   font-weight: 700;
 }
 .telao-top-right { display: flex; align-items: center; gap: 22px; }
@@ -558,9 +563,14 @@ input:focus {
 }
 .telao-panel-head h2 {
   margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font-size: clamp(1.05rem, 1.9vw, 1.6rem);
+  /* Sentence case (unslop, ciclo UI 8): era "PODE RETIRAR AGORA" /
+     "A CAMINHO" em caixa alta com 0.14em — 3 palavras em caps perdem a
+     forma da palavra e leem mais devagar a metros de distância. O JSX
+     já escrevia em sentence case; era o CSS que gritava. Tamanho subiu
+     (1.05→1.25rem base, teto 1.6→1.9rem) p/ compensar a altura de caixa
+     menor das minúsculas e manter o peso do título no painel. */
+  letter-spacing: -0.01em;
+  font-size: clamp(1.25rem, 2.2vw, 1.9rem);
 }
 .telao-panel.is-ready .telao-panel-head h2 { color: #a7f3d0; }
 .telao-panel.is-route .telao-panel-head h2 { color: #c3d7e4; }

@@ -1,3 +1,65 @@
+## 2026-11-17 17:55–18:05 — Ciclo UI 8: telão em sentence case — fim do caixa alta com tracking largo
+
+**Pesquisa do ciclo (frente b — UX de fluxos de atendimento/check-in)**
+- **Caixa alta apaga a forma da palavra** (FHWA/MUTCD 2009, via
+  mentalfloss 2025): placas de rua trocaram "BROADWAY" por "Broadway"
+  — "uma palavra em caixa alta é só um retângulo grande à distância";
+  o misto dá relevo (ascendentes/descendentes) e o olho reconhece o
+  padrão antes de decodificar as letras.
+- **Evitar caixa alta em qualquer coisa com mais de duas palavras**
+  (thecrazypixel, 2026 — menus lidos a 2–4,5 m): caps só p/ cabeçalhos
+  de categoria; nomes em sentence/title case.
+- **Na mesma largura, o misto rende letras ~25% maiores**
+  (quartadesign, 2026): o que parecia "gritar mais" na verdade lia
+  menor.
+- **Exceção: mensagens de ação curtas ficam em caps** (FHWA:
+  "KEEP RIGHT", "2 MILES"; wirespring: caps OK p/ 1–2 palavras de
+  ênfase) — o selo "AGORA" e o "Recomendado" dos planos ficam.
+- Achados registrados em `docs/product/IDEAS.md` (frente b, ciclo
+  UI 8); o item implementado era o da fila UI: **rótulos em caixa
+  alta com tracking largo no telão** (4º sinal da passada
+  anti-genérica; os 3 primeiros já estavam corrigidos).
+
+**Direção (unslop)** — Produto: o telão da TV da escola, lido a
+metros de distância. Caráter: calmo, exato — o título diz o que a
+família procura sem gritar. O JSX já escrevia "Pode retirar agora"
+em sentence case; era o CSS que forçava o grito. Momento: nenhum
+novo — só a voz dos títulos muda.
+
+**O que foi feito**
+- **Títulos dos painéis em sentence case** (`globals.css`):
+  `.telao-panel-head h2` perdeu `text-transform: uppercase` e o
+  tracking 0.14em (agora -0.01em, Sora 600 pela regra global de h2).
+  "PODE RETIRAR AGORA" → "Pode retirar agora", "A CAMINHO" → "A
+  caminho". Tamanho subiu (1.05→1.25rem base, teto 1.6→1.9rem) p/
+  compensar a altura de caixa menor das minúsculas e manter o peso
+  do título no painel.
+- **Subtítulo da marca em sentence case**: `.telao-brand-text span`
+  perdeu o uppercase + 0.22em — "PAINEL DE SAÍDA" → "Painel de
+  saída", agora em Sora 700, tracking 0, tamanho 0.8→1rem no teto.
+- **"AGORA" mantido em caps de propósito**: é palavra única de ação
+  (exceção FHWA p/ mensagens de ação, como "KEEP RIGHT"); o selo
+  "Recomendado" dos planos idem. Verificação por grep: só esses 2
+  `text-transform: uppercase` restam em todo o web, ambos de 1
+  palavra.
+- Nenhuma regra de negócio, preço ou API tocada. Só CSS — o layout
+  do telão não se move (títulos em sentence case são mais estreitos;
+  o tamanho maior compensa).
+
+**Arquivos alterados**
+- `apps/web/app/globals.css` (títulos dos painéis e subtítulo da
+  marca do telão)
+- `docs/product/IDEAS.md` (frente b, ciclo UI 8), `BACKLOG.md` (fila UI/UX)
+
+**Verificação** — `next build` em apps/web: **OK** (tipos válidos, 10
+rotas: /, /cadastro, /escola, /esqueci-senha, /login, /planos,
+/portaria, /redefinir-senha, /telao, /_not-found). Limitação: sem TV
+real neste sandbox — a checagem foi por inspeção de CSS + build; a
+leitura a distância fica p/ a verificação ao vivo.
+
+**Próximo (fila UI)** — 404 + favicon (BACKLOG, MENOR — link errado
+cai na tela padrão do Next; aba sem ícone da marca).
+
 ## 2026-11-17 17:24–17:35 — Ciclo UI 7: passada anti-genérica — gradiente só num momento (telão)
 
 **Pesquisa do ciclo (frente a — telão/TV, design de painéis)**

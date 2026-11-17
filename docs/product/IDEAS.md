@@ -1556,10 +1556,45 @@ Fontes: tvpilot.app "Digital Signage Color Contrast: What Works on a Real TV" e 
   CAMINHO" (uppercase + 0.14em) e "PAINEL DE SAÍDA" (0.22em) ainda
   vivem no telão — numa TV o caixa alta ajuda a leitura a distância,
   mas a skill pede sentence case em tudo. Impacto 2, Esforço 1 —
-  **não feito neste ciclo** (fora do escopo "gradiente só num
-  momento"); candidato p/ o próximo ciclo da passada anti-genérica:
-  testar os títulos em sentence case com Sora e medir se a leitura a
-  distância se mantém.
+  **feito no ciclo UI 8, 17/11/2026** (sentence case em Sora, títulos
+  com tamanho maior p/ compensar a altura de caixa; "AGORA" ficou em
+  caps por ser palavra única de ação — exceção FHWA p/ mensagens de
+  ação).
+
+## Semeado em 17/11/2026 — UX de fluxos de atendimento/check-in: caixa alta × sentence case (frente b, ciclo UI 8)
+- **Caixa alta apaga a forma da palavra; a leitura a distância é por
+  forma, não por letra** (FHWA/MUTCD 2009, via mentalfloss 2025):
+  placas de rua dos EUA trocaram "BROADWAY" por "Broadway" — "uma
+  palavra em caixa alta é só um retângulo grande à distância"; o
+  misto dá relevo (ascendentes/descendentes) e o olho reconhece o
+  padrão antes de decodificar as letras. Impacto 4, Esforço 1 —
+  **implementado neste ciclo** (títulos do telão em sentence case).
+- **Evitar caixa alta em qualquer coisa com mais de duas palavras**
+  (thecrazypixel, 2026 — regra p/ menus lidos a 2–4,5 m): caps só p/
+  cabeçalhos de categoria; nomes de itens em sentence/title case.
+  Impacto 3, Esforço 1 — **implementado neste ciclo** ("Pode retirar
+  agora" tem 3 palavras; "A caminho" 2; "Painel de saída" 3 — todas
+  saíram do caps).
+- **Em caixa alta, a mesma largura rende letras ~25% menores**
+  (quartadesign, 2026): o texto em misto, na mesma largura, fica
+  maior — o que parecia "gritar mais" na verdade lia menor. Impacto
+  3, Esforço 1 — **implementado neste ciclo** (títulos do telão
+  cresceram 1.05→1.25rem base, teto 1.6→1.9rem).
+- **Exceção que confirma a regra: mensagens de ação curtas ficam em
+  caps** (FHWA/MUTCD: "KEEP RIGHT", "2 MILES" seguem em caixa alta;
+  wirespring: caps OK p/ uma ou duas palavras de ênfase): o selo
+  "AGORA" (1 palavra, ação) e o selo "Recomendado" dos planos ficam
+  em caps — não são o sinal de template que a skill ataca. Impacto
+  2, Esforço 0 — **verificado neste ciclo: já era o caso** (só esses
+  dois `text-transform: uppercase` restam no web, ambos de 1 palavra).
+- **Regra de tamanho p/ sinalização: 1 polegada de altura de letra
+  p/ cada 10 pés de distância** (thecrazypixel; 4over4, 2026) — p/
+  leitura de relance, dobrar: a 3 m, títulos de categoria ~75 mm de
+  altura de caixa. Os títulos do telão (até 1.9rem ≈ 30 px ≈ 8 mm de
+  caixa num 1080p) dependem da TV grande — o ganho real do ciclo é
+  forma de palavra + tamanho maior, não a régua absoluta. Impacto 2,
+  Esforço 0 — **registrado; medir numa TV real na verificação ao
+  vivo**.
 
 ## Diferencial TutorPass (tese)
 Concorrente BR forte é suite ampla (comunicação/ERP/facial). TutorPass vence sendo **o melhor só em saída**:
