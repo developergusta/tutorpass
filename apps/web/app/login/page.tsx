@@ -236,6 +236,9 @@ export default function LoginPage() {
                 {busy ? 'Entrando…' : 'Entrar'}
               </button>
             </p>
+            <p className="auth-foot">
+              <Link href="/esqueci-senha">Esqueci minha senha</Link>
+            </p>
           </form>
         ) : (
           <form onSubmit={onVerify2fa}>

@@ -2,6 +2,7 @@ import { ConflictException, ForbiddenException, UnauthorizedException } from '@n
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { TwoFactorService, totpCode } from '../two-factor/two-factor.service';
+import { PasswordResetService } from './password-reset.service';
 
 const SECRET = 'segredo-de-teste-com-mais-de-32-caracteres-123456';
 const SCHOOL = 'escola-demo-teste';
@@ -23,7 +24,7 @@ describe('AuthController (/auth/*)', () => {
   beforeEach(() => {
     service = new AuthService(SECRET);
     twoFactor = new TwoFactorService();
-    controller = new AuthController(service, twoFactor);
+    controller = new AuthController(service, twoFactor, new PasswordResetService(service));
   });
 
   it('register devolve o usuário sem passwordHash; e-mail duplicado → 409', () => {

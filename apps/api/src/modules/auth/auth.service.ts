@@ -309,6 +309,28 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     return user;
   }
 
+  /** Busca por e-mail normalizado — apoio ao fluxo de redefinição de senha. */
+  findUserByEmail(email: string): AuthUser | null {
+    const id = this.usersByEmail.get(email.trim().toLowerCase());
+    return id ? (this.users.get(id) ?? null) : null;
+  }
+
+  /**
+   * Redefinição de senha por token (fluxo "esqueci minha senha"): mesma
+   * política da troca de senha, persiste o hash novo e revoga TODAS as
+   * sessões — se o pedido partiu de um vazamento, o invasor cai junto.
+   */
+  resetPasswordWithToken(userId: string, newPassword: string): void {
+    const user = this.getUserOrThrow(userId);
+    this.validatePassword(newPassword);
+    user.passwordHash = hashPassword(newPassword);
+    const newHash = user.passwordHash;
+    this.persist((prisma) =>
+      prisma.user.update({ where: { id: userId }, data: { passwordHash: newHash } }),
+    );
+    this.revokeAllForUser(userId, new Date());
+  }
+
   // --- Login / logout -------------------------------------------------------
 
   /**

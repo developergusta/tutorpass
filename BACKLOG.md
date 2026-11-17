@@ -5,19 +5,17 @@
 Auditoria completa web + API depois do conserto do login. O padrão é o
 mesmo do login: **o motor existe e é testado; falta a camada de uso**.
 
-- [ ] **CRÍTICO — A escola não consegue operar: não há cadastro de
+- [x] **CRÍTICO — A escola não consegue operar: não há cadastro de
   alunos/turmas/tutores em lugar nenhum.** RosterService/Students/
   Classrooms/Tutors têm lógica + testes, mas NENHUM controller HTTP;
   o web não tem área da escola. Sem alunos cadastrados, a fila nunca
-  tem dado real e o produto não funciona ponta a ponta. Precisa:
-  controller(s) REST do roster (CRUD + importação CSV que o serviço
-  já tem) + telas de gestão no web (turmas, alunos, tutores).
-- [ ] **CRÍTICO — Portaria é só um painel de leitura.** A API tem
+  tem dado real e o produto não funciona ponta a ponta. FEITO em 17/11/2026: RosterController + /escola (ver CHANGELOG-DEV).
+- [x] **CRÍTICO — Portaria é só um painel de leitura.** A API tem
   call/validate-qr/release/cancel/block (13 rotas no PickupController),
   mas o web não chama nenhuma: a portaria não consegue chamar o aluno,
   validar o QR nem confirmar a retirada pela tela (1 botão na página =
   "tentar de novo" da conexão).
-- [ ] **CRÍTICO — Não existe "esqueci minha senha".** Nenhuma rota de
+- [x] **CRÍTICO — Não existe "esqueci minha senha".** Nenhuma rota de
   reset na API e nenhum link no web: admin que esquecer a senha perde
   a conta (só outro admin ou acesso ao banco resolve). Precisa: fluxo
   de reset com token de uso único (e-mail quando houver provedor; por

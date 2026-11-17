@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Post,
   Req,
@@ -23,6 +24,8 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { TwoFactorCodeDto } from './dto/two-factor-code.dto';
 import { TwoFactorVerifyDto } from './dto/two-factor-verify.dto';
 import { TwoFactorService } from '../two-factor/two-factor.service';
+import { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';
+import { PasswordResetService } from './password-reset.service';
 
 // REST /auth/* — primeira superfície HTTP do Step 2 sobre o AuthService.
 // O refresh token NUNCA vai no corpo da resposta: ele sai em cookie httpOnly
@@ -80,7 +83,37 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly twoFactor: TwoFactorService,
+    private readonly passwordResets: PasswordResetService,
   ) {}
+
+  // "Esqueci minha senha": a resposta é SEMPRE { ok: true } — exista ou
+  // não conta com o e-mail (não vaza quem é usuário). A entrega do link
+  // na v1 é pelo admin da escola (GET /password-resets abaixo).
+  @Public()
+  @Post('forgot-password')
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    this.passwordResets.request(dto.email);
+    return { ok: true };
+  }
+
+  @Public()
+  @Post('reset-password')
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    this.passwordResets.reset(dto.token, dto.newPassword);
+    return { ok: true };
+  }
+
+  // Entrega v1 dos links de redefinição: só ADMIN, só da própria escola.
+  @UseGuards(JwtAuthGuard)
+  @Get('password-resets')
+  passwordResetsList(@CurrentUser() user: AccessTokenPayload) {
+    if (!user.roles.includes('ADMIN') || !user.schoolId) {
+      throw new ForbiddenException(
+        'Só administradores da escola veem os pedidos de redefinição.',
+      );
+    }
+    return this.passwordResets.listPendingForSchool(user.schoolId);
+  }
 
   @Public()
   @Post('register')

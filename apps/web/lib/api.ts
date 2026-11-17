@@ -221,6 +221,33 @@ export async function logout(): Promise<void> {
   clearSession();
 }
 
+// ------------------------------------------------- esqueci minha senha
+
+/** Pede a redefinição. A API responde ok sempre (não vaza quem tem conta). */
+export function forgotPassword(email: string): Promise<{ ok: boolean }> {
+  return postJson<{ ok: boolean }>('/auth/forgot-password', { email });
+}
+
+/** Consome o token do link e define a senha nova. */
+export function resetPassword(
+  token: string,
+  newPassword: string,
+): Promise<{ ok: boolean }> {
+  return postJson<{ ok: boolean }>('/auth/reset-password', { token, newPassword });
+}
+
+export interface PendingReset {
+  email: string;
+  name: string;
+  token: string;
+  expiresAt: string;
+}
+
+/** Entrega v1 dos links: o admin da escola vê os pedidos pendentes. */
+export function listPasswordResets(): Promise<PendingReset[]> {
+  return authedJson<PendingReset[]>('/auth/password-resets');
+}
+
 // ------------------------------------------------------------ roster
 // Cadastro da escola (turmas, alunos, tutores) — /api/roster/*, com o
 // schoolId indo na sessão (o servidor nunca aceita escola pelo body).

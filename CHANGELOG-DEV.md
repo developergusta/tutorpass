@@ -132,6 +132,47 @@ rotas: /, /cadastro, /login, /planos, /portaria, /telao, /_not-found).
 único p/ telas sem dados, falhas de API e carregamento; depois revisão
 mobile geral e app do tutor quando existir.
 
+## 2026-11-17 16:38 — Varredura: os 3 itens críticos corrigidos (ordem aprovada pelo usuário)
+
+**Item 1 — a escola consegue se cadastrar (roster com HTTP + telas)**
+- API: `RosterController` (novo, módulo RosterApiModule) — turmas
+  (listar/criar/renomear/desativar), alunos (listar/criar/editar/status/
+  responsáveis), tutores (listar/criar/vincular/desvincular) e
+  POST /roster/import (CSV com dryRun). schoolId SEMPRE da sessão;
+  recurso de outra escola responde 404; escrita só ADMIN/COORDINATOR,
+  leitura também GATE_AGENT. Spec nova com o serviço real (isolamento
+  de tenant incluído).
+- Web: página **/escola** (guardada por login) com abas Turmas / Alunos
+  / Responsáveis / Importar CSV — formulários, listas, vínculo de
+  responsável por aluno com parentesco, prévia de importação com erros
+  por linha. Link "Escola" na topbar quando logado. Cliente ganhou
+  `authedJson` (Bearer + refresh automático em 401).
+
+**Item 2 — portaria operável**
+- A fila agora expõe o `status` bruto; VALIDATED cai no grupo "pronto"
+  e RELEASED sai da lista (faltava no REMOVED_HINTS).
+- Cada entrada na portaria ganhou as ações da máquina de estados:
+  Chamar (QUEUED), Validar QR com campo p/ o código (QUEUED/CALLED),
+  Confirmar retirada (só VALIDATED — a API exige), Cancelar. Erros da
+  API aparecem na própria linha.
+
+**Item 3 — esqueci minha senha**
+- API: `PasswordResetService` — token de uso único (hash SHA-256,
+  1 h, pedido novo invalida o anterior); POST /auth/forgot-password
+  (resposta sempre ok, sem vazar contas), POST /auth/reset-password
+  (troca + revoga TODAS as sessões), GET /auth/password-resets (só
+  ADMIN da própria escola). AuthService ganhou findUserByEmail e
+  resetPasswordWithToken (mesma política da troca de senha + persiste).
+- Entrega v1 honesta: sem provedor de e-mail, o link fica na Área da
+  escola ("Redefinições de senha pendentes", com Copiar link) p/ o
+  admin passar à pessoa; o token cru vive só em memória.
+- Web: /esqueci-senha (explica o fluxo), /redefinir-senha?token=...,
+  link "Esqueci minha senha" no login e o cartão de pendentes na /escola.
+
+**Verificação** — jest completo: **509/509 (43 suítes)**; `next build`
+OK (12 páginas). Provas ao vivo (roster + reset + ações da portaria)
+registradas na entrada seguinte, após o deploy.
+
 ## 2026-11-17 16:35 — Prova ao vivo do login (deploy fc90ddd) + varredura geral
 
 **Login provado em produção** (usuário descartável

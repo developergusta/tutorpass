@@ -10,12 +10,14 @@ import {
   importStudents,
   linkTutor,
   listClassrooms,
+  listPasswordResets,
   listStudentTutors,
   listStudents,
   listTutors,
   setStudentStatus,
   type Classroom,
   type ImportReport,
+  type PendingReset,
   type Student,
   type StudentTutor,
   type Tutor,
@@ -35,6 +37,70 @@ const RELATIONSHIPS: { value: string; label: string }[] = [
 ];
 
 type Tab = 'turmas' | 'alunos' | 'tutores' | 'importar';
+
+// Entrega v1 dos links de redefinição de senha: só aparece p/ ADMIN
+// (a API responde 403 p/ os demais — aí o cartão nem renderiza).
+function PasswordResetsCard() {
+  const [pending, setPending] = useState<PendingReset[] | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    listPasswordResets()
+      .then((list) => {
+        if (alive) setPending(list);
+      })
+      .catch(() => {
+        if (alive) setPending(null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (!pending || pending.length === 0) return null;
+
+  async function copyLink(reset: PendingReset) {
+    const url = `${window.location.origin}/redefinir-senha?token=${reset.token}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(reset.email);
+    } catch {
+      setCopied(null);
+      window.prompt('Copie o link de redefinição:', url);
+    }
+  }
+
+  return (
+    <section className="card resets-card">
+      <h2>Redefinições de senha pendentes</h2>
+      <p className="muted">
+        Quem pediu "esqueci minha senha" aparece aqui por 1 hora. Passe o link para a
+        pessoa — é assim que a redefinição chega enquanto o TutorPass não manda e-mail.
+      </p>
+      <ul className="roster-list">
+        {pending.map((r) => (
+          <li className="roster-row" key={r.token}>
+            <span>
+              <strong>{r.name}</strong>
+              <span className="muted">
+                {' '}
+                · {r.email} · expira às{' '}
+                {new Date(r.expiresAt).toLocaleTimeString('pt-BR', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+            </span>
+            <button className="btn secondary small" type="button" onClick={() => void copyLink(r)}>
+              {copied === r.email ? 'Link copiado ✓' : 'Copiar link'}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 function EscolaPanel() {
   const [tab, setTab] = useState<Tab>('turmas');
@@ -75,6 +141,8 @@ function EscolaPanel() {
         </p>
       ) : null}
       {notice ? <p className="alert ok">{notice}</p> : null}
+
+      <PasswordResetsCard />
 
       <div className="admin-tabs" role="tablist" aria-label="Seções do cadastro">
         {(

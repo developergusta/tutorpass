@@ -5,12 +5,14 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 import { RolesGuard } from './roles.guard';
 import { TenantGuard } from './tenant.guard';
 import { TwoFactorModule } from '../two-factor/two-factor.module';
+import { PasswordResetService } from './password-reset.service';
 
 @Module({
   imports: [TwoFactorModule],
   controllers: [AuthController],
   providers: [
     AuthService,
+    PasswordResetService,
     JwtAuthGuard,
     RolesGuard,
     TenantGuard,
