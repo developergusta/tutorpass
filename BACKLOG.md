@@ -32,7 +32,8 @@
 
 ## Fila UI/UX (rotina de 30 min — ordem: login → portaria → telão → planos → estados vazios/erro → mobile)
 - [x] Login (ciclo UI 2, 17/11/2026): layout centrado com marca (`.auth-*` reutilizável em `globals.css`), botão mostrar/ocultar senha com SVG próprio, alvo 44 px, `aria-pressed` + rótulo dinâmico, senha reocultada ao enviar (WCAG 3.3.8), código 2FA com espaçamento e dica de recuperação, estado de sucesso com ícone de confirmação e ações centralizadas; lógica de login/2FA intacta; `next build` OK (7 rotas). Ver docs/product/IDEAS.md, frente c, ciclo UI 2.
-- [ ] Portaria: alvos de toque ≥ 44 px + foco visível nos botões da fila, hierarquia da fila/status/ações (Impacto 3, Esforço 2 — próxima candidata; ver IDEAS.md, frente c, ciclo UI 2) — e aplicar o padrão `.auth-*` ao /cadastro.
+- [x] Portaria (ciclo UI 3, 17/11/2026): resumo em 3 contadores no topo (na fila / prontos p/ retirada / a caminho, com numerais tabulares), selo de conexão com texto + cor (ao vivo/conectando/fora do ar, `role="status"`), seção "Pronto para retirada" com destaque verde e badge de contagem, linhas numeradas com nome maior e chips de turma/portão/ETA, estados vazios por seção, botão "Ver no telão" centralizado; `.btn` com `min-height: 48px` em todo o site (alvos ≥ 44 px) e foco visível já global; hook expõe o `gate` da entrada p/ o chip de portão; lógica da fila intacta; `next build` OK (7 rotas). Padrão `.auth-*` aplicado ao /cadastro no mesmo ciclo (marca, mostrar/ocultar senha, sucesso com ícone). Ver docs/product/IDEAS.md, frente a, ciclo UI 3.
+- [ ] Planos/calculadora: destaque do plano recomendado e hierarquia dos cartões (próxima candidata da fila UI).
 
 ## Banco de ideias (pesquisa contínua)
 Ver `docs/product/IDEAS.md` — ideias com fonte, impacto e esforço, promovidas ao backlog

@@ -21,6 +21,7 @@ export interface QueueItem {
   id: string;
   studentName: string;
   classroomName: string | null;
+  gate: string | null;
   group: QueueGroup;
   etaMinutes: number | null;
 }
@@ -86,6 +87,7 @@ function normalize(raw: unknown, fallback: QueueGroup): QueueItem | null {
     id,
     studentName,
     classroomName: pickString(entry, ['classroomName', 'classroom']),
+    gate: pickString(entry, ['gate', 'gateName']),
     group: groupFromStatus(pickString(entry, ['status', 'band', 'proximityBand']), fallback),
     etaMinutes: typeof etaRaw === 'number' ? etaRaw : null,
   };

@@ -98,6 +98,7 @@ a { color: var(--brand); }
   border: none;
   border-radius: 10px;
   padding: 12px 18px;
+  min-height: 48px;
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
@@ -659,3 +660,113 @@ input:focus {
 .auth-success p { margin: 0 0 16px; }
 .auth-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 .auth-actions .btn { flex: 1 1 160px; }
+
+/* Portaria — hierarquia da fila p/ uso em tablet/celular (ciclo UI 3).
+   Resumo em 3 números no topo (o operador vê o estado num olhar),
+   seção "pronto" com destaque verde, linhas numeradas e chips de
+   turma/portão/ETA; todos os alvos de toque ≥ 44 px. */
+.conn-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  min-height: 44px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.conn-pill .status-dot { margin-right: 0; }
+.conn-pill.is-live { background: var(--brand-tint); border-color: #bfe6d2; color: var(--brand-dark); }
+.conn-pill.is-live .status-dot { background: var(--ok); }
+.conn-pill.is-wait { background: var(--warn-bg); border-color: #f3ddb0; color: var(--warn-text); }
+.conn-pill.is-wait .status-dot { background: #d99a00; }
+.conn-pill.is-off { background: var(--error-bg); border-color: #f3c2c2; color: var(--error-text); }
+.conn-pill.is-off .status-dot { background: #c0392b; }
+
+.queue-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 4px 0 16px;
+}
+.queue-stat {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 12px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+.queue-stat strong {
+  display: block;
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.queue-stat span { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+.queue-stat.is-ready { border-color: #bfe6d2; background: #eef8f2; }
+.queue-stat.is-ready strong { color: var(--brand-dark); }
+
+.queue-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.queue-section-head h2 { margin: 0; font-size: 1.15rem; }
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.queue-section.is-ready { border: 1.5px solid #bfe6d2; }
+.queue-section.is-ready .count-badge { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+.queue-list li { align-items: center; padding: 14px 4px; }
+.queue-pos {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.queue-section.is-ready .queue-pos { background: var(--brand-tint); border-color: #bfe6d2; color: var(--brand-dark); }
+.queue-main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.queue-list .name { font-size: 1.08rem; }
+.queue-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.chip.eta { font-variant-numeric: tabular-nums; color: var(--brand-dark); border-color: #bfe6d2; background: var(--brand-tint); }
+
+.queue-actions { display: flex; justify-content: center; margin: 4px 0 0; }
+.queue-actions .btn { min-height: 48px; }

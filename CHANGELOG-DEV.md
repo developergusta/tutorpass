@@ -1,3 +1,63 @@
+## 2026-11-17 15:24–15:35 — Ciclo UI 3: portaria redesenhada (hierarquia da fila + cadastro no padrão auth)
+
+**Pesquisa do ciclo (frente a — referências de design de SaaS e painéis)**
+- **O loop do operador, não o modelo de dados** (hiperfusion, 13/07/2026):
+  encontrar → avaliar → agir → confirmar → próximo; as 5 ações mais
+  frequentes num trilho consistente; estado é contrato — texto + ícone,
+  nunca só cor.
+- **3 a 5 métricas no máximo numa visão operacional** (Contact Centre
+  Summit, atual. 20/07/2026; RocketScreens, 2026): mais dado vira ruído;
+  contadores grandes com limiares verde/âmbar/vermelho comunicam urgência
+  sem interpretar número; no telão/TV, legível a distância em até 2 s.
+- **Numerais tabulares em contagens ao vivo** (designhq, 2026): dígitos de
+  largura fixa não dançam quando o valor muda.
+- **Mobile é um olhar com uma mão** (fuselabcreative, 2026): a primeira
+  posição vertical responde à pergunta única da tela; 3–5 pontos primários.
+- Achados registrados em `docs/product/IDEAS.md` (frente a, ciclo UI 3);
+  o item implementado era o da fila UI: **portaria** (Impacto 3, Esforço 2).
+
+**O que foi feito**
+- **Resumo da fila** (`portaria/page.tsx`): 3 contadores no topo — na fila
+  agora / prontos p/ retirada / a caminho — com numerais tabulares; o de
+  "prontos" em verde, p/ o operador ver o estado num olhar.
+- **Selo de conexão** (`conn-pill`, `role="status"`): texto + cor, nunca só
+  cor — "Tempo real conectado" (verde), "API no ar · tempo real
+  conectando…" (âmbar) e "API fora do ar…" (vermelho), com `min-height`
+  44 px.
+- **Hierarquia das seções**: "Pronto para retirada" primeiro, com borda
+  verde e badge de contagem verde; "A caminho" calma; cada seção com
+  badge de contagem e estado vazio próprio.
+- **Linhas numeradas**: posição em círculo, nome maior (1.08rem) e chips
+  de turma, portão e ETA (`~N min`, tabular) — o hook
+  (`use-pickup-queue.ts`) passou a expor o `gate` da entrada, que já
+  vinha no evento.
+- **Alvos de toque**: `.btn` com `min-height: 48px` em todo o site; foco
+  visível já era global. Botão "Ver no telão" centralizado em
+  `.queue-actions`.
+- **Cadastro no padrão `.auth-*`** (pendência do ciclo UI 2): layout
+  centrado com marca (escudo), campos em `.field`, mostrar/ocultar senha
+  com o mesmo botão olho do login (44 px, `aria-pressed`, senha
+  reocultada ao enviar) e sucesso com ícone de confirmação + ações
+  centralizadas. Lógica de cadastro/login/criação de escola intacta.
+- Lógica da fila (hook, eventos, grupos) intacta — só apresentação.
+  Nenhuma regra de negócio, preço ou API tocada.
+
+**Arquivos alterados**
+- `apps/web/app/portaria/page.tsx` (resumo, selo, seções, linhas, ações)
+- `apps/web/lib/use-pickup-queue.ts` (+ `gate` no `QueueItem`)
+- `apps/web/app/globals.css` (+ `.conn-pill`, `.queue-summary`,
+  `.queue-stat`, `.queue-section`, `.count-badge`, `.queue-pos`,
+  `.queue-chips`, `.chip`, `.queue-actions`; `.btn` com `min-height: 48px`)
+- `apps/web/app/cadastro/page.tsx` (padrão `.auth-*`, mostrar senha, sucesso)
+- `docs/product/IDEAS.md` (frente a, ciclo UI 3), `BACKLOG.md` (fila UI/UX)
+
+**Verificação** — `next build` em apps/web: **OK** (tipos válidos, 7
+rotas: /, /cadastro, /login, /planos, /portaria, /telao, /_not-found).
+
+**Próximo (fila UI)** — planos/calculadora: destaque do plano recomendado
+e hierarquia dos cartões; depois estados vazios/erro/carregando e revisão
+mobile geral.
+
 ## 2026-11-17 15:13–15:17 — Ciclo UI 2: login redesenhado (acessibilidade + mobile)
 
 **Pesquisa do ciclo (frente c — acessibilidade e mobile)**

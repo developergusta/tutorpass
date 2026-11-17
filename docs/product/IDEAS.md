@@ -1403,6 +1403,32 @@ Fontes: copyprogramming.com "Password Eye Icon Toggle: Complete 2026 Guide"
   revisar os botões da portaria p/ o mínimo de 44 px. Impacto 3, Esforço 2
   — próxima candidata (portaria: alvos de toque + foco visível).
 
+## Semeado em 17/11/2026 — painéis operacionais e filas em tempo real (frente a, ciclo UI 3)
+Fontes: hiperfusion.com "Dense Admin Screens for Operators: Patterns That Beat
+Dashboards in Repetitive Work" (13/07/2026); contactcentresummit.co.uk "Display
+Board Layout" (atual. 20/07/2026); rocketscreens.com "How to Display Zendesk
+Tickets on Call Center TVs" (2026); designhq.io "Dashboard UI Design: Best
+Practices & SaaS Examples" (2026); fuselabcreative.com "Mobile Dashboard
+Design: What to Leave Off the Screen" (2026).
+
+- **O loop do operador, não o modelo de dados**: encontrar → avaliar → agir →
+  confirmar → próximo; as 5 ações mais frequentes num trilho consistente e
+  previsível; estado é contrato (texto + ícone, nunca só cor). Impacto 3,
+  Esforço 2 — **aplicado neste ciclo na portaria** (resumo em 3 contadores +
+  seções por status + selo de conexão com texto).
+- **3 a 5 métricas no máximo numa visão operacional**: mais dado vira ruído,
+  não insight; contadores grandes com limiares verde/âmbar/vermelho
+  comunicam urgência sem ninguém interpretar número. Impacto 3, Esforço 1
+  — aplicado (resumo de 3 números; "prontos" em verde).
+- **Numerais tabulares em contagens ao vivo**: dígitos de largura fixa não
+  dançam quando o valor muda — o operador lê o número sem re-focar.
+  Impacto 2, Esforço 1 — aplicado (tabular-nums nos contadores, badges de
+  contagem e chips de ETA).
+- **Mobile é um olhar com uma mão**: a primeira posição vertical responde à
+  pergunta única da tela; o resto vai p/ um toque de distância; o olhar
+  vale p/ 3–5 pontos primários, não mais. Impacto 3, Esforço 2 — próxima
+  candidata (revisão mobile geral da fila UI).
+
 ## Diferencial TutorPass (tese)
 Concorrente BR forte é suite ampla (comunicação/ERP/facial). TutorPass vence sendo **o melhor só em saída**:
 mais rápido de implantar, QR dinâmico anti-fraude (eles usam QR estático), auditoria imutável com hash
