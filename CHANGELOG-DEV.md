@@ -66,6 +66,27 @@ contas de visão criadas no ciclo anterior).
 API tem setup/confirm/status, o web não tem a tela); depois o app do
 tutor quando existir o esqueleto mobile.
 
+## 2026-11-17 19:12 — Contas de visão criadas e verificadas (1 login por perfil)
+
+Na escola de teste, senha única `Visao#2026` p/ todas:
+- admin.visao@tutorpass.com.br (Marina Admin) — ADMIN
+- coordenacao.visao@tutorpass.com.br (Carlos Coordenação) — COORDINATOR
+- portaria.visao@tutorpass.com.br (Paula Portaria) — GATE_AGENT
+- professor.visao@tutorpass.com.br (Tiago Professor) — TEACHER
+- tutor.visao@tutorpass.com.br (Rita Responsável) — TUTOR
+
+**Verificação ao vivo** — cadastro 201 + vínculo 201 nos cinco;
+login SEM escola (o fluxo da tela) devolvendo a escola certa e o
+papel certo nos cinco; GET /schools/members lista a equipe com 6
+ativos (os 5 + o admin de teste original). O script de criação
+quebrou só na impressão final da lista (token de 15 min expirou
+durante a espera do deploy) — refeita com token novo, conferida.
+Detalhe: a rotina de UI pegou a rota nova e entregou a aba Equipe
+na /escola no ciclo UI 10 (commit e275056) — as contas já aparecem
+lá. Limites honestos das visões: professor e tutor ainda não têm
+tela própria (o que muda p/ eles hoje é o que a API deixa ou nega);
+a tela de Segurança/2FA é o próximo item da fila da rotina.
+
 ## 2026-11-17 19:00 — Equipe da escola: admin vincula papel a conta existente
 
 **Pedido** — "crie logins diversificados pra mim com cada um dos
