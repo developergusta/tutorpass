@@ -33,6 +33,10 @@ body {
 }
 
 h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; color: var(--ink); }
+/* Display nos títulos e na marca (unslop, passada de tipo): hierarquia por
+   tamanho e cor, peso no máximo 600, nada de Inter-em-tudo. */
+h1, h2 { font-family: var(--font-display), var(--font-inter), system-ui, sans-serif; font-weight: 600; letter-spacing: -0.015em; }
+.topbar .logo { font-family: var(--font-display), var(--font-inter), system-ui, sans-serif; }
 
 a { color: var(--brand); }
 
@@ -456,26 +460,30 @@ input:focus {
 
 /* Home — hero, seções, recursos (redesign UI/UX, ciclo UI 1) */
 .hero {
-  background: linear-gradient(135deg, #06382a 0%, #0b6e4f 55%, #0e7f5c 100%);
+  /* Verde profundo chapado (unslop, passada de cor): o gradiente de matiz
+     saiu; o momento rico do hero é o painel da saída, não o fundo. */
+  background: #07382a;
   color: #eafaf2;
   padding: 64px 0 56px;
+}
+.hero-grid { display: grid; gap: 36px; }
+@media (min-width: 960px) {
+  .hero-grid { grid-template-columns: 1.02fr 0.98fr; align-items: center; gap: 48px; }
 }
 .hero h1 {
   color: #fff;
   font-size: clamp(2rem, 5.2vw, 3.3rem);
-  font-weight: 800;
-  margin: 18px 0 14px;
+  font-weight: 600;
+  margin: 14px 0 14px;
   letter-spacing: -0.02em;
 }
 .hero-badge {
+  /* Era um pill com fundo e borda (chrome de template); virou uma linha
+     quieta acima do título. */
   display: inline-block;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  color: #d9f5e6;
-  font-size: 0.85rem;
-  font-weight: 700;
-  padding: 6px 12px;
-  border-radius: 999px;
+  color: #7fe0ae;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 .hero-sub {
   font-size: clamp(1.02rem, 2vw, 1.2rem);
@@ -510,10 +518,80 @@ input:focus {
 }
 .hero-proof li::before { content: "✓ "; font-weight: 800; color: #7fe0ae; }
 
+/* O momento do hero (unslop): o produto de verdade — um painel da saída
+   como o telão mostra, com nomes plausíveis — em vez de blob abstrato. */
+.hero-board {
+  background: #0a2019;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+}
+.hb-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+.hb-title {
+  font-family: var(--font-display), var(--font-inter), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: #fff;
+}
+.hb-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #7fe0ae;
+  white-space: nowrap;
+}
+.hb-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #34d399;
+  animation: hb-pulse 1.6s ease-in-out infinite;
+}
+@keyframes hb-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .hb-dot { animation: none; } }
+.hb-label { margin: 16px 0 2px; font-size: 0.85rem; font-weight: 600; color: #7fe0ae; }
+.hb-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.hb-row:last-child { border-bottom: none; }
+.hb-name { color: #eafaf2; font-weight: 600; }
+.hb-meta { color: #9fc9b4; font-size: 0.88rem; }
+.hb-tag {
+  margin-left: auto;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #06231a;
+  background: #34d399;
+  border-radius: 6px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+.hb-eta {
+  margin-left: auto;
+  color: #9fc9b4;
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .section { padding-top: 28px; }
 .section-title {
   font-size: clamp(1.4rem, 3vw, 1.9rem);
-  font-weight: 800;
+  font-weight: 600;
   margin: 8px 0 18px;
 }
 
@@ -525,20 +603,26 @@ input:focus {
 @media (min-width: 640px) {
   .steps { grid-template-columns: repeat(3, 1fr); }
 }
-.step { margin-bottom: 0; }
-.step h3 { margin: 12px 0 6px; }
+/* Passos em formato editorial (unslop): sem cartão clone — divisor fino
+   em cima e numeral grande na fonte de display. */
+.step {
+  margin-bottom: 0;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 20px 0 0;
+}
+.step h3 { margin: 10px 0 6px; }
 .step p { margin: 0; }
 .step-n {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: var(--brand-tint);
-  color: var(--brand-dark);
-  font-weight: 800;
-  font-size: 1.05rem;
+  display: block;
+  font-family: var(--font-display), var(--font-inter), system-ui, sans-serif;
+  color: var(--brand);
+  font-weight: 600;
+  font-size: 1.9rem;
+  line-height: 1;
 }
 
 .features {
@@ -574,9 +658,46 @@ input:focus {
 }
 .icon-chip svg { width: 24px; height: 24px; }
 
+/* Recursos em lista editorial (unslop): a grade de cartões clones com
+   ícone em bolinha saiu — linhas com divisor fino e ícone discreto. */
+.feature-list { display: grid; grid-template-columns: 1fr; }
+@media (min-width: 900px) {
+  .feature-list { grid-template-columns: 1fr 1fr; column-gap: 48px; }
+}
+.feature-row {
+  display: flex;
+  gap: 16px;
+  padding: 20px 0;
+  border-top: 1px solid var(--border);
+}
+.feature-row .f-icon { flex: 0 0 auto; color: var(--brand-dark); margin-top: 2px; }
+.feature-row .f-icon svg { width: 22px; height: 22px; display: block; }
+.feature-row h3 { margin: 0 0 4px; font-size: 1.05rem; }
+.feature-row p { margin: 0; }
+
+/* Acesso rápido como lista de links (navegação, não conteúdo): linhas com
+   divisor, seta à direita, fundo sutil no hover. */
+.quick-links { border-top: 1px solid var(--border); }
+.quick-link {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 8px;
+  border-bottom: 1px solid var(--border);
+  text-decoration: none;
+  color: var(--ink);
+}
+.quick-link:hover { background: var(--brand-tint); }
+.quick-link .q-icon { display: inline-flex; color: var(--brand-dark); }
+.quick-link .q-icon svg { width: 22px; height: 22px; }
+.quick-link h3 { margin: 0; font-size: 1.05rem; }
+.quick-link p { margin: 2px 0 0; }
+.quick-link .q-arrow { margin-left: auto; color: var(--brand); font-weight: 600; font-size: 1.15rem; }
+
 .cta-band {
-  background: linear-gradient(135deg, #e9f7ef, #f4fbf7);
-  border: 1px solid #cdeedd;
+  /* Chapado (unslop, passada de cor): sem gradiente decorativo. */
+  background: #eef7f1;
+  border: 1px solid #d3e7da;
   border-radius: 18px;
   padding: 34px 26px;
   text-align: center;

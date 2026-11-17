@@ -49,6 +49,52 @@ rotas: /, /cadastro, /login, /planos, /portaria, /telao, /_not-found).
 único p/ telas sem dados, falhas de API e carregamento; depois revisão
 mobile geral e app do tutor quando existir.
 
+## 2026-11-17 16:21 — Unslop na prática: passada anti-genérica na home (pedido do usuário)
+
+**Método** — skill `unslop` (github.com/heydamir/unslop, instalada em
+~/workspace/custom-skills) aplicada à tela inicial. O usuário pediu p/
+ver na prática e já tinha dito "pode aplicar" — a espera de direção do
+método foi pulada por instrução dele.
+
+**Direção (das 5 linhas da unslop)**
+- Produto: organizar a saída de alunos de escolas particulares — tutor
+  entra na fila, portaria chama, retirada fica registrada.
+- Caráter: calmo, exato, um pouco acolhedor (confiança de escola).
+- Mundo: o portão às 17h — telão verde da TV, fila de carros, tag
+  impressa no crachá.
+- Momentos: (1) o painel da saída de verdade no hero; (2) os preços
+  reais na faixa final.
+- Assinatura: o ponto "ao vivo" + o selo "Agora" do painel da saída.
+
+**Auditoria (sinais achados na home)**
+1. Hero empilhado sem nenhum visual do produto, com pill de selo.
+2. Grade 3×2 de recursos com icon-chip e cartões clones — e uma segunda
+   grade idêntica ("Acesso rápido") logo abaixo.
+3. Passos 1-2-3 em cartões clones com número em bolinha.
+4. Gradiente de matiz no hero e na faixa CTA (cor decorativa espalhada).
+5. Inter em tudo; títulos com peso 800, sem fonte de display.
+6. Título "com segurança de verdade" (vago) e "Por que as escolas
+   escolhem o TutorPass" (frase de template).
+
+**Passadas aplicadas**
+- **Tipo**: Sora (500/600) como fonte de display em h1/h2 e na marca;
+  títulos com peso 600; Inter fica no texto e na interface.
+- **Layout/visual**: hero vira split assimétrico — texto à esquerda e o
+  painel da saída à direita (HTML/CSS, nomes plausíveis, selo "Agora",
+  ETAs tabulares), como o telão mostra.
+- **Cor**: hero em verde profundo chapado (#07382a, sem gradiente) e
+  faixa CTA chapada; o momento rico é o painel, não o fundo.
+- **Estrutura**: recursos viram lista editorial com divisores finos e
+  ícone discreto (sem bolinha); "Acesso rápido" vira lista de links com
+  seta; passos viram editorial com numeral grande em display.
+- **Texto**: h1 "A saída da escola sem fila, com cada retirada
+  registrada"; subtítulo enxuto; seção de recursos vira "Feito para a
+  hora da saída". Fatos e preços intactos.
+
+**Verificação** — `next build` antes do push (ver entrada do commit);
+demais telas seguem o sistema anterior e entram nas próximas passadas
+da fila (a passada anti-genérica do BACKLOG continua aberta p/ elas).
+
 ## 2026-11-17 15:52 — Uptime Kuma: tag 1 → 2 (linha 1.x descontinuada)
 
 O usuário abriu o Kuma e viu o aviso do próprio projeto: a v1.23.17

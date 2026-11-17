@@ -128,35 +128,72 @@ const steps = [
   },
 ];
 
+// O painel do hero é o produto de verdade (como o telão mostra a saída),
+// com nomes plausíveis — passada "visuals" da unslop: nada de blob abstrato.
+const boardReady = [
+  { name: 'Alice Martins', meta: '3º B · Portão principal', now: true },
+  { name: 'Pedro Santos', meta: '5º A · Portão principal', now: false },
+  { name: 'Maria Clara Souza', meta: '2º C · Portão lateral', now: false },
+];
+const boardComing = [
+  { name: 'Lucas Almeida', meta: '4º B', eta: '~3 min' },
+  { name: 'Sofia Ribeiro', meta: '1º A', eta: '~6 min' },
+];
+
 export default function HomePage() {
   return (
     <main>
       <section className="hero">
-        <div className="container">
-          <span className="hero-badge">Saída escolar segura · sem fila no drive-thru</span>
-          <h1>
-            A saída da escola sem fila,
-            <br />
-            com segurança de verdade
-          </h1>
-          <p className="hero-sub">
-            O TutorPass organiza o check-in e o check-out dos alunos: o tutor avisa que está
-            chegando, a portaria chama o aluno na hora certa e cada retirada fica registrada
-            num log de auditoria imutável.
-          </p>
-          <div className="hero-ctas">
-            <Link className="btn btn-hero" href="/planos">
-              Ver planos e preços
-            </Link>
-            <Link className="btn btn-hero-ghost" href="/cadastro">
-              Criar conta grátis
-            </Link>
+        <div className="container hero-grid">
+          <div>
+            <h1>
+              A saída da escola sem fila,
+              <br />
+              com cada retirada registrada
+            </h1>
+            <p className="hero-sub">
+              O tutor avisa que está chegando, a portaria chama o aluno na hora certa e
+              cada retirada fica registrada num log de auditoria imutável.
+            </p>
+            <div className="hero-ctas">
+              <Link className="btn btn-hero" href="/planos">
+                Ver planos e preços
+              </Link>
+              <Link className="btn btn-hero-ghost" href="/cadastro">
+                Criar conta grátis
+              </Link>
+            </div>
+            <ul className="hero-proof">
+              <li>QR dinâmico anti-fraude</li>
+              <li>Implantação em 1 dia</li>
+              <li>Grátis até 30 alunos</li>
+            </ul>
           </div>
-          <ul className="hero-proof">
-            <li>QR dinâmico anti-fraude</li>
-            <li>Implantação em 1 dia</li>
-            <li>Grátis até 30 alunos</li>
-          </ul>
+          <div className="hero-board" aria-hidden="true">
+            <div className="hb-head">
+              <span className="hb-title">Saída · Portão principal</span>
+              <span className="hb-live">
+                <span className="hb-dot" />
+                Ao vivo
+              </span>
+            </div>
+            <p className="hb-label">Pode retirar agora</p>
+            {boardReady.map((r) => (
+              <div className="hb-row" key={r.name}>
+                <span className="hb-name">{r.name}</span>
+                <span className="hb-meta">{r.meta}</span>
+                {r.now ? <span className="hb-tag">Agora</span> : null}
+              </div>
+            ))}
+            <p className="hb-label">A caminho</p>
+            {boardComing.map((r) => (
+              <div className="hb-row" key={r.name}>
+                <span className="hb-name">{r.name}</span>
+                <span className="hb-meta">{r.meta}</span>
+                <span className="hb-eta">{r.eta}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -174,13 +211,15 @@ export default function HomePage() {
       </section>
 
       <section className="container section">
-        <h2 className="section-title">Por que as escolas escolhem o TutorPass</h2>
-        <div className="features">
+        <h2 className="section-title">Feito para a hora da saída</h2>
+        <div className="feature-list">
           {features.map((f) => (
-            <div className="card feature" key={f.title}>
-              <span className="icon-chip">{f.icon}</span>
-              <h3>{f.title}</h3>
-              <p className="muted">{f.text}</p>
+            <div className="feature-row" key={f.title}>
+              <span className="f-icon">{f.icon}</span>
+              <div>
+                <h3>{f.title}</h3>
+                <p className="muted">{f.text}</p>
+              </div>
             </div>
           ))}
         </div>
@@ -188,32 +227,38 @@ export default function HomePage() {
 
       <section className="container section">
         <h2 className="section-title">Acesso rápido</h2>
-        <div className="features">
-          <div className="card feature">
-            <span className="icon-chip">{iconLogin}</span>
-            <h3>Entrar</h3>
-            <p className="muted">Acesso da equipe da escola, com 2FA quando ativo.</p>
-            <Link className="btn" href="/login">
-              Ir para o login
-            </Link>
-          </div>
-          <div className="card feature">
-            <span className="icon-chip">{iconGate}</span>
-            <h3>Portaria</h3>
-            <p className="muted">Fila de saída ao vivo: quem já pode retirar e quem está a caminho.</p>
-            <Link className="btn" href="/portaria">
-              Abrir a portaria
-            </Link>
-          </div>
-          <div className="card feature">
-            <span className="icon-chip">{iconTv}</span>
-            <h3>Telão</h3>
-            <p className="muted">Tela para a TV da escola, com letras grandes e as colunas da saída.</p>
-            <Link className="btn" href="/telao">
-              Abrir o telão
-            </Link>
-          </div>
-        </div>
+        <nav className="quick-links">
+          <Link className="quick-link" href="/login">
+            <span className="q-icon">{iconLogin}</span>
+            <span>
+              <h3>Entrar</h3>
+              <p className="muted">Acesso da equipe da escola, com 2FA quando ativo.</p>
+            </span>
+            <span className="q-arrow" aria-hidden="true">
+              →
+            </span>
+          </Link>
+          <Link className="quick-link" href="/portaria">
+            <span className="q-icon">{iconGate}</span>
+            <span>
+              <h3>Portaria</h3>
+              <p className="muted">Fila de saída ao vivo: quem já pode retirar e quem está a caminho.</p>
+            </span>
+            <span className="q-arrow" aria-hidden="true">
+              →
+            </span>
+          </Link>
+          <Link className="quick-link" href="/telao">
+            <span className="q-icon">{iconTv}</span>
+            <span>
+              <h3>Telão</h3>
+              <p className="muted">Tela para a TV da escola, com letras grandes e as colunas da saída.</p>
+            </span>
+            <span className="q-arrow" aria-hidden="true">
+              →
+            </span>
+          </Link>
+        </nav>
       </section>
 
       <section className="container section">
