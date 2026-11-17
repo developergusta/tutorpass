@@ -109,10 +109,16 @@ mesmo do login: **o motor existe e é testado; falta a camada de uso**.
   alunos") quando o nome não resolve; nunca nome inventado (a API só
   devolve ids e o "Aluno" do hook é placeholder, não nome). Sem
   permissão (TUTOR, 403) ou fora do ar, o alerta some em silêncio e a
-  fila segue. `next build` OK (16 rotas). Fase 2: o mesmo sinal no
-  telão (decidir antes o que exibir — o telão é público e mostra nomes)
-  e o join em grupo (1 pedido p/ os irmãos — falta na API). Ver
-  docs/product/IDEAS.md, frente b, ciclo UI 12.
+  fila segue. `next build` OK (16 rotas). Fase 2 do telão FEITA no ciclo
+  UI 13 (17/11/2026): faixa compacta no telão — só a contagem ("1 família
+  com filhos em portões diferentes — combine um só portão na portaria"),
+  sem nomes nem portões, porque o telão é público; componente
+  compartilhado `components/SiblingGateAlert.tsx` (variante `compact`),
+  mesma leitura por REST a cada 30 s, some em silêncio sem permissão ou
+  fora do ar; estilo `.telao-gate-notice` em âmbar fixo (~8:1) com
+  triângulo + texto (não depende só da cor). Resta o join em grupo (1
+  pedido p/ os irmãos — falta na API). Ver docs/product/IDEAS.md, frente
+  c, ciclo UI 13.
 - [x] **Segurança/2FA (ciclo UI 11, 17/11/2026): página /seguranca** —
   2FA em 3 passos (QR gerado no navegador do otpauthUrl + chave manual
   copiável, confirmação com código de 6 dígitos, códigos de recuperação

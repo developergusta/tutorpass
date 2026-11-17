@@ -779,6 +779,34 @@ input:focus {
   color: #8fb8a5;
   font-size: clamp(0.85rem, 1.2vw, 1.05rem);
 }
+
+/* Aviso de irmãos em portões diferentes no telão (ciclo UI 13): a
+   versão compacta do alerta da portaria — uma só linha, só a contagem,
+   sem nomes nem portões, porque o telão é público. Meio de relance
+   (frente c, 2026): 1 linha, texto em Sora 700 legível a metros,
+   contraste ~8:1; o aviso não depende só da cor — triângulo + texto.
+   Valores em hex fixo como o resto do telão (ele é escuro por desenho
+   e ignora o tema): mesmos tons do --warn-* do tema escuro. Só existe
+   quando há conflito; sem permissão ou fora do ar, some em silêncio. */
+.telao-gate-notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #3a2a10;
+  border: 1px solid #6b5316;
+  border-radius: 12px;
+  padding: 12px 20px;
+  color: #f5c56b;
+}
+.telao-gate-notice p {
+  margin: 0;
+  font-size: clamp(1.05rem, 1.7vw, 1.5rem);
+  line-height: 1.25;
+}
+.telao-gate-notice .gate-alert-icon { color: #f5c56b; }
+@media (max-width: 640px) {
+  .telao-gate-notice { padding: 10px 16px; }
+}
 @keyframes telao-in {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: none; }

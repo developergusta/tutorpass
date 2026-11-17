@@ -1,3 +1,73 @@
+## 2026-11-17 20:24–20:35 — Ciclo UI 13: o alerta de irmãos chega ao telão (só a contagem)
+
+**Pesquisa do ciclo (frente c — acessibilidade de sinalização pública)**
+- **Sinalização é meio de relance: 1–2 s por olhar** (yodeck, 2026):
+  hierarquia e contraste importam mais que o texto — "o problema quase
+  nunca é o software ou a tela, é o layout: texto demais, contraste que
+  falha na luz real, fonte que some a 3 metros".
+- **Altura da letra por distância: ~2,5 cm a cada 3 m**
+  (digitalsignage.com, 23/10/2026): corpo 36 pt a 3 m, manchete o dobro;
+  mínimo = 12 + 2,4 × distância em pés.
+- **Regra 3×5** (digitalsignage.com, 2026; risevision, 2026): no máximo
+  3 linhas de 5 palavras — quem passa lê 7–10 palavras em 2–3 s.
+- **Alvo de contraste p/ sinalização é 7:1, não o 4.5:1 da web**
+  (digitalsignage.com; signvero, 2026): o mínimo do WCAG passa no teste
+  estático e falha sob reflexo — "um aviso de alto contraste num dia
+  claro falha quando o sol lava a tela".
+- **O aviso não pode depender só da cor** (signvero, 2026; JMU, 2026):
+  o padrão é ícone + texto.
+- Achados registrados em `docs/product/IDEAS.md` (frente c, ciclo UI 13);
+  o item implementado era o da fila UI: **o mesmo sinal no telão**
+  (fase 2 do ciclo UI 12 — a decisão pendente era o que exibir num
+  painel público).
+
+**Direção (unslop)** — Produto: o telão da TV da escola, lido a metros
+de distância por famílias no pátio. Caráter: calmo, exato. Momento:
+nenhum novo — o painel "Pode retirar agora" segue o único momento
+verde; o aviso é uma faixa âmbar discreta entre o topo e os painéis.
+Assinatura: o triângulo de aviso em traço 2, o mesmo gesto da
+portaria. Decisão de privacidade: o telão mostra SÓ a contagem —
+nenhum nome, nenhum portão — porque é público; quem resolve é a
+portaria, que tem o detalhe.
+
+**O que foi feito**
+- **Faixa compacta no telão** (`telao/page.tsx` + `.telao-gate-notice`
+  em `globals.css`): 1 linha — "1 família com filhos em portões
+  diferentes — combine um só portão na portaria" (pluraliza a contagem)
+  — em Sora 700, `clamp(1.05rem, 1.7vw, 1.5rem)`, âmbar fixo #f5c56b
+  sobre #3a2a10 (~8:1, acima do alvo 7:1 p/ sinalização), com o
+  triângulo + texto (não depende só da cor). Hex fixo como o resto do
+  telão (ele é escuro por desenho e ignora o tema). Só existe quando há
+  conflito; sem permissão (TUTOR, 403) ou fora do ar, some em silêncio
+  e a fila segue. `role="status"`.
+- **Componente compartilhado** (`components/SiblingGateAlert.tsx`):
+  o alerta saiu de `portaria/page.tsx` p/ um componente com a variante
+  `compact` (telão) e a detalhada (portaria, comportamento idêntico —
+  contagem + orientação + portões com nomes ou contagem). O hook de
+  leitura por REST (a cada 30 s e quando a fila muda) é um só p/ as
+  duas telas. A portaria perdeu o import não usado (`useEffect`).
+- Nenhuma regra de negócio, preço ou API tocada. Só web.
+
+**Arquivos alterados**
+- `apps/web/components/SiblingGateAlert.tsx` (novo — hook + variantes)
+- `apps/web/app/portaria/page.tsx` (usa o componente compartilhado)
+- `apps/web/app/telao/page.tsx` (faixa compacta entre topo e painéis)
+- `apps/web/app/globals.css` (+ `.telao-gate-notice`)
+- `docs/product/IDEAS.md` (frente c, ciclo UI 13), `BACKLOG.md` (telão
+  fase 2 feito; join em grupo segue pendente de API)
+
+**Verificação** — `next build` em apps/web: **OK** (tipos válidos, 16
+rotas; `/portaria` 2,44 kB, `/telao` 1,52 kB). Limitação: sem TV real
+neste sandbox e sem conflito ativo na escola de teste — a faixa só
+aparece com irmãos em portões diferentes; a prova ao vivo (leitura a
+5+ m com a luz do pátio + se a faixa rouba altura demais dos painéis
+com a fila cheia) fica p/ a verificação ao vivo.
+
+**Próximo (fila UI)** — app do tutor (quando existir o esqueleto mobile
+— hoje só README + package.json no apps/mobile); candidatas: join em
+grupo (1 pedido p/ os irmãos — falta na API) e Segurança/Equipe fase 2
+(ambas com falta na API).
+
 ## 2026-11-17 19:54–20:05 — Ciclo UI 12: alerta de irmãos em portões diferentes na portaria
 
 **Pesquisa do ciclo (frente b — UX de fluxos de atendimento/check-in)**

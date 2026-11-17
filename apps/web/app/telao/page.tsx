@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import RequireAuth from '../../components/RequireAuth';
+import SiblingGateAlert from '../../components/SiblingGateAlert';
 import { usePickupQueue, type QueueItem } from '../../lib/use-pickup-queue';
 
 // Telão — design próprio de "painel de saída" (não é uma página do admin):
@@ -102,7 +103,7 @@ function EnRoutePanel({ items, loading }: { items: QueueItem[]; loading: boolean
 }
 
 function TelaoPanel() {
-  const { ready, enRoute, apiOnline, socketConnected } = usePickupQueue();
+  const { ready, enRoute, items, apiOnline, socketConnected } = usePickupQueue();
   const now = useClock();
   const loading = apiOnline === null;
 
@@ -147,6 +148,11 @@ function TelaoPanel() {
           </span>
         </div>
       </header>
+
+      {/* Irmãos em portões diferentes (ciclo UI 13): a versão compacta do
+          alerta — só a contagem, sem nomes nem portões, porque o telão é
+          público. Quem resolve é a portaria, que tem o detalhe. */}
+      <SiblingGateAlert items={items} compact />
 
       <div className="telao-cols">
         <ReadyPanel items={ready} loading={loading} />

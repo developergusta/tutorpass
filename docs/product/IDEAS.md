@@ -1728,6 +1728,38 @@ Fontes: tvpilot.app "Digital Signage Color Contrast: What Works on a Real TV" e 
   lá antes de levar. Impacto 2, Esforço 1 — **registrado no BACKLOG
   (fila UI)**.
 
+## Semeado em 17/11/2026 — acessibilidade do telão: meio de relance (frente c, ciclo UI 13)
+- **Sinalização é meio de relance: 1–2 segundos por olhar** (yodeck, 2026):
+  hierarquia e contraste importam mais que o tamanho do texto — "o
+  problema quase nunca é o software ou a tela, é o layout: texto demais,
+  contraste que falha na luz real, fonte que some a 3 metros".
+  Impacto 4, Esforço 1 — **implementado neste ciclo** (o aviso no telão
+  é 1 linha só, entre o topo e os painéis, sem disputar com o painel
+  "Pode retirar agora", que segue o único momento verde da tela).
+- **Altura da letra por distância: ~2,5 cm a cada 3 m** (digitalsignage.com,
+  23/10/2026): corpo 36 pt a 3 m, 60 pt a 6 m; manchete o dobro do corpo;
+  mínimo = 12 + 2,4 × distância em pés. Impacto 3, Esforço 1 — o aviso
+  usa `clamp(1.05rem, 1.7vw, 1.5rem)` em Sora 700, na mesma escala dos
+  títulos do telão; a leitura a distância real fica p/ a verificação ao
+  vivo numa TV.
+- **Regra 3×5: no máximo 3 linhas de 5 palavras** (digitalsignage.com,
+  2026; risevision, 2026): quem passa lê 7–10 palavras em 2–3 segundos.
+  Impacto 4, Esforço 1 — **implementado neste ciclo** (1 linha:
+  contagem + "combine um só portão na portaria").
+- **Alvo de contraste p/ sinalização é 7:1, não o 4.5:1 da web**
+  (digitalsignage.com, 2026; signvero, 2026): o mínimo do WCAG passa no
+  teste estático e falha sob reflexo — "um aviso de alto contraste num
+  dia claro falha quando o sol lava a tela". Impacto 3, Esforço 1 —
+  **implementado neste ciclo** (âmbar #f5c56b sobre #3a2a10, ~8:1).
+- **O aviso não pode depender só da cor** (signvero, 2026; JMU, 2026):
+  filtro de daltonismo só ajuda quem sabe aplicar; o padrão é ícone +
+  texto. Impacto 3, Esforço 1 — **implementado neste ciclo** (triângulo
+  de aviso em traço 2, o mesmo gesto da portaria, + texto).
+- **O que falta p/ o padrão completo (não neste ciclo)**: checar o aviso
+  numa TV real a 5+ m com a luz do pátio (reflexo), e medir se a faixa
+  rouba altura demais dos painéis quando a fila está cheia. Impacto 2,
+  Esforço 1 — **registrado no BACKLOG (fila UI)**.
+
 ## Diferencial TutorPass (tese)
 Concorrente BR forte é suite ampla (comunicação/ERP/facial). TutorPass vence sendo **o melhor só em saída**:
 mais rápido de implantar, QR dinâmico anti-fraude (eles usam QR estático), auditoria imutável com hash
