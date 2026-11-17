@@ -9,6 +9,7 @@ import {
   refreshSession,
   type LoginSuccess,
 } from '../lib/api';
+import ThemeToggle from './ThemeToggle';
 
 function BurgerIcon() {
   return (
@@ -106,6 +107,7 @@ export default function AuthNav() {
 
   return (
     <>
+      <ThemeToggle />
       <button
         className="nav-toggle"
         type="button"

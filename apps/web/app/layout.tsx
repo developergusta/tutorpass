@@ -53,8 +53,19 @@ function LogoMark() {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt-BR" className={`${inter.variable} ${sora.variable}`}>
+    <html
+      lang="pt-BR"
+      className={`${inter.variable} ${sora.variable}`}
+      suppressHydrationWarning
+    >
       <body>
+        {/* Tema claro/escuro: aplica o tema ANTES da primeira pintura
+            (escolha salva em localStorage; sem escolha, o aparelho
+            decide via prefers-color-scheme) — sem isso, quem usa o
+            escuro veria um clarão branco a cada página. */}
+        <Script id="tutorpass-theme-init" strategy="beforeInteractive">
+          {`try{var t=localStorage.getItem('tutorpass.theme');if(t!=='dark'&&t!=='light'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='light';}`}
+        </Script>
         {/* Umami (analytics próprio, sem cookies — kit essencial 17/11/2026).
             URL/id da era do IP; com domínio próprio, trocar p/ o subdomínio
             de analytics. */}

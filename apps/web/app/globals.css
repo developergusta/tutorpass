@@ -1,4 +1,5 @@
 :root {
+  color-scheme: light;
   --bg: #f6f7f9;
   --card: #ffffff;
   --text: #17202b;
@@ -8,14 +9,51 @@
   --border: #dde3ea;
   --warn-bg: #fff4e5;
   --warn-text: #8a5a00;
+  --warn-border: #f3ddb0;
   --error-bg: #fdecec;
   --error-text: #8f1d1d;
+  --error-border: #f3c2c2;
   --ok: #0b6e4f;
   --brand-tint: #e6f4ec;
   --ink: #0d1520;
   --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.06);
   --shadow-md: 0 6px 16px -6px rgba(16, 24, 40, 0.14), 0 2px 6px rgba(16, 24, 40, 0.06);
   --radius: 14px;
+  /* Tokens de tema (claro/escuro, 17/11/2026): --brand-text é o verde
+     p/ TEXTO sobre superfícies (no claro = o próprio brand; no escuro
+     clareia p/ manter contraste). --brand/--brand-dark NÃO mudam no
+     escuro: são fundos de botão/chip com texto branco por cima. */
+  --brand-text: #0b6e4f;
+  --topbar-bg: rgba(255, 255, 255, 0.92);
+  --ok-bg: #eef8f2;
+  --ok-border: #bfe6d2;
+}
+
+/* Tema escuro (pedido do usuário, 17/11/2026): mesmas superfícies,
+   verde da marca preservado nos fundos com texto branco; o que muda
+   é fundo/cartão/borda/texto e o verde de texto, que clareia. O telão
+   e o hero da home já são escuros por desenho e não mudam. */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b100e;
+  --card: #151d19;
+  --text: #e9f0ec;
+  --muted: #9db3a8;
+  --border: #27352e;
+  --warn-bg: #3a2a10;
+  --warn-text: #f5c56b;
+  --warn-border: #6b5316;
+  --error-bg: #3d1a1a;
+  --error-text: #f3a3a3;
+  --error-border: #7a3535;
+  --brand-tint: #12291f;
+  --brand-text: #4cc38a;
+  --ink: #f2f6f3;
+  --topbar-bg: rgba(11, 16, 14, 0.92);
+  --ok-bg: #10231a;
+  --ok-border: #1e5b41;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 6px 16px -6px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 ::selection { background: #bfe6d2; }
@@ -43,7 +81,7 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; color: var(--ink); }
 h1, h2 { font-family: var(--font-display), var(--font-inter), system-ui, sans-serif; font-weight: 600; letter-spacing: -0.015em; }
 .topbar .logo { font-family: var(--font-display), var(--font-inter), system-ui, sans-serif; }
 
-a { color: var(--brand); }
+a { color: var(--brand-text); }
 
 .container {
   max-width: 960px;
@@ -63,7 +101,7 @@ a { color: var(--brand); }
      o respiro em cima (e nas laterais) impede a topbar de ficar
      escondida atrás dele. */
   padding: calc(12px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--topbar-bg);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
 }
@@ -124,6 +162,26 @@ a { color: var(--brand); }
 }
 .btn.small { padding: 8px 14px; min-height: 44px; font-size: 0.95rem; }
 
+/* Botão de tema claro/escuro: sempre visível na topbar, mesmo
+   formato do hambúrguer. O margin-left:auto empurra ele (e o que
+   vem depois: hambúrguer + nav) p/ a direita da topbar. */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-left: auto;
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+}
+.theme-toggle svg { width: 21px; height: 21px; }
+.theme-toggle:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
 /* Menu hambúrguer no mobile (pedido do usuário, 17/11/2026): até
    720 px a navegação da topbar sai da linha e vira um painel que
    abre pelo botão — links em linhas cheias de 48 px, fáceis de
@@ -138,10 +196,11 @@ a { color: var(--brand); }
     justify-content: center;
     width: 44px;
     height: 44px;
-    margin-left: auto;
+    /* Sem margin-left aqui: quem empurra o grupo p/ a direita é o
+       margin-left:auto do .theme-toggle, que vem antes no DOM. */
     border: 1px solid var(--border);
     border-radius: 10px;
-    background: #fff;
+    background: var(--card);
     color: var(--ink);
     cursor: pointer;
   }
@@ -172,7 +231,7 @@ a { color: var(--brand); }
 .admin-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 20px 0 16px; }
 .admin-tab {
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--card);
   color: var(--ink);
   border-radius: 999px;
   padding: 9px 16px;
@@ -180,7 +239,7 @@ a { color: var(--brand); }
   cursor: pointer;
   min-height: 44px;
 }
-.admin-tab.is-active { background: var(--brand); border-color: var(--brand); color: #fff; }
+.admin-tab.is-active { background: var(--brand); border-color: var(--brand-text); color: #fff; }
 .roster-form { margin-bottom: 20px; }
 .roster-form h2 { margin-top: 0; font-size: 1.15rem; }
 .form-grid {
@@ -213,11 +272,11 @@ a { color: var(--brand); }
   border-radius: 6px;
   padding: 2px 8px;
   background: var(--brand-tint);
-  color: var(--brand-dark);
+  color: var(--brand-text);
   vertical-align: middle;
 }
-.badge.off { background: #eceff2; color: var(--muted); }
-.badge.danger { background: #fdecec; color: #a11; }
+.badge.off { background: var(--border); color: var(--muted); }
+.badge.danger { background: var(--error-bg); color: var(--error-text); }
 .student-tutors {
   padding: 4px 4px 16px;
 }
@@ -231,7 +290,7 @@ a { color: var(--brand); }
   flex-wrap: wrap;
   margin-top: 10px;
 }
-.entry-actions .chip.ok { background: var(--brand-tint); color: var(--brand-dark); font-weight: 700; }
+.entry-actions .chip.ok { background: var(--brand-tint); color: var(--brand-text); font-weight: 700; }
 .qr-form { display: flex; gap: 8px; flex-wrap: wrap; width: 100%; margin-top: 4px; }
 .qr-form input {
   flex: 1 1 220px;
@@ -241,14 +300,14 @@ a { color: var(--brand); }
   font: inherit;
   min-height: 44px;
 }
-.queue-item-error { color: #a11; font-size: 0.9rem; font-weight: 600; width: 100%; }
+.queue-item-error { color: var(--error-text); font-size: 0.9rem; font-weight: 600; width: 100%; }
 textarea {
   width: 100%;
   border: 1.5px solid var(--border);
   border-radius: 10px;
   padding: 12px 14px;
   font: inherit;
-  background: #fff;
+  background: var(--card);
 }
 select {
   width: 100%;
@@ -256,7 +315,7 @@ select {
   border-radius: 10px;
   padding: 12px 14px;
   font: inherit;
-  background: #fff;
+  background: var(--card);
   min-height: 48px;
 }
 .topbar nav a { text-decoration: none; font-weight: 600; }
@@ -294,7 +353,7 @@ select {
 .btn:disabled { opacity: 0.6; cursor: wait; }
 .btn.secondary {
   background: var(--card);
-  color: var(--brand);
+  color: var(--brand-text);
   border: 1px solid var(--brand);
 }
 
@@ -315,12 +374,12 @@ input {
   border: 1px solid var(--border);
   border-radius: 10px;
   font-size: 1rem;
-  background: #fff;
+  background: var(--card);
   color: var(--text);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 input:focus {
-  border-color: var(--brand);
+  border-color: var(--brand-text);
   box-shadow: 0 0 0 3px rgba(11, 110, 79, 0.15);
   outline: none;
 }
@@ -333,7 +392,7 @@ input:focus {
 }
 .alert.error { background: var(--error-bg); color: var(--error-text); }
 .alert.warn { background: var(--warn-bg); color: var(--warn-text); }
-.alert.ok { background: #e6f4ec; color: var(--ok); }
+.alert.ok { background: var(--brand-tint); color: var(--ok); }
 
 .muted { color: var(--muted); }
 
@@ -370,7 +429,7 @@ input:focus {
 .state-icon {
   display: inline-flex; align-items: center; justify-content: center;
   width: 52px; height: 52px; border-radius: 50%;
-  background: var(--brand-tint); color: var(--brand-dark); margin-bottom: 12px;
+  background: var(--brand-tint); color: var(--brand-text); margin-bottom: 12px;
 }
 .state-title {
   font-family: var(--font-display), var(--font-inter), system-ui, sans-serif;
@@ -380,10 +439,10 @@ input:focus {
 .state-action { margin-top: 16px; }
 .state-error {
   background: var(--error-bg);
-  border: 1px solid #f3c2c2;
+  border: 1px solid var(--error-border);
   border-radius: var(--radius);
 }
-.state-error .state-icon { background: #f8d7d7; color: var(--error-text); }
+.state-error .state-icon { background: var(--error-bg); color: var(--error-text); }
 
 /* 404 da marca (ciclo UI 9): a página é só o `.state` centrado, com
    respiro vertical p/ não colar na topbar nem no rodapé; as duas
@@ -487,7 +546,7 @@ input:focus {
 .calculator input { max-width: 220px; }
 .calc-result {
   font-size: 1.15rem;
-  background: #e6f4ec;
+  background: var(--brand-tint);
   border-radius: 10px;
   padding: 14px;
 }
@@ -753,6 +812,8 @@ input:focus {
 }
 .hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; }
 .btn-hero {
+  /* Botão branco sobre o hero verde-escuro: branco e verde-escuro nos
+     DOIS temas (não segue --card/--brand-text de propósito). */
   background: #fff;
   color: var(--brand-dark);
   padding: 14px 22px;
@@ -880,7 +941,7 @@ input:focus {
 .step-n {
   display: block;
   font-family: var(--font-display), var(--font-inter), system-ui, sans-serif;
-  color: var(--brand);
+  color: var(--brand-text);
   font-weight: 600;
   font-size: 1.9rem;
   line-height: 1;
@@ -915,7 +976,7 @@ input:focus {
   height: 46px;
   border-radius: 12px;
   background: var(--brand-tint);
-  color: var(--brand-dark);
+  color: var(--brand-text);
 }
 .icon-chip svg { width: 24px; height: 24px; }
 
@@ -931,7 +992,7 @@ input:focus {
   padding: 20px 0;
   border-top: 1px solid var(--border);
 }
-.feature-row .f-icon { flex: 0 0 auto; color: var(--brand-dark); margin-top: 2px; }
+.feature-row .f-icon { flex: 0 0 auto; color: var(--brand-text); margin-top: 2px; }
 .feature-row .f-icon svg { width: 22px; height: 22px; display: block; }
 .feature-row h3 { margin: 0 0 4px; font-size: 1.05rem; }
 .feature-row p { margin: 0; }
@@ -949,16 +1010,16 @@ input:focus {
   color: var(--ink);
 }
 .quick-link:hover { background: var(--brand-tint); }
-.quick-link .q-icon { display: inline-flex; color: var(--brand-dark); }
+.quick-link .q-icon { display: inline-flex; color: var(--brand-text); }
 .quick-link .q-icon svg { width: 22px; height: 22px; }
 .quick-link h3 { margin: 0; font-size: 1.05rem; }
 .quick-link p { margin: 2px 0 0; }
-.quick-link .q-arrow { margin-left: auto; color: var(--brand); font-weight: 600; font-size: 1.15rem; }
+.quick-link .q-arrow { margin-left: auto; color: var(--brand-text); font-weight: 600; font-size: 1.15rem; }
 
 .cta-band {
   /* Chapado (unslop, passada de cor): sem gradiente decorativo. */
-  background: #eef7f1;
-  border: 1px solid #d3e7da;
+  background: var(--ok-bg);
+  border: 1px solid var(--ok-border);
   border-radius: 18px;
   padding: 34px 26px;
   text-align: center;
@@ -1074,7 +1135,7 @@ input:focus {
   height: 64px;
   border-radius: 50%;
   background: var(--brand-tint);
-  color: var(--brand-dark);
+  color: var(--brand-text);
   margin-bottom: 12px;
 }
 .auth-success-icon svg { width: 32px; height: 32px; }
@@ -1100,11 +1161,11 @@ input:focus {
   font-size: 0.95rem;
 }
 .conn-pill .status-dot { margin-right: 0; }
-.conn-pill.is-live { background: var(--brand-tint); border-color: #bfe6d2; color: var(--brand-dark); }
+.conn-pill.is-live { background: var(--brand-tint); border-color: var(--ok-border); color: var(--brand-text); }
 .conn-pill.is-live .status-dot { background: var(--ok); }
-.conn-pill.is-wait { background: var(--warn-bg); border-color: #f3ddb0; color: var(--warn-text); }
+.conn-pill.is-wait { background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-text); }
 .conn-pill.is-wait .status-dot { background: #d99a00; }
-.conn-pill.is-off { background: var(--error-bg); border-color: #f3c2c2; color: var(--error-text); }
+.conn-pill.is-off { background: var(--error-bg); border-color: var(--error-border); color: var(--error-text); }
 .conn-pill.is-off .status-dot { background: #c0392b; }
 
 .queue-summary {
@@ -1130,8 +1191,8 @@ input:focus {
   color: var(--ink);
 }
 .queue-stat span { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
-.queue-stat.is-ready { border-color: #bfe6d2; background: #eef8f2; }
-.queue-stat.is-ready strong { color: var(--brand-dark); }
+.queue-stat.is-ready { border-color: var(--ok-border); background: var(--ok-bg); }
+.queue-stat.is-ready strong { color: var(--brand-text); }
 
 .queue-section-head {
   display: flex;
@@ -1154,8 +1215,8 @@ input:focus {
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
-.queue-section.is-ready { border: 1.5px solid #bfe6d2; }
-.queue-section.is-ready .count-badge { background: var(--brand); border-color: var(--brand); color: #fff; }
+.queue-section.is-ready { border: 1.5px solid var(--ok-border); }
+.queue-section.is-ready .count-badge { background: var(--brand); border-color: var(--brand-text); color: #fff; }
 
 .queue-list li { align-items: center; padding: 14px 4px; }
 .queue-pos {
@@ -1172,7 +1233,7 @@ input:focus {
   font-variant-numeric: tabular-nums;
   color: var(--muted);
 }
-.queue-section.is-ready .queue-pos { background: var(--brand-tint); border-color: #bfe6d2; color: var(--brand-dark); }
+.queue-section.is-ready .queue-pos { background: var(--brand-tint); border-color: var(--ok-border); color: var(--brand-text); }
 .queue-main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .queue-list .name { font-size: 1.08rem; }
 .queue-chips { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -1188,7 +1249,7 @@ input:focus {
   font-weight: 600;
   white-space: nowrap;
 }
-.chip.eta { font-variant-numeric: tabular-nums; color: var(--brand-dark); border-color: #bfe6d2; background: var(--brand-tint); }
+.chip.eta { font-variant-numeric: tabular-nums; color: var(--brand-text); border-color: var(--ok-border); background: var(--brand-tint); }
 
 .queue-actions { display: flex; justify-content: center; margin: 4px 0 0; }
 .queue-actions .btn { min-height: 48px; }

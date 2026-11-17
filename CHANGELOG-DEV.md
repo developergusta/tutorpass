@@ -1,3 +1,42 @@
+## 2026-11-17 18:47 — Tema claro e tema escuro (pedido do usuário)
+
+**Pedido** — "faz um tema escuro e tema claro".
+
+**Como funciona**
+- Botão sol/lua na topbar (44 px, sempre visível, ao lado do
+  hambúrguer no mobile). A escolha fica salva no aparelho
+  (localStorage `tutorpass.theme`); sem escolha, vale o
+  `prefers-color-scheme` do sistema.
+- Script `beforeInteractive` no layout aplica o tema no `<html
+  data-theme>` ANTES da primeira pintura — nada de clarão branco
+  p/ quem usa o escuro. `suppressHydrationWarning` no html pelo
+  atributo injetado.
+- `components/ThemeToggle.tsx` lê o estado do `<html>` e alterna.
+
+**Implementação (só tokens, sem reescrever telas)**
+- Bloco `[data-theme="dark"]` em `globals.css` sobrescreve os
+  tokens: fundo #0b100e, cartão #151d19, texto #e9f0ec, borda
+  #27352e, tint escuro, sombras mais fortes e `color-scheme: dark`
+  (controles e rolagem acompanham).
+- Token novo `--brand-text`: no claro é o verde da marca; no
+  escuro, #4cc38a (legível sobre superfícies escuras). `--brand` e
+  `--brand-dark` NÃO mudam: são fundos de botão/chip com texto
+  branco — o contraste deles já funciona nos dois temas.
+- Superfícies que estavam em hex fixo viraram token: topbar
+  (--topbar-bg), inputs/select/admin-tab/nav-toggle (--card),
+  cta-band e estados "pronto" (--ok-bg/--ok-border), pills de
+  conexão e estado de erro (--warn-border/--error-border/
+  --error-bg/--error-text), badge.off (--border).
+- Exceções de propósito: o botão branco do hero (.btn-hero) segue
+  branco com texto verde-escuro nos dois temas (o hero já é
+  escuro por desenho), e o telão inteiro não muda (é painel de TV,
+  escuro por desenho).
+
+**Verificação** — `next build` OK (15 páginas). Varredura de hex
+restante fora dos trechos telão/hero: só brancos sobre a marca,
+o ponto cinza de status e a seleção de texto — todos corretos nos
+dois temas. Conferência visual final fica com o usuário.
+
 ## 2026-11-17 18:41 — Menu hambúrguer no mobile (pedido do usuário)
 
 **Pedido** — "o topo tem q ser um menu hamburguer no mobile".
