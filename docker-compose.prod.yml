@@ -37,6 +37,10 @@ services:
       QR_TOKEN_SECRET: "${QR_TOKEN_SECRET:?defina QR_TOKEN_SECRET no .env.production}"
       QR_WINDOW_SECONDS: "30"
       CORS_ORIGINS: "${PUBLIC_ORIGIN:?defina PUBLIC_ORIGIN no .env.production}"
+      # Alerta da portaria via ntfy (rede interna; o token é o do usuário
+      # publicador "api", criado no servidor — ver docs/05-deploy-vps.md).
+      NTFY_BASE_URL: "http://ntfy:80"
+      NTFY_TOKEN: "${NTFY_TOKEN:-}"
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_started }
@@ -129,7 +133,9 @@ services:
       BACKUP_KEEP_DAYS: "7"
       BACKUP_KEEP_WEEKS: "4"
       BACKUP_KEEP_MONTHS: "6"
-    volumes: [db_backups:/db/data/backups]
+    # A imagem atual (v0.0.11, Go) grava em /backups (daily/weekly/monthly) —
+    # o volume precisa montar aí, não no caminho antigo /db/data/backups.
+    volumes: [db_backups:/backups]
     depends_on:
       postgres: { condition: service_healthy }
     restart: unless-stopped

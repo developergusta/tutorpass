@@ -1,3 +1,43 @@
+## 2026-11-17 15:01–15:20 — Kit essencial open-source no VPS + alerta da portaria via ntfy
+
+**Contexto** — o usuário pediu serviços open-source via Docker p/ dar um
+gás na aplicação e aprovou o "kit essencial". No meio, perguntou se o
+ntfy poderia avisar o celular de quem fica na portaria quando o tutor vem
+buscar — virou feature no mesmo pacote.
+
+**Infra (docker-compose.prod.yml, 10 containers no total)**
+- **Uptime Kuma** (:3001, login próprio) — monitoramento do site/API.
+- **Umami** (:3002, banco `umami` no Postgres atual) — analytics sem
+  cookies; senha do admin trocada da padrão e site "TutorPass"
+  cadastrado; script de medição entrou no `layout.tsx` do web.
+- **ntfy** (:2586) — push self-hosted com `auth-default-access: deny-all`,
+  upstream p/ iOS ligado; usuários `gustavo` (admin) e `api` (publicador,
+  ACL write-only em `tutorpass-*`, token no `.env.production` do
+  servidor); publicação de teste no tópico `tutorpass-alertas` OK.
+  Credenciais geradas ficam em `/root/.kit-credentials` (600) no VPS.
+- **Dozzle** — logs ao vivo SEM porta pública: rota `/dozzle` no Caddy
+  atrás de basic_auth (bcrypt gerado no servidor). Pegadinha registrada:
+  o Caddy não recarrega o Caddyfile quando o compose só sobe serviços
+  novos — precisou de restart do container.
+- **Backup do Postgres** (`postgres-backup-local`, diário, retenção
+  7d/4sem/6m) — pegadinha registrada: a imagem atual (v0.0.11) grava em
+  `/backups`, não em `/db/data/backups`; o volume foi corrigido e um
+  backup manual de prova foi gerado com sucesso.
+
+**Produto — GateAlertService (`modules/gate-alerts`, novo)**
+- A API publica no ttfy ao `PickupService.join`: tópico
+  `tutorpass-<schoolId>-portaria`, título "Portaria — tutor chegou",
+  corpo enxuto SEM nomes (LGPD: "Tutor entrou na fila de retirada ·
+  <portão>") — o detalhe fica nas telas internas. Publicação
+  fire-and-forget que nunca lança nem atrasa a fila; sem `NTFY_BASE_URL`,
+  o serviço nasce desligado. Compose da API ganhou `NTFY_BASE_URL`/
+  `NTFY_TOKEN`. O celular da portaria assina o tópico da escola no app
+  ntfy (Android pleno; iOS via relay).
+
+**Verificação** — suíte da API e `next build` (rodar antes do push);
+prova ao vivo do join → ntfy depende de uma escola real na API (junto do
+teste do cadastro, pendente de aprovação do usuário).
+
 ## 2026-11-17 14:22–14:40 — Cadastro completo (pedido do usuário) + telão com design único
 
 **Contexto** — o usuário perguntou como alguém se cadastra e a checagem
@@ -48,6 +88,117 @@ deploy registrado abaixo nesta entrada quando concluído.
 **Próximo** — rotina de UI retoma (fila: login → portaria → planos →
 estados vazios/erro → mobile). Step 2 restante: persistir roster
 completo, pickup, refresh tokens e 2FA.
+
+## 2026-11-17 13:54–14:29 — Sinalizar saída não reconhecida (ciclo 30)
+
+**Pesquisa do ciclo (frente c — UX/design de painéis e apps de fila)**
+- **NIS Dismissal (Dubai, 2024, 784 alunos, 3 zonas)**: "uma exceção trava
+  a fila inteira" era o problema — um veículo não cadastrado parava todas
+  as famílias atrás dele; a correção foi o registro paralelo (a fila
+  continua enquanto a exceção é resolvida à parte). É o princípio aplicado
+  na implementação: contestar uma saída NUNCA trava a portaria nem reverte
+  a liberação — corre em paralelo, via incidente + fila do DPO.
+- **Technothera Smart Dismissal (2026)**: 4 interfaces sincronizadas, selo
+  ARRIVED que pulsa em todas as telas e contagem regressiva por pedido —
+  o refinamento é o mesmo padrão p/ a contestação (badge "CONTESTADA"
+  pulsante no painel e no telão, fase 2 deste item).
+- **Positive Proof — alerta de guarda/restrição (2026)**: os tribunais NÃO
+  avisam a escola quando a guarda muda; a lista de quem pode buscar fica
+  desatualizada mais rápido que o papel acompanha, e houve condenação por
+  liberar p/ pessoa não autorizada. A resposta é o alerta no ponto de
+  contato, antes da liberação — o nosso bloqueio é por aluno, não por
+  pessoa: promovido ao BACKLOG como próxima candidata (Impacto 4, Esforço 3).
+- **School'sOut (pesquisa UX)**: o responsável compartilha o código com um
+  familiar p/ autorizar a retirada — valida a nossa autorização temporária
+  + tag impressa.
+- Achados novos registrados em `docs/product/IDEAS.md` (seção frente c,
+  ciclo 30); promovido ao BACKLOG: **alerta de guarda/restrição na
+  portaria** (Impacto 4, Esforço 3). A ideia implementada foi a do BACKLOG:
+  **sinalizar saída não reconhecida** (Impacto 4, Esforço 2 — Elo Saída,
+  ciclo 29).
+
+**O que foi feito**
+- **UnrecognizedReleaseService** (`apps/api/src/modules/disputes/release-dispute.service.ts`,
+  novo): o tutor contesta um evento RELEASED do PickupLog em até 24 h após
+  a liberação (`DISPUTE_WINDOW_HOURS`), com snapshot da saída (quem
+  retirou, hora, portão — só ids e hora, nunca nome/foto). Contestar ABRE
+  um incidente de segurança (`UNAUTHORIZED_ACCESS`, risco relevante, 1
+  titular afetado — o relógio ANPD de 3 dias úteis começa). 1 contestação
+  por liberação, para sempre (409 na segunda). Apuração pela escola
+  (`resolve`): LEGITIMATE (engano — era autorizado) ou UNRECOGNIZED
+  (confirmado — a contestação escala e o incidente segue aberto p/ o DPO),
+  com nota obrigatória que vai p/ o incidente. `listOpenForSchool` é a
+  fila da secretaria/DPO; `addNote` p/ o andamento; log append-only com
+  hash encadeado por contestação + `verifyChain`. A contestação NÃO trava
+  a fila nem reverte a liberação. `DisputesModule` exporta o serviço;
+  README do módulo e `docs/01-arquitetura.md` atualizados.
+- **Controller REST** (`disputes.controller.ts`, novo):
+  `/api/disputes/schools/:schoolId/*` com JwtAuthGuard + TenantGuard +
+  @Roles — 8 rotas: report (TUTOR), open, get, notes, events e
+  verify-chain (ADMIN/COORDINATOR), students/:studentId/release-disputes
+  (TUTOR + staff); 3 DTOs com class-validator.
+- **Schema Prisma** (`apps/api/prisma/schema.prisma`): enum
+  `ReleaseDisputeStatus` + modelos `ReleaseDispute` (com
+  `releaseLogId @unique` — 1 contestação por liberação) e
+  `ReleaseDisputeEvent`, com os campos opostos em `School`/`Student`;
+  `prisma validate`: **schema válido**.
+
+**Arquivos alterados**
+- `apps/api/src/modules/disputes/release-dispute.service.ts` (novo)
+- `apps/api/src/modules/disputes/release-dispute.service.spec.ts` (novo, 16 testes)
+- `apps/api/src/modules/disputes/disputes.controller.ts` (novo)
+- `apps/api/src/modules/disputes/disputes.controller.spec.ts` (novo, 6 testes)
+- `apps/api/src/modules/disputes/dto/*.dto.ts` (novos, 3 DTOs)
+- `apps/api/src/modules/disputes/disputes.module.ts` (novo)
+- `apps/api/src/modules/disputes/README.md` (novo)
+- `apps/api/src/app.module.ts` (+ DisputesModule)
+- `apps/api/src/app.module.spec.ts` (+ resolve UnrecognizedReleaseService)
+- `apps/api/prisma/schema.prisma` (+ `ReleaseDispute`, `ReleaseDisputeEvent`, enum, campos opostos)
+- `docs/01-arquitetura.md` (linha do módulo disputes)
+- `docs/product/IDEAS.md` (seção frente c, ciclo 30), `BACKLOG.md`
+
+**Verificação**
+- `node node_modules/jest/bin/jest.js --config jest.config.js` na API:
+  **37 suítes, 489/489 testes passando** (467 anteriores + 22 novos:
+  contestação com snapshot + incidente, log não-RELEASED, log
+  desconhecido/outro aluno, janela de 24 h (dentro e fora), duplicata
+  409, motivo > 500, resolve LEGITIMATE/UNRECOGNIZED, apuração de
+  contestação fechada, nota vazia, resultado inválido, anotações, fila
+  da secretaria, cadeia adulterada → verify-chain false; controller:
+  fluxo completo, 404, 409, resolve com resolvedBy do token, notas).
+  Sem regressão.
+- `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit`:
+  **exit 0, sem erros**.
+- **Reverificação após a mescla com o fio principal (14:31)**: o trabalho
+  "Cadastro completo" (SchoolsModule, POST /schools) entrou na árvore
+  depois da 1ª verificação — suíte rodada de novo sobre a árvore mesclada:
+  **40 suítes, 495/495 testes passando** (489 + 6 novos do outro fio),
+  `tsc --noEmit` limpo. Nenhum conflito com o DisputesModule (os dois
+  módulos coexistem no AppModule).
+- `prisma validate` (via `pnpm dlx prisma@5.22.0`, com `DATABASE_URL`
+  fictício só p/ a validação): **schema válido**. A 1ª validação achou 1
+  erro real meu — faltava o campo oposto `releaseDisputes` em `Student`
+  — corrigido antes de fechar o ciclo.
+- Limitação: sem Postgres nem Redis ao vivo neste sandbox (sem docker),
+  então não houve boot real da API nem migração — a persistência Prisma
+  (troca do store in-memory) continua sendo Step 2.
+
+**Observação — ciclo UI paralelo**: enquanto este ciclo rodava, outro
+processo executou o "Ciclo UI 1" (14:07–14:15, pedido do usuário,
+redesign da home + base visual em `apps/web` apenas) e atualizou o cron
+p/ os próximos ciclos seguirem a linha de UI/UX. Este ciclo seguiu o
+procedimento padrão do corpo da tarefa (a candidata do BACKLOG), e o
+trabalho de UI não tocou a API — a verificação acima continua válida.
+
+**Próximo item sugerido**: **alerta de guarda/restrição na portaria**
+(Impacto 4, Esforço 3 — novo, ciclo 30: bloqueio por pessoa + sinal na
+validação do QR quando alguém com restrição tenta retirar) ou **login de
+tutor por SMS** (Impacto 4, Esforço 3) ou **código de conexão do
+responsável por QR** (Impacto 3, Esforço 2) — ressalva: o cron foi
+redirecionado p/ UI/UX no Ciclo UI 1; se a linha de UI continuar, o
+próximo ciclo é o da fila UI (login, portaria, telão, planos).
+
+---
 
 ## 2026-11-17 14:07–14:15 — Ciclo UI 1 (pedido do usuário): redesign da home + base visual
 

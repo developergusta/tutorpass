@@ -7,6 +7,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { createHash } from 'crypto';
+import { GateAlertService } from '../gate-alerts/gate-alert.service';
 import { QrTokenService } from '../qr/qr-token.service';
 
 // Núcleo do Step 2 — fila de retirada da portaria (REST pickup):
@@ -170,9 +171,12 @@ export class PickupService {
   private logCounter = 0;
 
   // @Optional: fora do Nest (teste com `new`) o QR pode ser injetado à mão;
-  // sem ele, validateQr recusa com erro claro em vez de quebrar.
+  // sem ele, validateQr recusa com erro claro em vez de quebrar. O alerta da
+  // portaria (ntfy) é igualmente opcional: sem ele (ou desligado), o join
+  // segue só com a fila/realtime.
   constructor(
     @Optional() @Inject(QrTokenService) private readonly qr?: QrTokenService,
+    @Optional() @Inject(GateAlertService) private readonly gateAlerts?: GateAlertService,
   ) {}
 
   /** Entrada na fila — manual (portaria) ou automática (geofence / QR do portão). */
@@ -222,6 +226,9 @@ export class PickupService {
       authorizationId: entry.authorizationId,
       gate: entry.gate,
     });
+    // Apita o celular da portaria (ntfy) — fire-and-forget: o serviço nunca
+    // lança e a fila não espera a rede p/ responder ao tutor.
+    void this.gateAlerts?.tutorJoinedQueue(entry.schoolId, entry.gate);
     return entry;
   }
 

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import Link from 'next/link';
+import Script from 'next/script';
 import type { ReactNode } from 'react';
 import './globals.css';
 
@@ -33,6 +34,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR" className={inter.variable}>
       <body>
+        {/* Umami (analytics próprio, sem cookies — kit essencial 17/11/2026).
+            URL/id da era do IP; com domínio próprio, trocar p/ o subdomínio
+            de analytics. */}
+        <Script
+          async
+          src="http://187.53.122.5:3002/script.js"
+          data-website-id="d5ab136f-d22f-4d49-9c8e-5c0725f52515"
+          strategy="afterInteractive"
+        />
         <header className="topbar">
           <Link className="logo" href="/">
             <span className="logo-mark">
