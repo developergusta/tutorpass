@@ -1,6 +1,6 @@
 # Produção no VPS (Hostinger KVM) — ver docs/05-deploy-vps.md.
 # Uso: cp .env.production.example .env.production (preencher os segredos)
-#      docker compose -f docker-compose.prod.yml up -d --build
+#      docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 # Só o Caddy publica portas (80/443). Postgres, Redis, API e web vivem na
 # rede interna do compose — nada de banco exposto na internet.
 services:
@@ -50,6 +50,9 @@ services:
         NEXT_PUBLIC_API_URL: "${PUBLIC_ORIGIN:?defina PUBLIC_ORIGIN no .env.production}"
     environment:
       NODE_ENV: production
+      # Next standalone escuta no hostname do container sem isto — o
+      # healthcheck em 127.0.0.1:3000 nunca passaria
+      HOSTNAME: "0.0.0.0"
     depends_on: [api]
     restart: unless-stopped
 

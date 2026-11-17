@@ -14,3 +14,18 @@ expurgo LGPD e ao refresh de planos). No Step 2, trocar o store in-memory por
 Prisma (`PickupAuthorization`, já no schema) e exigir, no controller,
 `ConsentService.requireConsent(tutorId, 'DELEGATION_SELFIE')` antes de criar —
 selfie é biométrico e exige consentimento explícito (LGPD art. 14).
+
+## Tag/cartão impresso p/ delegado sem smartphone (17/11/2026)
+
+`PrintedTagService` — o responsável (ou a secretaria) emite a tag p/ o
+delegado que não tem smartphone: código de 6 dígitos + QR com o mesmo
+código (`TUTORPASS-TAG:<schoolId>:<código>`); a portaria digita ou escaneia,
+com a mesma validação nos dois casos. Validade padrão 1 dia (máx. 30),
+uso único por padrão (multiuso dentro da janela p/ a avó da semana toda);
+código único entre as tags ativas da escola; sem sobreposição p/ mesmo
+delegado + aluno; brute-force trava o código após 5 tentativas erradas em
+15 min; recusa na portaria (documento não confere) invalida a tag de vez
+(REFUSED) e devolve `notifyTutorId` p/ avisar o responsável (Step 2);
+`refresh()`/`refreshAll()` marcam EXPIRED. No Step 2, trocar o store
+in-memory por Prisma (`PrintedTag`, já no schema) e guardar só o hash do
+código, como os recovery codes do 2FA.

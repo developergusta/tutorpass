@@ -15,8 +15,8 @@ resolve os 3 — e degrada p/ memória quando o Redis cai, sem quebrar nada.
 | `MemoryEphemeralStore` | `memory-ephemeral-store.ts` | Backend em memória (1 instância), expiração preguiçosa, sem timer. |
 | `RedisEphemeralStore` | `redis-ephemeral-store.ts` | Backend Redis via ioredis (`SET NX EX` atômico). |
 | `ResilientEphemeralStore` | `resilient-ephemeral-store.ts` | Tenta o primário (Redis); se falhar, usa o fallback (memória). |
-| `RedisService` | `redis.service.ts` | Lê `REDIS_URL`, conecta no `onModuleInit` com timeout de 2 s e fail-fast (sem retry infinito). Modos: `disabled` (sem URL) / `memory` (URL sem Redis) / `redis` (conectado). `getStore()` resolve o store a cada chamada — o `onModuleInit` roda depois dos construtores. |
-| `RedisIoAdapter` | `realtime/redis-io.adapter.ts` | Adapter Socket.io (`@socket.io/redis-adapter`, pub/sub) ligado no `main.ts` quando `REDIS_URL` existe e conecta. Sem Redis, segue o adapter em memória. |
+| `RedisService` | `redis.service.ts` | Lê `REDIS_URL`, conecta no `onModuleInit` com timeout de 2 s e fail-fast (sem retry infinito). Modos: `disabled` (sem URL) / `memory` (URL sem Redis) / `redis` (conectado). `getStore()` resolve o store a cada chamada — o `onModuleInit` roda depois dos construtores. `getClient()` expõe o cliente conectado p/ quem precisa de comandos além do `EphemeralStore` (o log em Streams). |
+| `RedisIoAdapter` | `realtime/redis-io.adapter.ts` | Adapter Socket.io (`@socket.io/redis-streams-adapter`, 1 cliente ioredis) ligado no `main.ts` quando `REDIS_URL` existe e conecta — com connection state recovery de 2 min. Sem Redis, segue o adapter em memória. |
 
 ## Quem usa
 
@@ -31,19 +31,21 @@ resolve os 3 — e degrada p/ memória quando o Redis cai, sem quebrar nada.
 - `main.ts` — `RedisIoAdapter` quando o Redis conecta; senão, aviso no
   log e adapter em memória.
 - `GET /api/health` — devolve `redis: disabled | memory | redis`.
+- `EventLogService` — log de eventos por room em Streams (`tutorpass:events:{room}`,
+  `MAXLEN ~ 500`) quando o Redis conecta; ring buffer em memória quando não.
+  Degrada p/ memória de vez se a Stream falhar (ver `realtime/event-log.service.ts`).
 
 ## Multi-instância: o que ainda falta
 
-O adapter clássico move o broadcast entre instâncias, mas **não move o
-estado da aplicação nem suporta connection state recovery** — por isso
-o catch-up continua sendo o `EventLogService` (seq por room). E o
-balanceador precisa de **sessões fixas (sticky sessions)** ou de
-transporte só-websocket no cliente: sem isso o handshake do Socket.io
-(polling) pode cair em instâncias diferentes e dar HTTP 400. Próximo
-passo: o adapter de Redis Streams (`@socket.io/redis-streams-adapter`,
-ainda não instalado), que suporta recovery e retoma o stream sem perder
-pacote quando o Redis cai — ver `docs/product/IDEAS.md`, frente f,
-ciclo 21.
+O adapter de Streams move o broadcast entre instâncias **e** suporta connection
+state recovery (2 min, JWT revalidado) — mas não move o resto do estado da
+aplicação por si só (nonce do QR e geofence já vivem no `RedisService`, e o log
+de eventos agora vive em Streams). O balanceador ainda precisa de **sessões
+fixas (sticky sessions)** ou de transporte só-websocket no cliente: sem isso o
+handshake do Socket.io (polling) pode cair em instâncias diferentes e dar
+HTTP 400 — a verificar no deploy multi-instância (hoje é 1 instância, então
+não bloqueia). Falta também o expurgo de rooms antigas das Streams (job
+diário, Step 2).
 
 ## Local
 

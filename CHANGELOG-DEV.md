@@ -1,3 +1,293 @@
+## 2026-11-17 13:24–13:45 — Exercício de direitos do titular (art. 18/19 LGPD)
+
+**Pesquisa do ciclo (frente b — concorrentes Brasil)**
+- **Elo Saída é concorrente novo (out/2026, elosaida.com.br)**: sistema só
+  de saída em 3 passos — Autorizar (quem busca, por quanto tempo, com foto
+  → QR pass), Verificar (portão confere rosto, documento e placa) e
+  Notificar (alerta instantâneo "Pedro saiu" com hora, portão e pessoa — e
+  o tutor pode sinalizar uma saída NÃO reconhecida). Extras: vans com QR
+  pass, aluno que sai sozinho com permissão agendada, alertas de restrição
+  e offline. Piloto grátis de 30 dias, sem hardware, sem biometria facial
+  obrigatória. É o concorrente mais próximo da nossa tese — e o passo
+  "sinalizar saída não reconhecida" é o refinamento que nos falta.
+- **Inoutchi (atual. 04/11/2026) valida a nossa tag impressa**: token de uso
+  único ou por período, QR ou código de 6 dígitos; recusa invalida o token
+  e avisa o responsável — exatamente PrintedTagService +
+  TemporaryAuthorizationService. O roteiro de implantação deles é de 72 h;
+  o nosso é de 1 dia — velocidade de implantação é o argumento de venda.
+- **GoHome é hardware-pesado** (tags veiculares, RFID, biometria, facial,
+  totem + tela smart; 456.122 alunos controlados): o nosso "sem hardware
+  obrigatório" é o contraponto p/ a escola pequena — frase de venda, não
+  código.
+- **School Guardian virou suíte** (facial, IA p/ brigas, botão de pânico,
+  GPS de ônibus, LPR; usado por Escola Eleva, Colégio Arcádia e Sanfra) —
+  reforça a tese: ser o melhor SÓ em saída. **Agenda Edu adicionou "Saída
+  Inteligente"** (Instituto Dom Barreto, out/2026): o incumbente que já
+  está dentro da escola adiciona a saída como módulo raso — a defesa é
+  profundidade (QR dinâmico, auditoria imutável, fila por proximidade).
+- Achados novos registrados em `docs/product/IDEAS.md` (seção frente b,
+  ciclo 29), incl. a ideia nova **sinalizar saída não reconhecida**
+  (Impacto 4, Esforço 2 — próxima candidata). A ideia implementada foi a
+  do BACKLOG: **exercício de direitos do titular (art. 18)** (Impacto 4,
+  Esforço 3).
+
+**O que foi feito**
+- **DataSubjectRequestService** (`apps/api/src/modules/data-subject-requests/data-subject-request.service.ts`,
+  novo): exercício dos direitos do art. 18 pelo painel do admin — 8 tipos
+  (ACCESS, CORRECTION, ANONYMIZATION, BLOCKING, ERASURE, PORTABILITY,
+  SHARING_INFO, CONSENT_REVOCATION); dois prazos do art. 19 — acesso
+  simplificado IMEDIATO (`provideSimplifiedAccess`, só p/ ACCESS e só
+  depois da identidade verificada; sem ele o ACCESS não pode ser atendido)
+  e declaração completa em 15 dias corridos (`dueAt`); identidade
+  verificada antes de qualquer entrega (OPEN → IDENTITY_VERIFIED →
+  IN_PROGRESS — pedido sem verificação não anda); ERASURE/ANONYMIZATION
+  só aceitam PARTIAL e carregam `retainedByLegalObligation` com as
+  categorias do art. 16 (PickupLog, logs de auditoria, consentimentos e
+  incidentes — nunca apagados); 1 pedido ativo por titular + tipo; nota
+  de atendimento obrigatória (é a resposta ao titular); negação com
+  motivo; cancelamento e anotações; `listOverdue` (fila do DPO) +
+  `listSimplifiedAccessPending` (o "imediato" pendente); log append-only
+  com hash encadeado e `verifyChain`. `DataSubjectRequestsModule` exporta
+  o serviço; README do módulo e `docs/01-arquitetura.md` atualizados.
+- **Controller REST** (`data-subject-request.controller.ts`, novo):
+  `/api/data-subject-requests/schools/:schoolId/*` com JwtAuthGuard +
+  TenantGuard + @Roles — 12 rotas, só ADMIN/COORDINATOR (a escola é a
+  controladora; a portaria não abre nem atende pedidos de direitos), 5
+  DTOs com class-validator.
+- **Schema Prisma** (`apps/api/prisma/schema.prisma`): enums
+  `DataSubjectRequestType` / `DataSubjectType` /
+  `DataSubjectRequestStatus` + modelos `DataSubjectRequest` e
+  `DataSubjectRequestEvent`, com o campo oposto `dataSubjectRequests` em
+  `School`; `prisma validate`: **schema válido**.
+
+**Arquivos alterados**
+- `apps/api/src/modules/data-subject-requests/data-subject-request.service.ts` (novo)
+- `apps/api/src/modules/data-subject-requests/data-subject-request.service.spec.ts` (novo, 21 testes)
+- `apps/api/src/modules/data-subject-requests/data-subject-request.controller.ts` (novo)
+- `apps/api/src/modules/data-subject-requests/data-subject-request.controller.spec.ts` (novo, 6 testes)
+- `apps/api/src/modules/data-subject-requests/data-subject-request.module.ts` (novo)
+- `apps/api/src/modules/data-subject-requests/dto/*.dto.ts` (novos, 5 DTOs)
+- `apps/api/src/modules/data-subject-requests/README.md` (novo)
+- `apps/api/src/app.module.ts` (+ DataSubjectRequestsModule)
+- `apps/api/prisma/schema.prisma` (+ `DataSubjectRequest`, `DataSubjectRequestEvent`, enums, campo oposto)
+- `docs/01-arquitetura.md` (linha do módulo data-subject-requests)
+- `docs/product/IDEAS.md` (seção frente b, ciclo 29; art. 18 marcado como implementado), `BACKLOG.md`
+
+**Verificação**
+- `node node_modules/jest/bin/jest.js --config jest.config.js` na API:
+  **35 suítes, 467/467 testes passando** (440 anteriores + 27 novos:
+  abertura, prazo de 15 dias, duplicata, verificação de identidade,
+  acesso simplificado, atendimento, retenção do art. 16, negação,
+  cancelamento, filas do DPO, cadeia de hash; controller: fluxo completo,
+  ERASURE PARTIAL, filas, negação, log).
+- `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit`:
+  **exit 0, sem erros**.
+- `prisma validate` (binário do store pnpm, `prisma@5.22.0` — o `pnpm`
+  não está no PATH deste sandbox e o `npx` não resolve o pacote):
+  **schema válido**. A 1ª rodada de testes achou 1 erro real meu — o
+  controller usa JwtAuthGuard e o módulo não importava o AuthModule —
+  corrigido antes de fechar o ciclo (padrão dos módulos pickup/onboarding).
+- Limitação: sem Postgres nem Redis ao vivo neste sandbox (sem docker),
+  então não houve boot real da API nem migração — a persistência Prisma
+  (troca do store in-memory) continua sendo Step 2.
+
+**Próximo item sugerido**: **login de tutor por SMS** (Impacto 4, Esforço 3
+— tutores entram por código no celular, sem senha; falta o provedor de
+SMS no Step 2) ou **sinalizar saída não reconhecida** (Impacto 4, Esforço 2
+— novo, ciclo 29: o tutor contesta a saída na notificação e abre um
+incidente) ou **código de conexão do responsável por QR** (Impacto 3,
+Esforço 2 — novo, ciclo 28).
+
+---
+
+## 2026-11-17 12:55–13:03 — Tag/cartão impresso p/ delegado sem smartphone
+
+**Pesquisa do ciclo (frente a — concorrentes internacionais: car tags + LPR)**
+- A car tag é a resposta oficial do PikMyKid p/ quem não tem smartphone
+  (pikmykid.com/parent-support, 2026): "The school will provide you with a
+  car tag... The car tag will have the student's name, teacher, and school
+  dismissal ID" — vai no para-brisa, o staff lê o QR e o delegado anuncia
+  a chegada sem app. Escolas chegam a exigir a tag de todos os motoristas
+  ("IT IS THE SAFEST WAY FOR OUR DISMISSAL TO HAPPEN" — Peck Place,
+  ago/2026). O PickUp Patrol gera e imprime car line tags e bus passes
+  direto na plataforma (pickuppatrol.net).
+- CENTEGIX ampliou a plataforma em 07/10/2026 (wisevoter.com): PikMyKid
+  integrada como "CENTEGIX Dismissal" junto a visitantes, hall passes,
+  alertas vestíveis e reunificação — 18 mi de pessoas, 18 mil locais.
+  Valida a tese: o mercado vai p/ suite de segurança; o TutorPass vence
+  sendo o melhor SÓ em saída.
+- LPR / leitura de placa (PLACA.AI LineCam, placa.ai, out/2026): câmera
+  solar lê a placa, casa com o roster e enfileira o aluno antes do carro
+  chegar — US$ 99/mês por câmera + US$ 949 de hardware; PikMyKid
+  (US$ 3.750/ano) é só software e "não tira o gargalo". No Brasil, o
+  equivalente sem hardware é a nossa tag com código + QR — LPR segue fase 2.
+- Achados novos registrados em `docs/product/IDEAS.md` (seção frente a,
+  ciclo 28), incl. duas ideias novas: **código de conexão do responsável
+  por QR** (Impacto 3, Esforço 2 — próxima candidata) e **reset anual do
+  plano de saída** (Impacto 2, Esforço 1 — detalhe p/ o DismissalPlanService).
+  A ideia implementada foi a do BACKLOG: **tag/cartão impresso**
+  (Impacto 3, Esforço 2).
+
+**O que foi feito**
+- **PrintedTagService** (`apps/api/src/modules/delegations/printed-tag.service.ts`,
+  novo): emissão da tag p/ o delegado — código de 6 dígitos
+  (`crypto.randomInt`) + QR com o mesmo código
+  (`TUTORPASS-TAG:<schoolId>:<código>`); a portaria digita ou escaneia,
+  com a mesma validação nos dois casos (`check` / `checkQrPayload`).
+  Validade padrão 1 dia, máx. 30; uso único por padrão, multiuso dentro
+  da janela; código único entre as tags ativas da escola (sorteio com
+  retry); sem sobreposição p/ mesmo delegado + aluno; anti-brute-force —
+  5 tentativas erradas travam o código por 15 min; recusa na portaria
+  (documento não confere) invalida a tag de vez (REFUSED, com motivo
+  obrigatório) e devolve `notifyTutorId` p/ avisar o responsável (o
+  controller dispara a notificação no Step 2); revogação idempotente;
+  `refresh()`/`refreshAll()` marcam EXPIRED (job diário, junto ao expurgo
+  LGPD); `listActiveForStudent` p/ a portaria. `DelegationsModule` exporta
+  o serviço; README do módulo e `docs/01-arquitetura.md` atualizados.
+- **Schema Prisma** (`apps/api/prisma/schema.prisma`): modelos `PrintedTag`
+  + `PrintedTagStudent` + enum `PrintedTagStatus` (ACTIVE/USED/REVOKED/
+  REFUSED/EXPIRED), com os campos opostos em `School`/`Tutor`/`Student`
+  (`printedTags`); `code` documentado p/ virar hash no Step 2 (como os
+  recovery codes do 2FA).
+
+**Arquivos alterados**
+- `apps/api/src/modules/delegations/printed-tag.service.ts` (novo)
+- `apps/api/src/modules/delegations/printed-tag.service.spec.ts` (novo, 16 testes)
+- `apps/api/src/modules/delegations/delegations.module.ts` (+ provider/export)
+- `apps/api/src/modules/delegations/README.md` (seção da tag)
+- `apps/api/prisma/schema.prisma` (+ `PrintedTag`, `PrintedTagStudent`, `PrintedTagStatus`, campos opostos)
+- `docs/01-arquitetura.md` (linha do módulo delegations)
+- `docs/product/IDEAS.md` (seção frente a, ciclo 28), `BACKLOG.md`
+
+**Verificação**
+- `node node_modules/jest/bin/jest.js --config jest.config.js` na API:
+  **33 suítes, 440/440 testes passando** (424 anteriores + 16 novos: emissão,
+  validação, sobreposição, unicidade do código, uso único/multiuso, QR,
+  recusa, revogação, expiração, brute-force, lista por aluno).
+- `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit`:
+  **exit 0, sem erros**.
+- `prisma validate` (via `pnpm dlx prisma@5.22.0`, com `DATABASE_URL` fictício
+  só p/ a validação): **schema válido**. A 1ª validação achou 3 erros reais
+  meus — faltavam os campos opostos `printedTags` em `School`/`Tutor`/
+  `Student` — corrigidos antes de fechar o ciclo. O `npx prisma` direto não
+  executa neste sandbox ("prisma: not found"); o `pnpm dlx` funciona.
+- Limitação: sem Postgres nem Redis ao vivo neste sandbox (sem docker),
+  então não houve boot real da API nem migração — a persistência Prisma
+  (troca do store in-memory) continua sendo Step 2.
+
+**Próximo item sugerido**: **login de tutor por SMS** (Impacto 4, Esforço 3
+— tutores entram por código no celular, sem senha; falta o provedor de
+SMS no Step 2) ou **exercício de direitos do titular (art. 18)** (Impacto 4,
+Esforço 3 — promovido no ciclo 26) ou **código de conexão do responsável
+por QR** (Impacto 3, Esforço 2 — novo, ciclo 28).
+
+---
+
+## 2026-11-17 12:24–12:44 — EventLog em Redis Streams + connection state recovery
+
+**Pesquisa do ciclo (frente f — tecnologia: Redis Streams + recovery)**
+- O recovery é opt-in e nem sempre funciona (socket.io docs, 2026): o servidor
+  habilita explicitamente (`connectionStateRecovery: { maxDisconnectionDuration }`,
+  default 2 min — nada de `Infinity`); na volta, `socket.recovered` diz se deu
+  certo; passou da janela, o cliente precisa sincronizar por outro caminho —
+  no nosso caso, o catch-up manual (`events.catch_up` + snapshot) continua
+  existindo como fallback, não é substituído pelo recovery.
+- O adapter de Streams guarda sessão + pacotes no Redis (deepwiki, 2026):
+  sessões em `sio:session:{pid}` (MessagePack, TTL = `maxDisconnectionDuration`),
+  replay por `XRANGE` (limite de 100 chamadas); o offset vai anexado a cada
+  pacote — o cliente precisa ter recebido ao menos 1 evento p/ inicializá-lo.
+- `maxLen` do stream do adapter precisa cobrir a janela da sessão (deepwiki/
+  Troubleshooting): se o offset for trimado antes da sessão expirar, o restore
+  falha com "session or offset not found". ioredis >= 5.3.2 suportado (problemas
+  de `GETDEL`/`SET` corrigidos na 0.2.1); usamos a 0.3.1 (latest no npm).
+- Cliente 4.6+ recupera sozinho: nosso web usa socket.io-client 4.7.5 e o
+  servidor 4.8.4 — ok, sem mudança no cliente.
+- Achados registrados em `docs/product/IDEAS.md` (seção frente f, ciclo 27);
+  a ideia implementada foi a do BACKLOG: **EventLog em Redis Streams +
+  connection state recovery** (Impacto 4, Esforço 3 — fase 2 do item Redis).
+
+**O que foi feito**
+- **Adapter trocado** (`apps/api/src/realtime/redis-io.adapter.ts`):
+  `@socket.io/redis-streams-adapter@0.3.1` no lugar do clássico
+  `@socket.io/redis-adapter` (removido das dependências); 1 cliente ioredis
+  em vez de pub+sub (`duplicate()` não é mais necessário); `createIOServer`
+  liga `connectionStateRecovery: { maxDisconnectionDuration: 2 min,
+  skipMiddlewares: false }` quando o Redis conecta — o JWT é revalidado no
+  recovery. Sem Redis, segue o adapter em memória, sem recovery, como antes.
+- **EventLog em Streams** (`event-log.store.ts` novo + `redis-streams-event-log.store.ts` novo):
+  `EventLogStore` com 2 backends — `MemoryEventLogStore` (o ring buffer de 500,
+  extraído sem mudança de comportamento) e `RedisStreamsEventLogStore`
+  (Stream `tutorpass:events:{room}` com `MAXLEN ~ 500`, seq por contador
+  `tutorpass:events:{room}:seq` via script Lua INCR+XADD atômico, p/ duas
+  instâncias não repetirem nem trocarem o seq). `EventLogService` virou async
+  (o `await` antes do emit garante que o seq do envelope é o mesmo que ficou
+  gravado) e resolve o backend na 1ª chamada: com Redis, Streams; sem, memória.
+  Se a Stream falhar, degrada p/ memória **de vez** (nunca mistura os dois
+  backends no mesmo processo — senão o seq dividiria e o catch-up perderia
+  eventos); o Redis voltando só vale no próximo boot. `RedisService.getClient()`
+  novo; `RealtimeModule` importa o `RedisModule`; `RealtimeService` e
+  `PickupGateway.onCatchUp` atualizados p/ o contrato async. Docs: `docs/03`,
+  `docs/01`, README do Redis e `main.ts`.
+- **`pnpm-lock.yaml` gerado**: o projeto não tinha lockfile. O `pnpm install`
+  ligou os pacotes mas o EPERM do `chown` abortou antes de gravar o lockfile;
+  ele foi gerado depois com `pnpm install --lockfile-only` (420 KB, com o
+  adapter 0.3.1 travado e zero referência ao adapter clássico).
+
+**Incidente no meio do ciclo (registrado, sem dano permanente)**: a 1ª tentativa
+de instalar o adapter foi com `npm install` em `apps/api` — o npm não entende
+o layout pnpm do workspace e **apagou arquivos dentro do store** (o `ts-jest`
+perdeu o `dist/` e a suíte parou de rodar: "Preset ts-jest not found"). Lição:
+**nunca usar npm dentro deste workspace — só pnpm**. Recuperação: `pnpm install
+--force` (via `npx -y pnpm@9.12.0`) re-baixou os pacotes danificados e a suíte
+voltou a 418/418 antes de qualquer mudança de código; o `pnpm-lock.yaml` agora
+existe e trava as versões. O `pnpm install` termina com um EPERM num `chown`
+de `jscodeshift` (sempre no mesmo arquivo, depois do "done") — cosmético, não
+impede a instalação nem os testes.
+
+**Arquivos alterados**
+- `apps/api/package.json` (+ `@socket.io/redis-streams-adapter@0.3.1`, − `@socket.io/redis-adapter`)
+- `pnpm-lock.yaml` (novo, gerado)
+- `apps/api/src/realtime/redis-io.adapter.ts` (reescrito: Streams + CSR)
+- `apps/api/src/realtime/redis-io.adapter.spec.ts` (+ janela de 2 min, sem CSR sem Redis)
+- `apps/api/src/realtime/event-log.store.ts` (novo: interface + `MemoryEventLogStore`)
+- `apps/api/src/realtime/redis-streams-event-log.store.ts` (novo)
+- `apps/api/src/realtime/event-log.service.ts` (reescrito: async + backend + degradação)
+- `apps/api/src/realtime/event-log.service.spec.ts` (async + 5 testes novos de Streams/degradação)
+- `apps/api/src/realtime/realtime.service.ts` (emit async)
+- `apps/api/src/realtime/realtime.service.spec.ts` (async)
+- `apps/api/src/realtime/pickup.gateway.ts` (`await` no catch-up)
+- `apps/api/src/realtime/realtime.module.ts` (+ `RedisModule`)
+- `apps/api/src/infra/redis/redis.service.ts` (+ `getClient()`)
+- `apps/api/src/infra/redis/README.md` (adapter + EventLog + o que falta)
+- `apps/api/src/main.ts` (comentário), `docs/01-arquitetura.md`, `docs/03-realtime-geofencing.md`
+- `docs/product/IDEAS.md` (seção frente f, ciclo 27), `BACKLOG.md`
+
+**Verificação**
+- `node node_modules/jest/bin/jest.js --config jest.config.js` na API:
+  **32 suítes, 424/424 testes passando** (418 anteriores + 6 novos:
+  catch-up entre 2 instâncias com store compartilhado, seq que continua na
+  2ª instância, trim com gap na Stream, degradação p/ memória sem quebrar a
+  emissão, janela de recovery 2 min; 1ª rodada: 1 suíte falhou por erro de
+  tipo no adapter — spread de `ServerOptions | undefined` alarga as props;
+  corrigido com cast no objeto já tipado). Sem regressão.
+- `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit`:
+  **exit 0, sem erros**.
+- Smoke: `createAdapter` do pacote novo aceita o cliente ioredis 5.11.1
+  (adaptador criado sem erro; o `Connection is closed` no fim do script é o
+  `disconnect()` do cliente de teste, esperado).
+- Limitação: sem Postgres nem Redis ao vivo neste sandbox (sem docker), então
+  não houve boot real da API nem teste contra Redis de verdade — os testes
+  usam cliente falso; o recovery fim-a-fim (cliente cai 30 s e volta com os
+  pacotes) só se prova com Redis + 2 instâncias no deploy.
+
+**Próximo item sugerido**: **login de tutor por SMS** (Impacto 4, Esforço 3
+— tutores entram por código no celular, sem senha; falta o provedor de
+SMS no Step 2) ou **tag/cartão impresso p/ delegado sem smartphone**
+(Impacto 3, Esforço 2 — com código de 6 dígitos + QR) ou **exercício de
+direitos do titular (art. 18)** (Impacto 4, Esforço 3 — promovido no ciclo 26).
+
+---
+
 ## 2026-11-17 11:59–12:08 — Kit de deploy em VPS pronto (fio de deploy)
 
 **Contexto**: usuário escolheu o caminho VPS (Hostinger KVM 1) em vez do

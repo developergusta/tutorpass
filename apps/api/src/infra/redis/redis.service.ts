@@ -83,6 +83,11 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     return this.memoryStore;
   }
 
+  /** Cliente Redis conectado, ou null (sem URL, inalcançável ou ainda não conectado). */
+  getClient(): Redis | null {
+    return this.mode === 'redis' ? this.client : null;
+  }
+
   /** true = Redis respondeu; false = sem URL ou inalcançável. */
   async ping(timeoutMs = 2000): Promise<boolean> {
     if (!this.url) return false;

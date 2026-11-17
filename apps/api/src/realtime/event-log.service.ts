@@ -1,78 +1,79 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { RedisService } from '../infra/redis/redis.service';
+import {
+  MAX_EVENTS_PER_ROOM,
+  MemoryEventLogStore,
+  type CatchUpResult,
+  type EventLogStore,
+  type SequencedEvent,
+} from './event-log.store';
+import { RedisStreamsEventLogStore } from './redis-streams-event-log.store';
+
+export { MAX_EVENTS_PER_ROOM };
+export type { CatchUpResult, SequencedEvent };
 
 // Log de eventos realtime por room, com sequência monotônica por room.
 // Socket.io é at-most-once por padrão: o que a portaria perde durante uma queda de
 // conexão some para sempre. Com seq por room, o cliente guarda o último seq visto e,
 // ao reconectar, pede `events.catch_up` com ele — o servidor reenvia só o que faltou.
-// Buffer limitado (ring buffer): eventos antigos demais saem do buffer e o catch-up
-// responde hasGap=true — aí o cliente pede snapshot completo (PickupService).
-// Step 2 (parcial, ciclo 21): o adapter Redis clássico já está ligado
-// (RedisIoAdapter no main.ts) e o estado efêmero já é compartilhado
-// (RedisService) — mas o log de eventos em si continua em memória, por
-// instância. O passo seguinte é trocar este store por Redis Streams e
-// ligar o catch-up ao Connection State Recovery do Socket.io 4.6+ via o
-// adapter de Streams (@socket.io/redis-streams-adapter, ainda não
-// instalado) — o adapter clássico não suporta o recovery. Até lá, o
-// catch-up cobre a reconexão do cliente dentro de 1 instância.
-
-export interface SequencedEvent {
-  seq: number; // monotônico por room, começa em 1
-  room: string;
-  type: string; // ex.: 'queue.entry.created'
-  data: unknown;
-  emittedAt: Date;
-}
-
-export interface CatchUpResult {
-  events: SequencedEvent[];
-  hasGap: boolean; // true = parte do que foi pedido já saiu do buffer; pedir snapshot
-  oldestRetainedSeq: number | null; // menor seq ainda no buffer (null = room sem eventos)
-  latestSeq: number; // maior seq da room (0 = sem eventos)
-}
-
-// Teto por room: uma portaria movimentada emite dezenas de eventos por dia; 500 cobre
-// várias horas de saída e mantém a memória limitada (~500 eventos × payload mínimo).
-export const MAX_EVENTS_PER_ROOM = 500;
-
+// Eventos antigos demais saem do log e o catch-up responde hasGap=true — aí o
+// cliente pede snapshot completo (PickupService).
+//
+// Backend (ciclo 27): Redis Streams quando o Redis está conectado — uma
+// Stream por room (`tutorpass:events:{room}`, ver
+// redis-streams-event-log.store.ts) — e ring buffer em memória quando não
+// está (dev sem Redis, ou Redis fora do ar). O backend é resolvido na
+// primeira chamada e, se uma operação na Stream falhar, o serviço degrada
+// p/ memória DE VEZ (flag `degraded`): misturar os dois backends no mesmo
+// processo dividiria o seq da room e o catch-up perderia eventos. Na
+// degradação o log volta a ser por instância — o comportamento de antes
+// desta mudança, nunca pior. O Redis voltando só vale no próximo boot
+// (o RedisService também só conecta no boot).
+//
+// O catch-up manual continua necessário mesmo com o connection state
+// recovery do Socket.io (adapter de Streams, ver redis-io.adapter.ts):
+// o recovery só cobre desconexões de até 2 min e falha quando a sessão
+// expira — o catch-up cobre qualquer janela dentro do log retido.
 @Injectable()
 export class EventLogService {
-  private readonly rooms = new Map<string, { events: SequencedEvent[]; nextSeq: number }>();
+  private readonly logger = new Logger(EventLogService.name);
+  private readonly memoryStore = new MemoryEventLogStore();
+  private streamsStore: RedisStreamsEventLogStore | null = null;
+  private degraded = false;
 
-  append(room: string, type: string, data: unknown): SequencedEvent {
-    let state = this.rooms.get(room);
-    if (!state) {
-      state = { events: [], nextSeq: 1 };
-      this.rooms.set(room, state);
-    }
-    const ev: SequencedEvent = { seq: state.nextSeq++, room, type, data, emittedAt: new Date() };
-    state.events.push(ev);
-    if (state.events.length > MAX_EVENTS_PER_ROOM) state.events.shift();
-    return ev;
+  constructor(@Optional() @Inject(RedisService) private readonly redis?: RedisService) {}
+
+  private resolveStore(): EventLogStore {
+    if (this.degraded) return this.memoryStore;
+    const client = this.redis?.getClient() ?? null;
+    if (!client) return this.memoryStore;
+    if (!this.streamsStore) this.streamsStore = new RedisStreamsEventLogStore(client);
+    return this.streamsStore;
   }
 
-  getSince(room: string, lastSeenSeq: number): CatchUpResult {
-    const state = this.rooms.get(room);
-    if (!state || state.events.length === 0) {
-      return {
-        events: [],
-        hasGap: false,
-        oldestRetainedSeq: null,
-        latestSeq: state ? state.nextSeq - 1 : 0,
-      };
+  private async withFallback<T>(op: (store: EventLogStore) => Promise<T>): Promise<T> {
+    const store = this.resolveStore();
+    if (store === this.memoryStore) return op(store);
+    try {
+      return await op(store);
+    } catch (err) {
+      // Uma falha na Stream não pode quebrar a emissão da fila: degrada
+      // p/ memória e segue — o evento ainda sai no socket.
+      this.degraded = true;
+      this.logger.warn(`EventLog em Streams falhou — degradado p/ memória: ${(err as Error)?.message}`);
+      return op(this.memoryStore);
     }
-    const oldest = state.events[0].seq;
-    // Pediu um seq mais antigo que o buffer retém: parte da história se perdeu.
-    const hasGap = lastSeenSeq < oldest - 1;
-    return {
-      events: state.events.filter((e) => e.seq > lastSeenSeq),
-      hasGap,
-      oldestRetainedSeq: oldest,
-      latestSeq: state.nextSeq - 1,
-    };
   }
 
-  latestSeq(room: string): number {
-    const state = this.rooms.get(room);
-    return state ? state.nextSeq - 1 : 0;
+  append(room: string, type: string, data: unknown): Promise<SequencedEvent> {
+    return this.withFallback((store) => store.append(room, type, data));
+  }
+
+  getSince(room: string, lastSeenSeq: number): Promise<CatchUpResult> {
+    return this.withFallback((store) => store.getSince(room, lastSeenSeq));
+  }
+
+  latestSeq(room: string): Promise<number> {
+    return this.withFallback((store) => store.latestSeq(room));
   }
 }

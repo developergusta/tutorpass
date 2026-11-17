@@ -12,11 +12,12 @@ continua possível (Turbo filtra por app, Docker só da API, Vercel só do web).
 - `schools` — tenant, campi, pontos de retirada, configuração de raio/tempos
 - `students` / `classrooms` — alunos, turmas, matrícula do ano
 - `tutors` — tutores, vínculo tutor↔aluno, veículos
-- `delegations` — autorização temporária de terceiro (selfie, documento, janela de validade)
+- `delegations` — autorização temporária de terceiro (selfie, documento, janela de validade) e tag/cartão impresso p/ delegado sem smartphone (código de 6 dígitos + QR)
+- `data-subject-requests` — exercício de direitos do titular (LGPD arts. 18/19): acesso simplificado imediato + declaração completa em 15 dias, identidade verificada antes de entregar dado, retenção do art. 16 na eliminação
 - `pickup` — máquina de estados da fila e da retirada (núcleo)
 - `qr` — emissão/validação do token dinâmico de 30s
 - `geofencing` — ingestão de localização, haversine, histerese, transição de zona
-- `realtime` — Gateway Socket.io, rooms, snapshot, adapter Redis
+- `realtime` — Gateway Socket.io, rooms, snapshot, adapter Redis Streams
 - `audit` — PickupLog/AuditLog append-only com hash encadeado
 - `reports` — tempo de espera, retiradas/dia, exportação
 

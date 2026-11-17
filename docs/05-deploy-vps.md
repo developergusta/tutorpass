@@ -28,12 +28,14 @@ Tudo sobe com `docker-compose.prod.yml` (5 serviços):
    `cp .env.production.example .env.production` e preencher os 4 segredos
    (`openssl rand -hex 32` p/ cada um) + `SITE_ADDRESS`/`PUBLIC_ORIGIN`
    (IP puro no primeiro boot; domínio depois).
-4. Subir: `docker compose -f docker-compose.prod.yml up -d --build`
+4. Subir: `docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build`
+   (o `--env-file` é obrigatório: sem ele o compose lê `.env`, não
+   `.env.production`, e falha com "required variable ... is missing")
 5. Primeira escola: crie pelo fluxo normal do app (registro) — o seed de
    demonstração se recusa a rodar com `NODE_ENV=production`, de propósito.
    Só p/ um teste rápido no primeiro boot (dados demo, senhas conhecidas —
    nunca numa instância que vá receber escola real):
-   `docker compose -f docker-compose.prod.yml exec -e NODE_ENV=development api npx prisma db seed`
+   `docker compose --env-file .env.production -f docker-compose.prod.yml exec -e NODE_ENV=development api npx prisma db seed`
 6. Conferir: `curl http://127.0.0.1:3333/api/health` (dentro do VPS, via
    rede do compose use `docker compose exec api wget -qO- http://127.0.0.1:3333/api/health`)
    e abrir `http://IP-DO-VPS` no navegador.
@@ -44,16 +46,16 @@ Tudo sobe com `docker-compose.prod.yml` (5 serviços):
 2. No `.env.production`: `SITE_ADDRESS=tutorpass.seudominio.com.br` e
    `PUBLIC_ORIGIN=https://tutorpass.seudominio.com.br`.
 3. Recriar web (a origem pública é embutida no build) e reiniciar o Caddy:
-   `docker compose -f docker-compose.prod.yml up -d --build web caddy`
+   `docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build web caddy`
 4. O Caddy emite o certificado Let's Encrypt sozinho no primeiro acesso.
 
 ## Operação
 
-- Logs: `docker compose -f docker-compose.prod.yml logs -f api`
+- Logs: `docker compose --env-file .env.production -f docker-compose.prod.yml logs -f api`
 - Atualizar p/ uma versão nova do GitHub:
-  `git pull && docker compose -f docker-compose.prod.yml up -d --build`
+  `git pull && docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build`
 - Backup do banco (mínimo):
-  `docker compose -f docker-compose.prod.yml exec postgres pg_dump -U tutorpass tutorpass | gzip > backup-$(date +%F).sql.gz`
+  `docker compose --env-file .env.production -f docker-compose.prod.yml exec postgres pg_dump -U tutorpass tutorpass | gzip > backup-$(date +%F).sql.gz`
   e copiar o arquivo p/ fora do VPS. Automatizar é item de backlog.
 
 ## Segurança mínima

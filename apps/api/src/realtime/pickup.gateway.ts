@@ -37,6 +37,6 @@ export class PickupGateway {
       return { ok: false, error: 'ROOM_NOT_JOINED' };
     }
     const lastSeen = typeof body.lastSeenSeq === 'number' && body.lastSeenSeq >= 0 ? Math.floor(body.lastSeenSeq) : 0;
-    return { ok: true, room, ...this.log.getSince(room, lastSeen) };
+    return { ok: true, room, ...(await this.log.getSince(room, lastSeen)) };
   }
 }

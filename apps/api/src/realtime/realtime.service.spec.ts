@@ -15,12 +15,12 @@ function stubGateway() {
 }
 
 describe('RealtimeService — envelope com seq por room', () => {
-  it('emite { seq, data } e o seq incrementa por room', () => {
+  it('emite { seq, data } e o seq incrementa por room', async () => {
     const { gw, emitted } = stubGateway();
     const svc = new RealtimeService(gw, new EventLogService());
 
-    svc.entryCreated('s1', 'c1', { entryId: 'e1' });
-    svc.entryStatus('s1', 'c1', { entryId: 'e1', status: 'CALLED' });
+    await svc.entryCreated('s1', 'c1', { entryId: 'e1' });
+    await svc.entryStatus('s1', 'c1', { entryId: 'e1', status: 'CALLED' });
 
     // entryCreated: gate + classroom; entryStatus: gate + classroom + admin = 5 emissões.
     expect(emitted).toHaveLength(5);
@@ -34,8 +34,8 @@ describe('RealtimeService — envelope com seq por room', () => {
     expect(classroom[0].payload).toEqual({ seq: 1, data: { entryId: 'e1' } });
   });
 
-  it('sem servidor (gateway ainda não subiu) não quebra', () => {
+  it('sem servidor (gateway ainda não subiu) não quebra', async () => {
     const svc = new RealtimeService({} as any, new EventLogService());
-    expect(() => svc.entryCreated('s1', 'c1', { entryId: 'e1' })).not.toThrow();
+    await expect(svc.entryCreated('s1', 'c1', { entryId: 'e1' })).resolves.not.toThrow();
   });
 });

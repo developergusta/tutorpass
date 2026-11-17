@@ -8,8 +8,9 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.enableCors({ origin: (process.env.CORS_ORIGINS ?? '').split(','), credentials: true });
   // Socket.io multi-instância: com REDIS_URL e Redis alcançável, o
-  // broadcast passa pelo adapter Redis; senão, segue o adapter em
-  // memória (1 instância) — o boot nunca quebra por falta de Redis.
+  // broadcast passa pelo adapter Redis Streams (com connection state
+  // recovery); senão, segue o adapter em memória (1 instância) — o boot
+  // nunca quebra por falta de Redis.
   // Multi-instância exige sticky sessions no balanceador (ver
   // src/infra/redis/README.md).
   const redisUrl = (process.env.REDIS_URL ?? '').trim();

@@ -120,6 +120,8 @@ guias de escala Socket.io/Redis (oneuptime.com, dev.to, ably.com, ago–nov/2026
   já no projeto) não suporta Connection State Recovery do Socket.io 4.6+; os adapters Redis Streams
   e MongoDB suportam. Sem isso, escalar para multi-instância e recuperar sessão são mutuamente
   exclusivos. Impacto 4, Esforço 3 — fase 2 (quando houver 2ª instância da API).
+  ✅ IMPLEMENTADO em 17/11/2026 (ciclo 27: `@socket.io/redis-streams-adapter@0.3.1`,
+  adapter com 1 cliente ioredis + CSR de 2 min; o clássico foi removido das dependências).
 - **Geofence por evento, não rastreamento contínuo**: geofence bem feito custa 1–20% de bateria/dia
   vs 30–40% do GPS contínuo; usar a precisão mais grossa que resolve o problema (significant-change
   fora do raio, alta precisão só dentro da zona APPROACH). iOS limita a 20 geofences/app e Android a
@@ -865,12 +867,16 @@ Zero, Part 8: Pub/Sub and Streams" (2026).
   é o caminho p/ ligar o catch-up do EventLogService ao recovery
   nativo. Impacto 4, Esforço 3 — FASE 2 (próximo item do Step 2:
   trocar o EventLog em memória por Redis Streams + recovery).
+  ✅ IMPLEMENTADO em 17/11/2026 (ciclo 27: adapter trocado + EventLog em Streams + CSR ligado).
 - **Pub/Sub é at-most-once; Streams é log com replay**
   (varcore/primelearnpoint, 2026): o que não pode se perder (auditoria,
   evento de fila) não vai p/ Pub/Sub — vai p/ Stream ou p/ banco.
   Nosso catch-up por seq continua necessário enquanto o EventLog for
   em memória. Impacto — (validação da arquitetura atual, sem ação de
   código neste ciclo).
+  Atualização 17/11/2026 (ciclo 27): o EventLog agora é em Streams — o
+  catch-up continua necessário como fallback do recovery (janela > 2 min
+  ou sessão expirada), não mais como único caminho de volta.
 - **Redis é infra interna confiável, não exposta** (socket.io docs,
   2026): o tráfego do adapter não é assinado nem cifrado — nada de
   segredo ou dado sensível no payload dos eventos. Nossos eventos já
@@ -882,6 +888,51 @@ Zero, Part 8: Pub/Sub and Streams" (2026).
   infinito) + ResilientEphemeralStore (fallback p/ memória) e o
   `main.ts` que nem registra o adapter se o Redis não conectar.
   Impacto 4, Esforço 2 — aplicado.
+
+## Semeado em 17/11/2026 — tecnologia: Redis Streams + connection state recovery (frente f, ciclo 27)
+Fontes: socket.io/docs/v4 "Connection state recovery" (2026); deepwiki
+socket.io-redis-streams-adapter "Connection State Recovery", "Troubleshooting"
+e "API Reference" (2026); nirajiitr.com "How to Secure and Scale Real-Time
+Presence with Socket.io, Redis Streams, and JWT Auth" (2026).
+
+- **Connection state recovery é opt-in e nem sempre funciona** (socket.io
+  docs, 2026): o servidor precisa habilitar explicitamente
+  (`connectionStateRecovery: { maxDisconnectionDuration }`); ao desconectar
+  sem `socket.disconnect()`, guarda id, rooms e `data` do socket; na volta,
+  `socket.recovered` diz se deu certo. A janela deve ser sensata (o default
+  é 2 min — nada de `Infinity`): passou dela, a sessão expirou e o cliente
+  precisa sincronizar por outro caminho. No nosso caso, esse caminho é o
+  catch-up manual (`events.catch_up` + snapshot) — o recovery NÃO o
+  substitui, só cobre a queda curta. Impacto 4, Esforço 3.
+  ✅ IMPLEMENTADO em 17/11/2026 (ciclo 27: adapter de Streams com
+  `maxDisconnectionDuration: 2 min` + `skipMiddlewares: false` — o JWT é
+  revalidado no recovery; catch-up manual mantido como fallback).
+- **O adapter de Streams guarda sessão + pacotes no Redis**
+  (deepwiki, 2026): sessões em `sio:session:{pid}` (MessagePack, TTL =
+  `maxDisconnectionDuration`) e pacotes no Stream; o restore valida o
+  offset (`{timestamp}-{seq}`), dá `GETDEL` na sessão e faz replay por
+  `XRANGE` (limite de 100 chamadas p/ não entrar em loop). O offset vai
+  anexado a cada pacote — o cliente precisa ter recebido ao menos 1 evento
+  p/ inicializar o offset. Impacto — (detalhe de implementação aplicado).
+- **O `maxLen` do stream do adapter precisa cobrir a janela da sessão**
+  (deepwiki/Troubleshooting, 2026): se o stream trima o offset antes da
+  sessão expirar, o restore falha com "session or offset not found" — o
+  default do adapter cobre os 2 min, mas quem afinar o `maxLen` precisa
+  lembrar disso. Redis < 6.2 não suporta range exclusivo; ioredis >= 5.3.2
+  é suportado (problemas de `GETDEL`/`SET` com ioredis corrigidos na 0.2.1;
+  usamos a 0.3.1). Impacto — (regra p/ o deploy, sem código).
+- **Cliente 4.6+ recupera sozinho; servidor antigo, não** (socket.io docs,
+  2026): o recovery exige socket.io >= 4.6 nos dois lados. Nosso web usa
+  socket.io-client 4.7.5 e o servidor 4.8.4 — ok, sem mudança no cliente.
+  Impacto — (checagem de compatibilidade, sem código).
+- **O log de eventos em Streams fecha o ciclo do adapter** (nirajiitr,
+  2026): o adapter move o broadcast com replay, mas o histórico da
+  aplicação (o que a portaria perdeu) continua sendo problema nosso — por
+  isso o EventLog trocou o ring buffer em memória por Stream por room
+  (`XADD` com `MAXLEN ~ 500`, seq por contador via Lua INCR+XADD).
+  Impacto 4, Esforço 3.
+  ✅ IMPLEMENTADO em 17/11/2026 (ciclo 27: `RedisStreamsEventLogStore` +
+  `EventLogService` com degradação p/ memória; ver BACKLOG).
 
 ## Semeado em 17/11/2026 — concorrentes internacionais (frente a, ciclo 22)
 Fontes: staging.pickuproster.com "PikMyKid Alternatives (2026)" (atual.
@@ -1165,6 +1216,126 @@ LGPD arts. 18, 19 e 16.
   art. 16 (logs de auditoria nunca apagados) explícitas na resposta.
   Impacto 4, Esforço 3 — PROMOVIDO ao BACKLOG (próxima candidata após
   login por SMS / tag impressa / Streams).
+  ✅ IMPLEMENTADO em 17/11/2026 (ciclo 29: DataSubjectRequestService +
+  controller REST /api/data-subject-requests/schools/:schoolId/* — 8 tipos
+  de pedido, dois prazos do art. 19 (acesso simplificado imediato +
+  declaração completa em 15 dias corridos), identidade verificada antes de
+  entregar dado, ERASURE/ANONYMIZATION só PARTIAL com retenção do art. 16,
+  log com hash encadeado, filas do DPO listOverdue +
+  listSimplifiedAccessPending; modelos DataSubjectRequest +
+  DataSubjectRequestEvent no schema; ver BACKLOG).
+
+## Semeado em 17/11/2026 — concorrentes internacionais: car tags + LPR (frente a, ciclo 28)
+Fontes: pikmykid.com "Parent App Support" (2026); placa.ai "PikMyKid
+Alternatives for School Dismissal" (atual. out/2026); pickuppatrol.net
+"How It Works"; manisteemariners.org "PikMyKid" (2026); wisevoter.com
+"CENTEGIX Expanded Safety Platform" (07/10/2026); carta de escola usuária
+PikMyKid 2026-2027 (4.files.edl.io).
+
+- **Car tag é a resposta oficial p/ quem não tem smartphone (PikMyKid)**:
+  a página de suporte responde direto "What if the person picking up does
+  NOT have a smartphone? — The school will provide you with a car tag...
+  The car tag will have the student's name, teacher, and school dismissal
+  ID". A tag vai no para-brisa, o staff lê o QR da tag e o delegado anuncia
+  a chegada sem app. Escolas chegam a exigir a tag de TODOS os motoristas
+  ("IT IS THE SAFEST WAY FOR OUR DISMISSAL TO HAPPEN" — Peck Place, ago/2026).
+  O PickUp Patrol gera e imprime as tags (car line tags e bus passes)
+  direto na plataforma. Valida a nossa tag impressa — e o refinamento é o
+  código de 6 dígitos digitável (o QR do PikMyKid exige o staff com o
+  aparelho; o dígito funciona até com a tag amassada ou o QR apagado).
+  Impacto 3, Esforço 2 —
+  ✅ IMPLEMENTADO em 17/11/2026 (ciclo 28: PrintedTagService — código de 6
+  dígitos + QR `TUTORPASS-TAG:<schoolId>:<código>`, validade 1–30 dias, uso
+  único ou multiuso, código único por escola, anti-brute-force 5/15 min,
+  recusa que invalida e avisa o responsável, sem sobreposição; modelos
+  PrintedTag + PrintedTagStudent no schema; ver BACKLOG).
+- **CENTEGIX ampliou a plataforma (07/10/2026)**: PikMyKid integrada como
+  "CENTEGIX Dismissal" junto a visitantes, hall passes, alertas vestíveis
+  e reunificação — 18 mi de pessoas, 18 mil locais, 50 estados. Reforça a
+  tese: o mercado vai p/ suite de segurança; o TutorPass vence sendo o
+  melhor SÓ em saída, não tentando copiar a suite. Impacto — (validação da
+  tese, sem ação de código).
+- **LPR / leitura de placa como entrada (PLACA.AI LineCam, 2026)**: câmera
+  solar lê a placa na entrada da fila, casa com o roster e enfileira o
+  aluno antes do carro chegar à frente — sem staff na carline. Custo:
+  US$ 99/mês por câmera + US$ 949 de hardware. O PikMyKid (US$ 3.750/ano)
+  é só software e "não tira o gargalo: o staff continua identificando os
+  carros". Refina a ideia já anotada de ALPR (Impacto 4, Esforço 5):
+  no Brasil, placa no para-brisa não existe — o equivalente é a nossa tag
+  com código + QR, que já resolve sem hardware. LPR segue fase 2, só com
+  parceiro de hardware e p/ escolas com fila de carro longa. Impacto —
+  (fase 2, sem ação de código).
+- **Código de conexão do responsável por QR (Parent Connection Code,
+  PikMyKid)**: a escola entrega um QR único p/ o responsável escanear no
+  app e se vincular ao aluno — sem digitar e-mail/telefone e sem a escola
+  cadastrar dado errado. O nosso seed/onboarding hoje depende de cadastro
+  manual; um QR de conexão impresso na matrícula corta o erro de digitação
+  e o suporte de "não vejo meu filho no app". Impacto 3, Esforço 2 —
+  próxima candidata (depois de login por SMS / direitos do titular).
+- **Plano padrão reseta todo ano (PikMyKid, carta 2026-2027)**: o plano de
+  saída volta p/ "ônibus" no início de cada ano letivo, como mecanismo de
+  segurança caso os planos tenham mudado. O nosso DismissalPlanService
+  resolve por dia da semana sem reset anual — um reset no início do ano
+  letivo (configurável por escola) evita plano do ano passado valendo em
+  janeiro. Impacto 2, Esforço 1 — detalhe p/ o DismissalPlanService, fase 2.
+
+## Semeado em 17/11/2026 — concorrentes Brasil: Elo Saída, Inoutchi, GoHome, School Guardian (frente b, ciclo 29)
+Fontes: elosaida.com.br (Instagram, 16/10/2026); inoutchi.com "Sistema de
+controle de entrada e saída de alunos" (atual. 04/11/2026); gohome.app.br
+(artigos 10/08/2026 e 05/10/2026); tech.escolaeleva.com.br "School Guardian";
+sanfra.g12.br "Tutorial School Guardian" (jan/2026); Instagram Colégio
+Arcádia / SOS Gestor Escolar (out/2026); Instagram Instituto Dom Barreto
+"Saída Inteligente — Agenda Edu" (28/10/2026).
+
+- **Elo Saída — concorrente novo (out/2026, elosaida.com.br)**: sistema
+  digital de saída em 3 passos — Autorizar (a mãe escolhe quem busca, por
+  quanto tempo, com foto, e gera um QR pass), Verificar (o portão confere
+  rosto, documento e placa e libera a criança) e Notificar (a família recebe
+  alerta instantâneo "Pedro saiu da escola" com hora, portão e pessoa — e
+  pode sinalizar uma saída NÃO reconhecida). Extras: vans com QR pass,
+  aluno que sai sozinho com permissão agendada, alertas de restrição e
+  funcionamento offline. Piloto grátis de 30 dias, sem hardware e sem
+  biometria facial obrigatória. É o concorrente mais próximo da nossa tese
+  (só saída, sem hardware) — e o passo "sinalizar saída não reconhecida"
+  é o refinamento que nos falta. Impacto — (inteligência competitiva).
+- **Sinalizar saída não reconhecida (Elo Saída)**: depois da liberação, o
+  tutor recebe a notificação com hora, portão e quem retirou — e pode
+  marcar "não reconheço esta saída", o que abre um incidente de segurança
+  (SecurityIncidentService) e avisa o DPO. Fecha o loop da notificação
+  dual-path: hoje avisamos, mas o tutor não tem como contestar na hora.
+  Impacto 4, Esforço 2 — próxima candidata (depois de login por SMS /
+  código de conexão por QR).
+- **Inoutchi (atual. 04/11/2026) valida a nossa tag impressa**: retirada
+  por terceiros com token de uso único ou por período, lido por QR ou
+  código de 6 dígitos; se a pessoa não for a esperada, a portaria recusa,
+  o token deixa de valer e o responsável é avisado — exatamente o nosso
+  PrintedTagService + TemporaryAuthorizationService. O roteiro de
+  implantação deles é de 72 h após a assinatura; o nosso é de 1 dia
+  (OnboardingService) — velocidade de implantação é o nosso argumento de
+  venda contra eles. Impacto — (validação, sem ação de código).
+- **GoHome é hardware-pesado — e esse é o calcanhar dele**: tags
+  veiculares, cartões RFID, biometria e reconhecimento facial, com totem +
+  tela smart na escola (456.122 alunos controlados, segundo o site). O
+  nosso "sem hardware obrigatório" (celular do tutor + TVs que a escola já
+  tem) é o contraponto direto p/ a escola pequena que não quer comprar
+  equipamento — vale como frase de venda na /planos e no onboarding, não
+  como código. Impacto — (posicionamento, sem ação de código).
+- **School Guardian virou suíte de segurança (out/2026)**: além da saída
+  (QR pessoal por tutor, autorizações permanentes/temporárias de 1 dia,
+  1 semana ou 1 mês — iguais às nossas — e saída desacompanhada com prazo),
+  agora vende reconhecimento facial, IA p/ detectar brigas, botão de
+  pânico, GPS de ônibus e LPR. Usado por Escola Eleva, Colégio Arcádia e
+  Sanfra. Reforça a tese: o mercado vai p/ suite; o TutorPass vence sendo
+  o melhor SÓ em saída, não tentando copiar a suite. Impacto — (validação
+  da tese, sem ação de código).
+- **Agenda Edu adicionou "Saída Inteligente" (Instituto Dom Barreto,
+  out/2026)**: a plataforma de agenda/comunicação que a escola já usa
+  passou a registrar quem busca a criança no app. O risco não é o
+  concorrente novo — é o incumbente que já está dentro da escola e
+  adiciona a saída como mais um módulo raso. A defesa é profundidade:
+  QR dinâmico anti-fraude, auditoria imutável e fila por proximidade, que
+  o módulo de agenda não tem. Impacto — (alerta estratégico, sem ação de
+  código).
 
 ## Diferencial TutorPass (tese)
 Concorrente BR forte é suite ampla (comunicação/ERP/facial). TutorPass vence sendo **o melhor só em saída**:

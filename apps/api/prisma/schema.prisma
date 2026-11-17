@@ -121,6 +121,7 @@ model School {
   pickupLogs      PickupLog[]
   auditLogs       AuditLog[]
   authorizations  PickupAuthorization[]
+  printedTags     PrintedTag[]
   earlyDismissals EarlyDismissalRequest[]
   defaultPlans    DismissalDefaultPlan[]
   exceptions      DismissalException[]
@@ -129,6 +130,7 @@ model School {
   notifications   Notification[]
   incidents       SecurityIncident[]
   vanRoutes       VanRoute[]
+  dataSubjectRequests DataSubjectRequest[]
 }
 
 enum NotificationKind {
@@ -280,6 +282,7 @@ model Student {
   queueEntries    PickupQueueEntry[]
   pickupLogs      PickupLog[]
   authorizations  PickupAuthorizationStudent[]
+  printedTags     PrintedTagStudent[]
   earlyDismissals EarlyDismissalStudent[]
   defaultPlans    DismissalDefaultPlan[]
   exceptions      DismissalException[]
@@ -307,6 +310,7 @@ model Tutor {
   queueEntries    PickupQueueEntry[]
   notifications   Notification[]
   authorizations  PickupAuthorization[]
+  printedTags     PrintedTag[]
   earlyDismissals EarlyDismissalRequest[]
 
   @@index([schoolId])
@@ -382,6 +386,47 @@ model PickupAuthorizationStudent {
   student         Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@id([authorizationId, studentId])
+}
+
+enum PrintedTagStatus {
+  ACTIVE
+  USED
+  REVOKED
+  REFUSED
+  EXPIRED
+}
+
+model PrintedTag {
+  id               String          @id @default(uuid()) @db.Uuid
+  schoolId         String          @db.Uuid
+  tutorId          String          @db.Uuid // quem emite a tag
+  delegateName     String
+  delegateDocument String // impresso na tag; a portaria confere na retirada
+  code             String // 6 dígitos — Step 2: guardar só o hash (cf. recovery codes do 2FA)
+  qrPayload        String // TUTORPASS-TAG:<schoolId>:<code>
+  singleUse        Boolean         @default(true)
+  expiresAt        DateTime
+  status           PrintedTagStatus @default(ACTIVE)
+  refusedAt        DateTime?
+  refusedReason    String? // motivo da recusa na portaria (auditoria)
+  revokedAt        DateTime?
+  usedAt           DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  school           School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tutor            Tutor           @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+  students         PrintedTagStudent[]
+
+  @@index([schoolId, code, status])
+}
+
+model PrintedTagStudent {
+  tagId     String     @db.Uuid
+  studentId String     @db.Uuid
+  tag       PrintedTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  student   Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([tagId, studentId])
 }
 
 model EarlyDismissalRequest {
@@ -674,4 +719,88 @@ model VanRouteStop {
 
   @@unique([vanRouteId, studentId])
   @@index([vanRouteId, order])
+}
+
+enum DataSubjectRequestType {
+  ACCESS // confirmação da existência + acesso (art. 18, I e II)
+  CORRECTION // correção (III)
+  ANONYMIZATION // anonimização (IV)
+  BLOCKING // bloqueio (IV)
+  ERASURE // eliminação (VI)
+  PORTABILITY // portabilidade (V)
+  SHARING_INFO // informação sobre compartilhamento (VII)
+  CONSENT_REVOCATION // revogação do consentimento (IX)
+}
+
+enum DataSubjectType {
+  STUDENT
+  TUTOR
+  STAFF
+}
+
+enum DataSubjectRequestStatus {
+  OPEN
+  IDENTITY_VERIFIED
+  IN_PROGRESS
+  FULFILLED
+  PARTIALLY_FULFILLED
+  DENIED
+  CANCELLED
+}
+
+// Pedido de exercício de direitos do titular (LGPD arts. 18 e 19) — ver
+// modules/data-subject-requests/data-subject-request.service.ts. Dois
+// prazos: acesso simplificado IMEDIATO (art. 19, I) e declaração completa
+// em até 15 dias corridos (art. 19, §2º). ERASURE/ANONYMIZATION nunca são
+// FULL: PickupLog, logs de auditoria, consentimentos e incidentes são
+// retidos por obrigação legal (art. 16, I) — as categorias mantidas ficam
+// em retainedByLegalObligation. Eventos do pedido (OPENED/IDENTITY_VERIFIED/
+// ...) ficam no log append-only com hash encadeado do
+// DataSubjectRequestService (Step 2: modelo DataSubjectRequestEvent).
+model DataSubjectRequest {
+  id                         String                    @id @default(uuid()) @db.Uuid
+  schoolId                   String                    @db.Uuid
+  subjectId                  String                    @db.Uuid
+  subjectType                DataSubjectType
+  requestedBy                String // quem abriu (id do staff ou do próprio titular)
+  channel                    String                    @default("ADMIN_PANEL")
+  type                       DataSubjectRequestType
+  details                    String // o que o titular pede
+  status                     DataSubjectRequestStatus  @default(OPEN)
+  receivedAt                 DateTime
+  dueAt                      DateTime // declaração completa: receivedAt + 15 dias
+  simplifiedAccessProvidedAt DateTime?
+  simplifiedAccessSummary    String?
+  identityVerifiedAt         DateTime?
+  verifiedBy                 String?
+  startedAt                  DateTime?
+  fulfilledAt                DateTime?
+  outcome                    String? // FULL ou PARTIAL
+  fulfillmentNote            String? // resposta ao titular
+  retainedByLegalObligation  String[] // categorias do art. 16 mantidas
+  deniedAt                   DateTime?
+  denialReason               String?
+  cancelledAt                DateTime?
+  createdAt                  DateTime                  @default(now())
+  updatedAt                  DateTime                  @updatedAt
+  school                     School                    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  events                     DataSubjectRequestEvent[]
+
+  @@index([schoolId, status])
+  @@index([schoolId, dueAt])
+  @@index([schoolId, subjectId, type])
+}
+
+model DataSubjectRequestEvent {
+  id        String             @id @default(uuid()) @db.Uuid
+  requestId String             @db.Uuid
+  type      String // OPENED / IDENTITY_VERIFIED / SIMPLIFIED_ACCESS_PROVIDED / STARTED / FULFILLED / DENIED / CANCELLED / NOTE
+  actor     String
+  note      String?
+  at        DateTime
+  prevHash  String?
+  hash      String
+  request   DataSubjectRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, at])
 }

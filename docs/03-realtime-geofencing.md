@@ -7,7 +7,7 @@
   - `school:{schoolId}:classroom:{classroomId}` — professor (só a sua sala)
   - `school:{schoolId}:admin` — coordenação
   - `tutor:{tutorId}` — confirmações para o tutor
-- Adapter Redis obrigatório desde o dia 1: permite 2+ instâncias da API sem quebrar rooms.
+- Adapter Redis Streams obrigatório desde o dia 1: permite 2+ instâncias da API sem quebrar rooms, com replay de pacotes perdidos.
 
 ## Eventos (contrato em `packages/types/src/events.ts`)
 Servidor → cliente (sempre *diff*, nunca a fila inteira):
@@ -30,12 +30,26 @@ toda emissão passa pelo `EventLogService` (`apps/api/src/realtime/event-log.ser
   envelope `{ seq, data }` — o cliente guarda o último seq visto por room.
 - Ao reconectar, o cliente envia `events.catch_up` com `{ room, lastSeenSeq }` e recebe
   só os eventos com seq maior, mais `oldestRetainedSeq`/`latestSeq`.
-- O log é um ring buffer de 500 eventos por room: se o pedido for mais antigo que o
-  retido, a resposta vem com `hasGap: true` e o cliente pede `queue.snapshot` completo
-  em vez de aplicar os eventos (nunca aplicar catch-up parcial).
+- O log é uma Stream por room (`tutorpass:events:{room}`, `MAXLEN ~ 500`, seq por
+  contador `tutorpass:events:{room}:seq` via script Lua INCR+XADD): o evento
+  sobrevive à queda da instância que emitiu e o catch-up funciona em qualquer
+  instância. Sem Redis, o log volta ao ring buffer em memória (1 instância);
+  se a Stream falhar no meio da operação, o serviço degrada p/ memória de vez
+  (nunca mistura os dois backends no mesmo processo — ver
+  `redis-streams-event-log.store.ts`).
+- Se o pedido for mais antigo que o retido, a resposta vem com `hasGap: true`
+  e o cliente pede `queue.snapshot` completo em vez de aplicar os eventos
+  (nunca aplicar catch-up parcial).
+- **Connection state recovery** (Socket.io 4.6+, adapter de Streams): o servidor
+  guarda a sessão (rooms + offset) no Redis por até 2 min após uma desconexão
+  inesperada; o cliente que volta dentro da janela reentra nas rooms e recebe
+  os pacotes perdidos sem pedir nada — o `socket.io-client` do web (4.7.5) faz
+  isso sozinho. Passou de 2 min, ou a sessão expirou, o recovery falha e o
+  cliente usa o catch-up manual (`events.catch_up`) + `queue.snapshot`.
+  O JWT é revalidado no recovery (`skipMiddlewares: false`).
 - O gateway só responde catch-up de rooms que o próprio socket entrou (`client.rooms`).
-- Step 2: trocar o store in-memory por Redis Streams e ligar ao Connection State Recovery
-  do Socket.io 4.6+ (o adapter Redis clássico não o suporta).
+- O que ainda falta: expurgo de rooms antigas da Stream (job diário, Step 2) e
+  a verificação das sticky sessions no deploy multi-instância.
 
 ## Geofencing — máquina de estados no servidor (não confie no cliente)
 Zonas por `PickupPoint` (configurável por escola): `APPROACH ≤ 800m`, `ARRIVAL ≤ 250m` (raio padrão).
