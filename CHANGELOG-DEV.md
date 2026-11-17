@@ -1,3 +1,86 @@
+## 2026-11-17 16:24–16:40 — Ciclo UI 5: estados vazios/erro/carregando (padrão único)
+
+**Pesquisa do ciclo (frente a/c — estados de tela: vazio, erro, carregamento)**
+- **Cinco estados, não um** (syntaqx, 03/11/2026): toda tela que carrega
+  dado precisa dos estados desenhados junto com o caminho feliz —
+  carregando (algo acontece, sem salto de layout), vazio (por que não há
+  nada + próximo passo), erro (o que houve, o que fazer + retry). O
+  conserto é barato no início e caro quando vira bug reportado.
+- **Skeleton no formato do conteúdo, nunca "sem registros" enquanto
+  carrega** (NN/g via syntaqx/medium, 2026): um "Nenhum registro" exibido
+  por segundos antes da lista aparecer é o erro clássico — o vazio só
+  pode aparecer depois que o carregamento terminou sem nada. Skeleton
+  p/ cargas de até ~10 s; abaixo de 1 s, nada.
+- **Vazio ensina o próximo passo** (NN/g; Carbon/IBM): ícone + título
+  curto + 1 linha de texto + no máximo 1 ação; um vazio de primeira
+  execução é a tela mais vista do produto e deve ensinar o recurso.
+- **Erro com linguagem de ação** (medium, 13/11/2026; davis-company,
+  2026): sem código interno; dizer que os dados estão seguros, o que
+  fazer e dar o botão de retry — e dar ao erro uma linguagem visual
+  distinta do vazio (tom de aviso, não ilustração amigável), senão o
+  usuário culpa o produto pelos dois.
+- Achados registrados em `docs/product/IDEAS.md` (frente a/c, ciclo UI 5);
+  o item implementado era o da fila UI: **estados vazios/erro/carregando**
+  (Impacto 3, Esforço 2).
+
+**O que foi feito**
+- **O bug real: vazio indistinguível de carregando** — a fila nasce vazia
+  nesta sessão (só eventos ao vivo a preenchem) e `apiOnline === null`
+  (ainda verificando) caía no mesmo ramo do "vazio": a portaria e o telão
+  afirmavam "nenhuma saída" antes mesmo de saber. Agora são 3 estados
+  distintos, nas duas telas.
+- **Padrão único `.state`** (`globals.css`): ícone 52 px + título em
+  display + 1 linha de texto + no máximo 1 ação; variante `.state-error`
+  com fundo e borda em tom de aviso; o `.empty` solto (só um parágrafo
+  cinza) saiu.
+- **Carregando = skeleton no formato real** (`.skeleton-list` /
+  `.skeleton-row` na portaria, `.telao-skeleton` no telão): linhas com
+  círculo + 2 barras, pulso suave, sem salto de layout; contadores e
+  rodapé mostram "–" enquanto conectam; `role="status"` + texto só p/
+  leitor de tela. Pulso desligado em `prefers-reduced-motion`.
+- **Erro com retry** (`use-pickup-queue.ts` + portaria): quando a API não
+  responde e a fila está vazia, cartão `.state-error` com ícone de aviso,
+  "A fila não está atualizando", "Nada foi perdido — tente de novo ou
+  aguarde: a página verifica sozinha a cada 30 segundos" e botão
+  "Tentar de novo" — o hook ganhou `retry()`, que re-verifica a saúde da
+  API e reconecta o socket (ele desiste sozinho após 5 tentativas). Com
+  itens na fila, os dados (mesmo desatualizados) continuam visíveis e só
+  o selo de conexão avisa — estado parcial, não tela de erro.
+- **Vazios com título** (portaria): "Nenhuma saída em andamento" com a
+  ação "Ver no telão"; por seção, "Ninguém pronto por enquanto" /
+  "Ninguém a caminho por enquanto" com a explicação do que aparece ali.
+  Textos em pt-BR, lógica da fila e da API intactas.
+
+**Arquivos alterados**
+- `apps/web/app/globals.css` (+ `.state`, `.state-error`, `.skeleton-*`,
+  `.telao-skeleton`, `.sr-only`; removido `.empty`)
+- `apps/web/app/portaria/page.tsx` (3 estados, skeleton, erro com retry)
+- `apps/web/app/telao/page.tsx` (skeleton de carregamento, contadores "–")
+- `apps/web/lib/use-pickup-queue.ts` (+ `retry()`)
+- `docs/product/IDEAS.md` (frente a/c, ciclo UI 5), `BACKLOG.md` (fila UI/UX)
+
+**Verificação** — `next build` em apps/web: **OK** (tipos válidos, 7
+rotas: /, /cadastro, /login, /planos, /portaria, /telao, /_not-found).
+
+**Incidente no meio do ciclo (registrado, sem dano)**: um segundo ciclo
+("Login completo", AuthNav + RequireAuth + refresh) rodou em paralelo
+neste mesmo checkout e commitou às 16:31 (`fc90ddd`) com `git add -A` —
+o commit varreu também os arquivos deste ciclo, que estavam sem commit
+naquele momento. A 1ª tentativa de `next build` deste ciclo (16:29)
+falhou em TODAS as páginas com `ReferenceError: AuthNav is not defined`
+porque o outro ciclo estava no meio da edição (layout importando
+`AuthNav` antes do arquivo existir no disco). Após o commit do outro
+ciclo, o rebuild limpo (`rm -rf .next && next build`) passou. O código
+deste ciclo foi conferido dentro do `fc90ddd` (skeleton, `.state`,
+`retry()` intactos, mesclados com a guarda `RequireAuth` do outro ciclo)
+e o registro deste ciclo vai num commit próprio a seguir. Lição p/ os
+próximos ciclos: dois ciclos no mesmo checkout precisam se alternar no
+commit — ou o segundo espera o `git status` limpo do primeiro.
+
+**Próximo (fila UI)** — revisão mobile geral de todas as telas; depois a
+passada anti-genérica (skill `unslop`) nas telas restantes e o app do
+tutor quando existir.
+
 ## 2026-11-17 15:54–16:00 — Ciclo UI 4: planos/calculadora (recomendado em destaque + hierarquia)
 
 **Pesquisa do ciclo (frente d — design systems / páginas de preço SaaS)**

@@ -1452,6 +1452,39 @@ Fontes: vezadigital.com "Best SaaS Pricing Page Examples (2026 Guide)"; insaim.d
   Esforço 1 — já era o caso (faixas 89/199/349 na página e na
   calculadora); nada a mudar.
 
+## Semeado em 17/11/2026 — estados de tela: vazio, erro, carregando (frente a/c, ciclo UI 5)
+Fontes: syntaqx.com "Error & Empty States" (atual. 03/11/2026); medium.com/@anjalisinggh.12 "The Screen Nobody Designs (and Every User Sees First)" (13/11/2026); mowgli.ai "AI App Missing Empty, Error and Loading States? Fix It" (2026); medium.com/@designstudiouiux "Empty-State UX: Fix Blank Screens Before Users Leave" (26/10/2026); davis-company.com "Empty State Design Best Practices" (2026).
+
+- **Desenhar os 5 estados junto com o caminho feliz** (syntaqx, 2026):
+  carregando, vazio, erro, parcial e sucesso — cada tela que busca dado
+  ganha os estados no desenho, não descobertos num bug report. Impacto 3,
+  Esforço 2 — **aplicado neste ciclo na portaria e no telão** (padrão
+  `.state` + skeleton + erro com retry; parcial = dados visíveis + selo
+  de conexão avisando).
+- **Nunca "sem registros" enquanto carrega** (NN/g, 2026): o vazio só
+  aparece depois que o carregamento terminou sem nada; antes disso, um
+  skeleton no formato do conteúdo. Impacto 3, Esforço 1 — **aplicado
+  neste ciclo** (era o bug real das duas telas: a fila nasce vazia e
+  `apiOnline === null` caía no ramo do vazio).
+- **Vazio = status + aprendizado + 1 ação** (NN/g; Carbon/IBM): ícone,
+  título curto, 1 linha e no máximo uma ação; o vazio de primeira
+  execução é a tela mais vista e deve ensinar o recurso. Impacto 2,
+  Esforço 1 — **aplicado neste ciclo** (títulos + explicação + "Ver no
+  telão" como única ação).
+- **Erro em linguagem de ação, com visual distinto do vazio**
+  (davis-company, 2026): sem código interno, dados seguros, o que fazer
+  e retry; tom de aviso em vez de ilustração amigável. Impacto 2,
+  Esforço 1 — **aplicado neste ciclo** (`.state-error` + botão "Tentar
+  de novo" com `retry()` no hook).
+- **Skeleton p/ espera curta com layout conhecido; spinner p/ módulo
+  único; progresso p/ > 10 s** (NN/g, 2026): e todo carregamento precisa
+  de um timeout que vira erro, p/ um request travado não deixar um
+  spinner para sempre. Impacto 2, Esforço 2 — parcial: o skeleton está
+  no lugar; o timeout explícito (virar erro após N segundos sem resposta
+  da API) fica p/ um próximo ciclo — hoje a verificação de saúde a cada
+  30 s já move o selo p/ "fora do ar", mas sem trocar a tela p/ o estado
+  de erro sozinha.
+
 ## Diferencial TutorPass (tese)
 Concorrente BR forte é suite ampla (comunicação/ERP/facial). TutorPass vence sendo **o melhor só em saída**:
 mais rápido de implantar, QR dinâmico anti-fraude (eles usam QR estático), auditoria imutável com hash
