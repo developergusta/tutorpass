@@ -183,6 +183,36 @@ contas de visão criadas no ciclo anterior).
 API tem setup/confirm/status, o web não tem a tela); depois o app do
 tutor quando existir o esqueleto mobile.
 
+## 2026-11-17 20:00 — Passada de movimento: animações nos momentos do produto
+
+**Pedido** — "já ta na hora de implementar umas animações
+interativas bem maneiras". Direção (unslop, passada de movimento):
+animação marca o MOMENTO, não decora — tudo em `globals.css`, sem
+dependência nova, uma vez por montagem (as listas usam id como
+key, então evento de socket não reanima item antigo).
+
+**O que entrou**
+- **Portaria:** item novo na fila desliza da esquerda
+  (`queue-in` 0,35s em `.queue-list li`).
+- **Telão:** quem é chamado **estoura** no painel de prontos
+  (`pop-in` com overshoot leve — a linha remonta no painel com a
+  mesma key, então toca no instante da chamada) e a linha do
+  AGORA chega acesa e assenta (`now-glow` 1,4s).
+- **Home:** hero em cascata (texto → painel → linhas do painel);
+  recursos, links rápidos e planos sobem com atraso curto.
+- **Micro:** botão afunda ao apertar (`:active` scale 0,98), seta
+  dos links rápidos anda no hover, menu hambúrguer desce
+  (`menu-in`), troca de tema sem corte seco (transition de
+  fundo/borda em body, cartões, topbar).
+- **Acessibilidade:** bloco geral `prefers-reduced-motion` no fim
+  do arquivo desliga tudo (duração ~0) p/ quem pede menos
+  movimento no sistema.
+
+**Verificação** — `next build` OK (16/16). Conferência visual ao
+vivo fica com o usuário (navegador daqui é desktop e sem som de
+movimento). Fila da rotina: NÃO repetir esta passada — seguir p/
+app do tutor / fases 2 de Segurança e Equipe.
+
 ## 2026-11-17 19:47 — Open Sans no hero, completado (pedido do usuário no WhatsApp)
 
 O pedido ("texto do Hero Section em Open Sans") chegou pelo

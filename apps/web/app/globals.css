@@ -1344,3 +1344,83 @@ input:focus {
 
 .queue-actions { display: flex; justify-content: center; margin: 4px 0 0; }
 .queue-actions .btn { min-height: 48px; }
+
+/* ————————————————————————————————————————————————————————————
+   MOVIMENTO (pedido do usuário, 17/11/2026: "animações interativas
+   bem maneiras"). Regra da casa (unslop, passada de movimento): a
+   animação marca o MOMENTO do produto, não decora a tela —
+   quem entra na fila desliza, quem é chamado estoura no telão,
+   e o resto é micro-interação (aperto de botão, seta, menu).
+   Tudo roda uma vez na montagem do elemento (as listas usam a id
+   como key, então evento de socket NÃO reanima item antigo) e o
+   bloco final respeita quem pede menos movimento no sistema.
+   ———————————————————————————————————————————————————————————— */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes queue-in {
+  from { opacity: 0; transform: translateX(-14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pop-in {
+  0% { opacity: 0; transform: scale(0.94) translateY(8px); }
+  60% { opacity: 1; transform: scale(1.015) translateY(0); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes now-glow {
+  from { background: rgba(52, 211, 153, 0.38); }
+  to { background: rgba(52, 211, 153, 0.14); }
+}
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Portaria: item novo na fila desliza da esquerda. */
+.queue-list li { animation: queue-in 0.35s ease both; }
+
+/* Telão: quem acabou de ser chamado ESTOURA no painel de prontos
+   (a linha remonta no outro painel com a mesma key, então a
+   animação toca exatamente no momento da chamada) e a linha do
+   AGORA chega acesa e assenta. */
+.telao-panel.is-ready .telao-list li { animation: pop-in 0.5s cubic-bezier(0.22, 1.2, 0.36, 1) both; }
+.telao-list li.is-now { animation: telao-in 0.45s ease both, now-glow 1.4s ease both; }
+
+/* Home: hero sobe em cascata (texto, depois o painel da saída,
+   cujas linhas também sobem uma a uma). */
+.hero-grid > div:first-child > * { animation: rise-in 0.55s ease both; }
+.hero-grid > div:first-child > *:nth-child(2) { animation-delay: 0.07s; }
+.hero-grid > div:first-child > *:nth-child(3) { animation-delay: 0.14s; }
+.hero-grid > div:first-child > *:nth-child(4) { animation-delay: 0.21s; }
+.hero-board { animation: rise-in 0.55s 0.15s ease both; }
+.hb-row { animation: rise-in 0.45s ease both; }
+.hb-row:nth-of-type(2) { animation-delay: 0.25s; }
+.hb-row:nth-of-type(3) { animation-delay: 0.33s; }
+.hb-row:nth-of-type(4) { animation-delay: 0.41s; }
+
+/* Seções da home e planos: entram ao carregar, em cascata curta. */
+.feature-row, .quick-link, .plan { animation: rise-in 0.5s ease both; }
+.feature-row:nth-child(2), .quick-link:nth-child(2), .plan:nth-child(2) { animation-delay: 0.06s; }
+.feature-row:nth-child(3), .quick-link:nth-child(3), .plan:nth-child(3) { animation-delay: 0.12s; }
+.feature-row:nth-child(4), .quick-link:nth-child(4) { animation-delay: 0.18s; }
+
+/* Micro-interações: aperto de botão, seta que anda, menu que desce
+   e troca de tema sem corte seco. */
+.btn:active { transform: scale(0.98); }
+.quick-link .q-arrow { transition: transform 0.18s ease; }
+.quick-link:hover .q-arrow { transform: translateX(4px); }
+.topbar nav.nav-open { animation: menu-in 0.22s ease both; }
+body { transition: background-color 0.25s ease, color 0.25s ease; }
+.card, .topbar, .queue-section, .admin-tab, .plan { transition: background-color 0.25s ease, border-color 0.25s ease; }
+
+/* Quem pede menos movimento no sistema não recebe nada disto —
+   nem as animações antigas (os blocos específicos continuam
+   valendo; este é o desligamento geral). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
