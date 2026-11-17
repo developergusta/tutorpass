@@ -201,9 +201,49 @@ input:focus {
   display: flex;
   flex-direction: column;
   margin-bottom: 0;
+  position: relative;
 }
 .plan.recommended {
   border: 2px solid var(--brand);
+  box-shadow: var(--shadow-md);
+}
+/* Mobile: o recomendado aparece primeiro na pilha, não enterrado no meio. */
+@media (max-width: 639px) {
+  .pricing-grid .plan.recommended { order: -1; }
+}
+@media (min-width: 640px) {
+  .plan.recommended { transform: scale(1.02); }
+}
+/* Selo do recomendado: sem ele, só a borda verde distinguia o cartão e o
+   visitante não sabia por que aquele era o ponto de partida. */
+.plan-badge {
+  align-self: flex-start;
+  background: var(--brand);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 5px 12px;
+  margin: 0 0 10px;
+}
+/* Faixas do PRO como lista (faixa ↔ preço), não parágrafo corrido: o olho
+   compara os 3 valores sem reler a frase. Mesmos valores da API. */
+.plan ul.plan-bands {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+.plan ul.plan-bands li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 0;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
 }
 .plan .price {
   font-size: 1.9rem;

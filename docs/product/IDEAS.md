@@ -1429,6 +1429,29 @@ Design: What to Leave Off the Screen" (2026).
   vale p/ 3–5 pontos primários, não mais. Impacto 3, Esforço 2 — próxima
   candidata (revisão mobile geral da fila UI).
 
+## Semeado em 17/11/2026 — páginas de preço SaaS: hierarquia e plano recomendado (frente d, ciclo UI 4)
+Fontes: vezadigital.com "Best SaaS Pricing Page Examples (2026 Guide)"; insaim.design "SaaS Pricing Page Design: Best Practices & Examples (2026)"; orbix.studio "SaaS Pricing Page Design: 11 Examples + Template (2026)"; wisernotify.com "12 Pricing Page Best Practices (With SaaS Examples, 2026)".
+
+- **Destaque exatamente UM plano recomendado**: selo ("Most Popular" /
+  "Recomendado") + borda + cartão levemente maior/elevado + CTA mais
+  forte — um único sinal dá ao indeciso um ponto de partida sem obrigá-lo
+  a comparar tudo. Impacto 3, Esforço 1 — **aplicado neste ciclo nos
+  planos** (selo "Recomendado" + sombra + scale 1.02 no desktop no cartão
+  do teste de 30 dias; os outros dois mantêm CTA secundário).
+- **Mobile: o recomendado vem primeiro na pilha**: no celular os planos
+  empilham e o recomendado não pode ficar enterrado no meio nem no fim
+  de uma rolagem horizontal. Impacto 3, Esforço 1 — **aplicado neste
+  ciclo** (`order: -1` no recomendado abaixo de 640 px).
+- **Mesma ordem dentro de cada cartão** (nome → para quem é → preço →
+  CTA → recursos, na mesma sequência) para o olho comparar sem reler.
+  Impacto 2, Esforço 1 — já era o caso nos nossos 3 cartões; aplicado
+  como lista de faixas no PRO (faixa ↔ preço, tabular), em vez do
+  parágrafo corrido.
+- **Preço, o que escala e o que não está incluído em texto claro**: o
+  visitante não deve precisar ligar para saber o valor. Impacto 2,
+  Esforço 1 — já era o caso (faixas 89/199/349 na página e na
+  calculadora); nada a mudar.
+
 ## Diferencial TutorPass (tese)
 Concorrente BR forte é suite ampla (comunicação/ERP/facial). TutorPass vence sendo **o melhor só em saída**:
 mais rápido de implantar, QR dinâmico anti-fraude (eles usam QR estático), auditoria imutável com hash

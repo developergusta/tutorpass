@@ -46,6 +46,9 @@ export default function CalculadoraPreco() {
         value={alunos}
         onChange={(e) => setAlunos(e.target.value)}
       />
+      {/* O resultado muda a cada tecla: aria-live avisa o leitor de tela
+          sem ele precisar sair do campo. */}
+      <div aria-live="polite">
       {!valido && (
         <p className="muted">Digite o número de alunos da escola.</p>
       )}
@@ -70,6 +73,7 @@ export default function CalculadoraPreco() {
           alunos por escola) — plano sob consulta, com preço por escola.
         </p>
       )}
+      </div>
       <p className="muted">
         Escolas e redes com mais de 1.000 alunos têm condição sob consulta. E
         dá para testar tudo antes de pagar: 30 dias grátis com todas as

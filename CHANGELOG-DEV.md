@@ -1,3 +1,54 @@
+## 2026-11-17 15:54–16:00 — Ciclo UI 4: planos/calculadora (recomendado em destaque + hierarquia)
+
+**Pesquisa do ciclo (frente d — design systems / páginas de preço SaaS)**
+- **Destaque exatamente UM plano recomendado** (insaim.design, 2026;
+  orbix.studio, 31/10/2026; wisernotify, 2026): selo "Most Popular" /
+  "Recomendado" + borda + cartão levemente maior/elevado + CTA mais
+  forte — um único sinal dá ao indeciso um ponto de partida sem obrigá-lo
+  a comparar tudo; sem rótulo, só a borda não comunica por que aquele
+  cartão é o ponto de partida.
+- **Mobile: o recomendado vem primeiro na pilha** (insaim.design, 2026):
+  no celular os planos empilham e o recomendado não pode ficar enterrado
+  no meio nem no fim de uma rolagem horizontal.
+- **Mesma ordem dentro de cada cartão** (nome → para quem é → preço →
+  CTA → recursos) e **preço em texto claro** (vezadigital, 2026): o olho
+  compara sem reler; o visitante não deve precisar ligar p/ saber o valor.
+- Achados registrados em `docs/product/IDEAS.md` (frente d, ciclo UI 4);
+  o item implementado era o da fila UI: **planos/calculadora**
+  (Impacto 3, Esforço 1).
+
+**O que foi feito**
+- **Selo "Recomendado"** (`planos/page.tsx` + `.plan-badge` em
+  `globals.css`): pill verde da marca, maiúscula, no topo do cartão do
+  teste de 30 dias — antes só a borda verde o distinguia, sem dizer o
+  porquê.
+- **Cartão recomendado elevado**: sombra `--shadow-md` e, no desktop,
+  `scale(1.02)` — destaque discreto, sem quebrar o grid; os outros dois
+  cartões mantêm o CTA secundário e o recomendado o primário.
+- **Mobile: recomendado em 1º** — `order: -1` no recomendado abaixo de
+  640 px (a pilha era Grátis → Teste → PRO; agora Teste → Grátis → PRO).
+- **Faixas do PRO como lista** (`.plan-bands`): 3 linhas faixa ↔ preço
+  com numerais tabulares, em vez do parágrafo corrido — mesmos valores
+  da API (R$ 89 até 50 · R$ 199 de 51 a 200 · R$ 349 acima de 200), sem
+  mudar preço, faixa ou regra.
+- **Calculadora acessível**: a região do resultado ganhou
+  `aria-live="polite"` — o leitor de tela anuncia o novo valor sem o
+  usuário sair do campo. Lógica de faixas e valores intacta.
+
+**Arquivos alterados**
+- `apps/web/app/planos/page.tsx` (selo, lista de faixas do PRO)
+- `apps/web/app/planos/calculadora.tsx` (`aria-live` no resultado)
+- `apps/web/app/globals.css` (+ `.plan-badge`, `.plan-bands`, elevação e
+  ordem mobile do `.plan.recommended`)
+- `docs/product/IDEAS.md` (frente d, ciclo UI 4), `BACKLOG.md` (fila UI/UX)
+
+**Verificação** — `next build` em apps/web: **OK** (tipos válidos, 7
+rotas: /, /cadastro, /login, /planos, /portaria, /telao, /_not-found).
+
+**Próximo (fila UI)** — estados vazios/erro/carregando: padrão visual
+único p/ telas sem dados, falhas de API e carregamento; depois revisão
+mobile geral e app do tutor quando existir.
+
 ## 2026-11-17 15:52 — Uptime Kuma: tag 1 → 2 (linha 1.x descontinuada)
 
 O usuário abriu o Kuma e viu o aviso do próprio projeto: a v1.23.17

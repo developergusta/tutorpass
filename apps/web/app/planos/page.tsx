@@ -59,6 +59,7 @@ export default function PlanosPage() {
         </div>
 
         <div className="card plan recommended">
+          <p className="plan-badge">Recomendado</p>
           <h2>Teste de 30 dias</h2>
           <p className="price">
             R$ 0 <span className="muted">por 30 dias</span>
@@ -83,10 +84,23 @@ export default function PlanosPage() {
             R$ 89–349 <span className="muted">/mês, por faixa</span>
           </p>
           <p className="muted">
-            Mensalidade fixa pela faixa de alunos: até 50 alunos, R$ 89/mês;
-            de 51 a 200, R$ 199/mês; acima de 200, R$ 349/mês. Para a escola
-            inteira — até 2.000 alunos e 50 funcionários.
+            Mensalidade fixa pela faixa de alunos, para a escola inteira —
+            até 2.000 alunos e 50 funcionários.
           </p>
+          <ul className="plan-bands" aria-label="Faixas de preço do PRO">
+            <li>
+              <span>Até 50 alunos</span>
+              <strong>R$ 89/mês</strong>
+            </li>
+            <li>
+              <span>De 51 a 200 alunos</span>
+              <strong>R$ 199/mês</strong>
+            </li>
+            <li>
+              <span>Acima de 200 alunos</span>
+              <strong>R$ 349/mês</strong>
+            </li>
+          </ul>
           <ul>
             {FEATURES_PRO.map((f) => (
               <li key={f}>{f}</li>
