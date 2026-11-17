@@ -24,6 +24,9 @@ export interface QueueItem {
   gate: string | null;
   group: QueueGroup;
   etaMinutes: number | null;
+  /** Status bruto da entrada (QUEUED/CALLED/VALIDATED/...) — a portaria
+   * usa p/ saber quais ações oferecer; null quando o evento não trouxe. */
+  status: string | null;
 }
 
 type RawEntry = Record<string, unknown>;
@@ -42,6 +45,7 @@ function groupFromStatus(status: string | null, fallback: QueueGroup): QueueGrou
   if (
     s.includes('READY') ||
     s.includes('CALLED') ||
+    s.includes('VALIDATED') ||
     s.includes('HERE') ||
     s.includes('WAITING') ||
     s.includes('ARRIVED')
@@ -83,17 +87,19 @@ function normalize(raw: unknown, fallback: QueueGroup): QueueItem | null {
     'Aluno';
 
   const etaRaw = entry.etaMinutes;
+  const rawStatus = pickString(entry, ['status', 'band', 'proximityBand']);
   return {
     id,
     studentName,
     classroomName: pickString(entry, ['classroomName', 'classroom']),
     gate: pickString(entry, ['gate', 'gateName']),
-    group: groupFromStatus(pickString(entry, ['status', 'band', 'proximityBand']), fallback),
+    group: groupFromStatus(rawStatus, fallback),
     etaMinutes: typeof etaRaw === 'number' ? etaRaw : null,
+    status: rawStatus ? rawStatus.toUpperCase() : null,
   };
 }
 
-const REMOVED_HINTS = ['DELIVERED', 'PICKED_UP', 'COMPLETED', 'CANCELLED', 'CANCELED', 'REMOVED'];
+const REMOVED_HINTS = ['DELIVERED', 'PICKED_UP', 'RELEASED', 'COMPLETED', 'CANCELLED', 'CANCELED', 'REMOVED'];
 
 export interface PickupQueueState {
   items: QueueItem[];

@@ -1,8 +1,119 @@
 'use client';
 
 import Link from 'next/link';
+import { useState, type FormEvent } from 'react';
 import RequireAuth from '../../components/RequireAuth';
+import {
+  callQueueEntry,
+  cancelQueueEntry,
+  releaseQueueEntry,
+  validateQueueQr,
+} from '../../lib/api';
 import { usePickupQueue, type QueueItem } from '../../lib/use-pickup-queue';
+
+// Ações da portaria numa entrada da fila — a tela deixou de ser só
+// leitura (varredura 17/11/2026): chamar, validar o QR do responsável e
+// confirmar a retirada, seguindo a máquina de estados da API
+// (QUEUED → CALLED → VALIDATED → RELEASED; cancelar até a validação).
+function EntryActions({ item }: { item: QueueItem }) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrToken, setQrToken] = useState('');
+
+  const status = item.status;
+  const canCall = status === 'QUEUED' || status === null;
+  const canValidate = status === 'QUEUED' || status === 'CALLED' || status === null;
+  const canRelease = status === 'VALIDATED';
+  const canCancel = canValidate;
+
+  async function run(name: string, fn: () => Promise<unknown>) {
+    setBusy(name);
+    setError(null);
+    try {
+      await fn();
+      if (name === 'qr') {
+        setQrOpen(false);
+        setQrToken('');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'A ação falhou. Tente de novo.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function onValidate(e: FormEvent) {
+    e.preventDefault();
+    void run('qr', () => validateQueueQr(item.id, qrToken.trim()));
+  }
+
+  return (
+    <span className="entry-actions">
+      {status === 'CALLED' ? <span className="chip ok">Chamado</span> : null}
+      {status === 'VALIDATED' ? <span className="chip ok">QR validado</span> : null}
+      {canCall ? (
+        <button
+          className="btn small"
+          type="button"
+          disabled={busy !== null}
+          onClick={() => void run('call', () => callQueueEntry(item.id))}
+        >
+          {busy === 'call' ? 'Chamando…' : 'Chamar'}
+        </button>
+      ) : null}
+      {canValidate ? (
+        <button
+          className="btn secondary small"
+          type="button"
+          disabled={busy !== null}
+          onClick={() => setQrOpen((v) => !v)}
+        >
+          Validar QR
+        </button>
+      ) : null}
+      {canRelease ? (
+        <button
+          className="btn small"
+          type="button"
+          disabled={busy !== null}
+          onClick={() => void run('release', () => releaseQueueEntry(item.id))}
+        >
+          {busy === 'release' ? 'Confirmando…' : 'Confirmar retirada'}
+        </button>
+      ) : null}
+      {canCancel ? (
+        <button
+          className="btn secondary small"
+          type="button"
+          disabled={busy !== null}
+          onClick={() => void run('cancel', () => cancelQueueEntry(item.id))}
+        >
+          Cancelar
+        </button>
+      ) : null}
+      {qrOpen && canValidate ? (
+        <form className="qr-form" onSubmit={onValidate}>
+          <input
+            value={qrToken}
+            onChange={(e) => setQrToken(e.target.value)}
+            placeholder="Código do QR do responsável"
+            aria-label="Código do QR do responsável"
+            autoFocus
+          />
+          <button className="btn small" type="submit" disabled={busy !== null || !qrToken.trim()}>
+            {busy === 'qr' ? 'Validando…' : 'Validar'}
+          </button>
+        </form>
+      ) : null}
+      {error ? (
+        <span className="queue-item-error" role="alert">
+          {error}
+        </span>
+      ) : null}
+    </span>
+  );
+}
 
 // Ícones do padrão de estados (traço 2, cantos arredondados, como o resto
 // do site): o vazio é uma confirmação calma, o erro é um aviso.
@@ -57,12 +168,14 @@ function QueueSection({
   tone,
   emptyTitle,
   emptyHint,
+  interactive = false,
 }: {
   title: string;
   items: QueueItem[];
   tone: 'ready' | 'route';
   emptyTitle: string;
   emptyHint: string;
+  interactive?: boolean;
 }) {
   return (
     <section
@@ -99,6 +212,7 @@ function QueueSection({
                     <span className="chip eta">~{item.etaMinutes} min</span>
                   ) : null}
                 </span>
+                {interactive ? <EntryActions item={item} /> : null}
               </span>
             </li>
           ))}
@@ -197,6 +311,7 @@ function PortariaPanel() {
             tone="ready"
             emptyTitle="Ninguém pronto por enquanto"
             emptyHint="Quem chegar aparece aqui em cima."
+            interactive
           />
           <QueueSection
             title="A caminho"
@@ -204,6 +319,7 @@ function PortariaPanel() {
             tone="route"
             emptyTitle="Ninguém a caminho por enquanto"
             emptyHint="Os tutores a caminho aparecem aqui com o tempo estimado."
+            interactive
           />
           <p className="queue-actions">
             <Link className="btn secondary" href="/telao">

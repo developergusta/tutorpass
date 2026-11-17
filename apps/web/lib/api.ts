@@ -396,6 +396,37 @@ export function importStudents(csv: string, dryRun: boolean): Promise<ImportRepo
   });
 }
 
+// ------------------------------------------------------------ portaria
+// Ações da fila (PickupController): o schoolId vai na ROTA e sai da
+// sessão — o servidor confere tenant e papel (GATE_AGENT/COORD/ADMIN).
+
+async function pickupAction<T>(entryId: string, action: string, body?: unknown): Promise<T> {
+  const session = loadSession() ?? (await refreshSession());
+  if (!session?.schoolId) {
+    throw new Error('Sessão sem escola — entre de novo selecionando a escola.');
+  }
+  return authedJson<T>(`/pickup/schools/${session.schoolId}/queue/${entryId}/${action}`, {
+    method: 'POST',
+    body: JSON.stringify(body ?? {}),
+  });
+}
+
+export function callQueueEntry(entryId: string): Promise<unknown> {
+  return pickupAction(entryId, 'call');
+}
+
+export function validateQueueQr(entryId: string, token: string): Promise<unknown> {
+  return pickupAction(entryId, 'validate-qr', { token });
+}
+
+export function releaseQueueEntry(entryId: string): Promise<unknown> {
+  return pickupAction(entryId, 'release');
+}
+
+export function cancelQueueEntry(entryId: string): Promise<unknown> {
+  return pickupAction(entryId, 'cancel');
+}
+
 /** true quando a API responde no healthcheck; false quando está fora do ar. */
 export async function checkApiHealth(): Promise<boolean> {
   try {

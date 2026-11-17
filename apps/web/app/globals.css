@@ -155,6 +155,26 @@ a { color: var(--brand); }
   padding: 4px 4px 16px;
 }
 .student-tutors ul { margin: 0 0 12px; padding-left: 18px; }
+
+/* Ações da portaria numa entrada da fila (chamar/validar QR/liberar). */
+.entry-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.entry-actions .chip.ok { background: var(--brand-tint); color: var(--brand-dark); font-weight: 700; }
+.qr-form { display: flex; gap: 8px; flex-wrap: wrap; width: 100%; margin-top: 4px; }
+.qr-form input {
+  flex: 1 1 220px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+  min-height: 44px;
+}
+.queue-item-error { color: #a11; font-size: 0.9rem; font-weight: 600; width: 100%; }
 textarea {
   width: 100%;
   border: 1.5px solid var(--border);
