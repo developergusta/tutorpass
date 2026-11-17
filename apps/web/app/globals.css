@@ -1377,47 +1377,72 @@ input:focus {
   to { opacity: 1; transform: none; }
 }
 
-/* Portaria: item novo na fila desliza da esquerda. */
-.queue-list li { animation: queue-in 0.35s ease both; }
+/* Portaria: item novo na fila desliza da esquerda. (fill
+   `backwards`, não `both`: a animação não pode prender o
+   transform depois de acabar, senão mata hovers futuros.) */
+.queue-list li { animation: queue-in 0.35s ease backwards; }
 
 /* Telão: quem acabou de ser chamado ESTOURA no painel de prontos
    (a linha remonta no outro painel com a mesma key, então a
    animação toca exatamente no momento da chamada) e a linha do
    AGORA chega acesa e assenta. */
-.telao-panel.is-ready .telao-list li { animation: pop-in 0.5s cubic-bezier(0.22, 1.2, 0.36, 1) both; }
-.telao-list li.is-now { animation: telao-in 0.45s ease both, now-glow 1.4s ease both; }
+.telao-panel.is-ready .telao-list li { animation: pop-in 0.5s cubic-bezier(0.22, 1.2, 0.36, 1) backwards; }
+.telao-list li.is-now { animation: telao-in 0.45s ease backwards, now-glow 1.4s ease backwards; }
 
-/* Home: hero sobe em cascata (texto, depois o painel da saída,
-   cujas linhas também sobem uma a uma). */
-.hero-grid > div:first-child > * { animation: rise-in 0.55s ease both; }
+/* Home: hero sobe em cascata (texto, depois o painel da saída).
+   As linhas do painel sobem na montagem — inclusive quando o
+   painel vivo (HeroBoard) chama um aluno novo. As seções abaixo
+   do hero NÃO animam mais na carga: quem faz isso agora é o
+   reveal no scroll (bloco da landing, mais abaixo). */
+.hero-grid > div:first-child > * { animation: rise-in 0.55s ease backwards; }
 .hero-grid > div:first-child > *:nth-child(2) { animation-delay: 0.07s; }
 .hero-grid > div:first-child > *:nth-child(3) { animation-delay: 0.14s; }
 .hero-grid > div:first-child > *:nth-child(4) { animation-delay: 0.21s; }
-.hero-board { animation: rise-in 0.55s 0.15s ease both; }
-.hb-row { animation: rise-in 0.45s ease both; }
-.hb-row:nth-of-type(2) { animation-delay: 0.25s; }
-.hb-row:nth-of-type(3) { animation-delay: 0.33s; }
-.hb-row:nth-of-type(4) { animation-delay: 0.41s; }
-
-/* Seções da home e planos: entram ao carregar, em cascata curta. */
-.feature-row, .quick-link, .plan { animation: rise-in 0.5s ease both; }
-.feature-row:nth-child(2), .quick-link:nth-child(2), .plan:nth-child(2) { animation-delay: 0.06s; }
-.feature-row:nth-child(3), .quick-link:nth-child(3), .plan:nth-child(3) { animation-delay: 0.12s; }
-.feature-row:nth-child(4), .quick-link:nth-child(4) { animation-delay: 0.18s; }
+.hero-board { animation: rise-in 0.55s 0.15s ease backwards; }
+.hb-row { animation: rise-in 0.45s ease backwards; }
+.hb-row.is-now { animation: pop-in 0.5s cubic-bezier(0.22, 1.2, 0.36, 1) backwards; }
+.hb-tag { animation: hb-pulse 1.6s ease-in-out infinite; }
 
 /* Micro-interações: aperto de botão, seta que anda, menu que desce
    e troca de tema sem corte seco. */
 .btn:active { transform: scale(0.98); }
 .quick-link .q-arrow { transition: transform 0.18s ease; }
 .quick-link:hover .q-arrow { transform: translateX(4px); }
-.topbar nav.nav-open { animation: menu-in 0.22s ease both; }
+.topbar nav.nav-open { animation: menu-in 0.22s ease backwards; }
 body { transition: background-color 0.25s ease, color 0.25s ease; }
-.card, .topbar, .queue-section, .admin-tab, .plan { transition: background-color 0.25s ease, border-color 0.25s ease; }
+.card, .queue-section, .admin-tab, .plan { transition: background-color 0.25s ease, border-color 0.25s ease; }
+.topbar { transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease; }
+
+/* ————————————————————————————————————————————————————————————
+   LANDING — os clássicos de UX (pedido do usuário, 17/11/2026):
+   reveal no scroll, rolagem suave, topbar que ganha sombra e
+   cartões que levantam no hover.
+   ———————————————————————————————————————————————————————————— */
+html { scroll-behavior: smooth; }
+
+/* Reveal on scroll (components/Reveal.tsx): `armed` só existe com
+   JS ligado — sem JS, o conteúdo nasce visível. */
+.reveal.armed { opacity: 0; transform: translateY(18px); }
+.reveal.armed.is-in {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal > .card, .reveal > .quick-link { height: 100%; }
+
+/* Topbar ganha sombra ao rolar (components/TopbarScroll.tsx). */
+.topbar.is-scrolled { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16); }
+
+/* Cartões que levantam no hover: planos e passos da home. */
+.plan, .step { transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.25s ease, border-color 0.25s ease; }
+.plan:hover, .step:hover { transform: translateY(-4px); box-shadow: 0 16px 32px rgba(13, 21, 32, 0.12); }
+[data-theme="dark"] .plan:hover, [data-theme="dark"] .step:hover { box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45); }
 
 /* Quem pede menos movimento no sistema não recebe nada disto —
    nem as animações antigas (os blocos específicos continuam
    valendo; este é o desligamento geral). */
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;

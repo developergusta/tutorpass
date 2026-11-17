@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Script from 'next/script';
 import type { ReactNode } from 'react';
 import AuthNav from '../components/AuthNav';
+import TopbarScroll from '../components/TopbarScroll';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
@@ -82,6 +83,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           data-website-id="d5ab136f-d22f-4d49-9c8e-5c0725f52515"
           strategy="afterInteractive"
         />
+        <TopbarScroll />
         <header className="topbar">
           <Link className="logo" href="/">
             <span className="logo-mark">

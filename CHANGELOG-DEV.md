@@ -183,6 +183,42 @@ contas de visão criadas no ciclo anterior).
 API tem setup/confirm/status, o web não tem a tela); depois o app do
 tutor quando existir o esqueleto mobile.
 
+## 2026-11-17 20:12 — Landing: os clássicos de UX que faltavam
+
+**Pedido** — "na tela inicial, tipo a landing page, faltam
+animações interativas né? clássicas de um sistema bem
+implementado em UX/UI". Faltavam mesmo: a passada anterior só
+tinha animação de ENTRADA. Entraram os clássicos:
+
+**O que entrou**
+- **Reveal no scroll** (`components/Reveal.tsx`, Intersection
+  Observer): passos, recursos, links rápidos e a faixa de preço
+  da home sobem ao entrar na viewport, em cascata curta (delay
+  por item). A classe que esconde (`armed`) só é posta pelo JS —
+  sem JS o conteúdo nasce visível; reduced-motion recebe direto.
+- **Hero VIVO** (`components/HeroBoard.tsx`): o painel da saída
+  deixou de ser foto — a cada ~4 s quem estava "a caminho" é
+  chamado p/ "pode retirar agora" (com o pop da chamada e o selo
+  Agora pulsando), o ETA dos demais cai e um nome novo entra na
+  fila (ciclo de 6 nomes, sem repetição na mesma lista). Para
+  com a aba oculta e com reduced-motion. Segue `aria-hidden`
+  (demonstração decorativa).
+- **Topbar com sombra ao rolar** (`components/TopbarScroll.tsx`
+  alterna `is-scrolled` no header do layout; vale p/ todo o site).
+- **Hover que levanta:** `.plan` (planos) e `.step` (passos)
+  sobem 4 px com sombra no hover.
+- **Rolagem suave** (`scroll-behavior: smooth`, desligada no
+  reduced-motion).
+- **Correção de fundação:** os fills de entrada viraram
+  `backwards` (não `both`) — fill `both` prende o transform no
+  estado final e mataria qualquer hover com transform nos
+  mesmos elementos. As regras antigas de entrada de
+  feature-row/quick-link/plan saíram (o Reveal as substitui).
+
+**Verificação** — `next build` OK (16/16). Fila da rotina: a
+landing está fechada em movimento — não repetir; seguir p/ app
+do tutor / fases 2 de Segurança e Equipe.
+
 ## 2026-11-17 20:00 — Passada de movimento: animações nos momentos do produto
 
 **Pedido** — "já ta na hora de implementar umas animações

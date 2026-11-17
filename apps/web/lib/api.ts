@@ -570,6 +570,28 @@ export function cancelQueueEntry(entryId: string): Promise<unknown> {
   return pickupAction(entryId, 'cancel');
 }
 
+// Irmãos em portões diferentes (PickupController): GET
+// /pickup/schools/:schoolId/sibling-gate-conflicts — a portaria sinaliza
+// o conflito p/ o tutor não deixar um filho esperando no portão errado.
+// A API devolve só ids (tutorId/studentIds); o nome do aluno vem da fila
+// ao vivo quando ela resolve o studentId. Só GATE_AGENT/COORDINATOR/
+// ADMIN/TEACHER — TUTOR recebe 403 e a tela some com o alerta.
+export interface SiblingGateConflict {
+  tutorId: string;
+  studentIds: string[];
+  gates: { gate: string | null; studentIds: string[] }[];
+}
+
+export async function listSiblingGateConflicts(): Promise<SiblingGateConflict[]> {
+  const session = loadSession() ?? (await refreshSession());
+  if (!session?.schoolId) {
+    throw new Error('Sessão sem escola — entre de novo selecionando a escola.');
+  }
+  return authedJson<SiblingGateConflict[]>(
+    `/pickup/schools/${session.schoolId}/sibling-gate-conflicts`,
+  );
+}
+
 /** true quando a API responde no healthcheck; false quando está fora do ar. */
 export async function checkApiHealth(): Promise<boolean> {
   try {

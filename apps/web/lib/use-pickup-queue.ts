@@ -19,6 +19,9 @@ export type QueueGroup = 'ready' | 'enRoute';
 
 export interface QueueItem {
   id: string;
+  /** Id do aluno (entry.studentId) — o alerta de irmãos em portões
+   * diferentes cruza por ele; o `id` acima é o da entrada, não do aluno. */
+  studentId: string | null;
   studentName: string;
   classroomName: string | null;
   gate: string | null;
@@ -90,6 +93,7 @@ function normalize(raw: unknown, fallback: QueueGroup): QueueItem | null {
   const rawStatus = pickString(entry, ['status', 'band', 'proximityBand']);
   return {
     id,
+    studentId: pickString(entry, ['studentId']),
     studentName,
     classroomName: pickString(entry, ['classroomName', 'classroom']),
     gate: pickString(entry, ['gate', 'gateName']),

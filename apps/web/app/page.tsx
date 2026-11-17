@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import HeroBoard from '../components/HeroBoard';
+import Reveal from '../components/Reveal';
 
 function Icon({ children }: { children: ReactNode }) {
   return (
@@ -128,18 +130,6 @@ const steps = [
   },
 ];
 
-// O painel do hero é o produto de verdade (como o telão mostra a saída),
-// com nomes plausíveis — passada "visuals" da unslop: nada de blob abstrato.
-const boardReady = [
-  { name: 'Alice Martins', meta: '3º B · Portão principal', now: true },
-  { name: 'Pedro Santos', meta: '5º A · Portão principal', now: false },
-  { name: 'Maria Clara Souza', meta: '2º C · Portão lateral', now: false },
-];
-const boardComing = [
-  { name: 'Lucas Almeida', meta: '4º B', eta: '~3 min' },
-  { name: 'Sofia Ribeiro', meta: '1º A', eta: '~6 min' },
-];
-
 export default function HomePage() {
   return (
     <main>
@@ -169,43 +159,21 @@ export default function HomePage() {
               <li>Grátis até 30 alunos</li>
             </ul>
           </div>
-          <div className="hero-board" aria-hidden="true">
-            <div className="hb-head">
-              <span className="hb-title">Saída · Portão principal</span>
-              <span className="hb-live">
-                <span className="hb-dot" />
-                Ao vivo
-              </span>
-            </div>
-            <p className="hb-label">Pode retirar agora</p>
-            {boardReady.map((r) => (
-              <div className="hb-row" key={r.name}>
-                <span className="hb-name">{r.name}</span>
-                <span className="hb-meta">{r.meta}</span>
-                {r.now ? <span className="hb-tag">Agora</span> : null}
-              </div>
-            ))}
-            <p className="hb-label">A caminho</p>
-            {boardComing.map((r) => (
-              <div className="hb-row" key={r.name}>
-                <span className="hb-name">{r.name}</span>
-                <span className="hb-meta">{r.meta}</span>
-                <span className="hb-eta">{r.eta}</span>
-              </div>
-            ))}
-          </div>
+          <HeroBoard />
         </div>
       </section>
 
       <section className="container section">
         <h2 className="section-title">Como funciona</h2>
         <div className="steps">
-          {steps.map((s) => (
-            <div className="card step" key={s.n}>
-              <span className="step-n">{s.n}</span>
-              <h3>{s.title}</h3>
-              <p className="muted">{s.text}</p>
-            </div>
+          {steps.map((s, i) => (
+            <Reveal key={s.n} delay={i * 80}>
+              <div className="card step">
+                <span className="step-n">{s.n}</span>
+                <h3>{s.title}</h3>
+                <p className="muted">{s.text}</p>
+              </div>
+            </Reveal>
           ))}
         </div>
       </section>
@@ -213,14 +181,16 @@ export default function HomePage() {
       <section className="container section">
         <h2 className="section-title">Feito para a hora da saída</h2>
         <div className="feature-list">
-          {features.map((f) => (
-            <div className="feature-row" key={f.title}>
-              <span className="f-icon">{f.icon}</span>
-              <div>
-                <h3>{f.title}</h3>
-                <p className="muted">{f.text}</p>
+          {features.map((f, i) => (
+            <Reveal key={f.title} delay={Math.min(i, 3) * 60}>
+              <div className="feature-row">
+                <span className="f-icon">{f.icon}</span>
+                <div>
+                  <h3>{f.title}</h3>
+                  <p className="muted">{f.text}</p>
+                </div>
               </div>
-            </div>
+            </Reveal>
           ))}
         </div>
       </section>
@@ -228,6 +198,7 @@ export default function HomePage() {
       <section className="container section">
         <h2 className="section-title">Acesso rápido</h2>
         <nav className="quick-links">
+          <Reveal>
           <Link className="quick-link" href="/login">
             <span className="q-icon">{iconLogin}</span>
             <span>
@@ -238,6 +209,8 @@ export default function HomePage() {
               →
             </span>
           </Link>
+          </Reveal>
+          <Reveal delay={80}>
           <Link className="quick-link" href="/portaria">
             <span className="q-icon">{iconGate}</span>
             <span>
@@ -248,6 +221,8 @@ export default function HomePage() {
               →
             </span>
           </Link>
+          </Reveal>
+          <Reveal delay={160}>
           <Link className="quick-link" href="/telao">
             <span className="q-icon">{iconTv}</span>
             <span>
@@ -258,10 +233,12 @@ export default function HomePage() {
               →
             </span>
           </Link>
+          </Reveal>
         </nav>
       </section>
 
       <section className="container section">
+        <Reveal>
         <div className="cta-band">
           <h2>Preço simples, publicado e sem surpresa</h2>
           <p>
@@ -272,6 +249,7 @@ export default function HomePage() {
             Conhecer os planos
           </Link>
         </div>
+        </Reveal>
       </section>
     </main>
   );
