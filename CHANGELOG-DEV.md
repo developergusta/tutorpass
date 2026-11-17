@@ -1,3 +1,69 @@
+## 2026-11-17 18:24–18:29 — Ciclo UI 9: 404 + favicon (a aba e o beco sem saída ganham a marca)
+
+**Pesquisa do ciclo (frente d — design systems / boas práticas de CSS/Next)**
+- **Convenção App Router: `app/icon.svg` + `app/favicon.ico` + `app/apple-icon.png`**
+  (docs Next.js; appsnaps, 23/10/2026): arquivos com esses nomes dentro de
+  `app/` são detectados automaticamente e viram rotas de metadados — sem
+  `<link>` manual no HTML e sem declarar `metadata.icons`.
+- **Um só lugar por convenção** (iloveblogs, teste em Next 16.4.2): ter
+  `app/favicon.ico` E `public/favicon.ico` juntos serve dois ícones
+  diferentes no mesmo URL — `next dev` serve um, `next start` o outro, sem
+  aviso no build. O projeto não tinha `public/` nem favicon nenhum, então o
+  trio novo vive só em `app/`.
+- **Stack mínimo 2026: SVG + ICO + apple-touch-icon** (copyprogramming,
+  2026; favicostudio): SVG escala sem perda e é o preferido dos navegadores
+  modernos; ICO fica como fallback legado e p/ PDF; apple-touch 180×180 p/
+  "adicionar à tela inicial" no iOS — pais e portaria usam o celular, então
+  o atalho na tela inicial é o caso de uso real do produto.
+- **404 de marca: dizer o que houve + dar o caminho de volta** (NN/g; mesmo
+  padrão dos estados do ciclo UI 5): a tela padrão do Next não diz onde o
+  usuário está nem para onde ir.
+- Achados registrados em `docs/product/IDEAS.md` (frente d, ciclo UI 9); o
+  item implementado era o da fila UI: **404 + favicon** (BACKLOG, MENOR).
+
+**Direção (unslop)** — Produto: a aba do navegador e o beco sem saída de
+um endereço errado, ambos com a marca do TutorPass. Caráter: calmo, exato.
+Momento: nenhum novo — o ícone é o glifo que já existe (escudo + visto),
+só ganha a aba; a 404 é o padrão `.state` que já existe, só ganha duas
+saídas claras. Assinatura: o escudo verde sólido, sem gradiente nem brilho.
+
+**O que foi feito**
+- **Favicon da marca** (`apps/web/app/icon.svg`): escudo + visto (mesmo
+  glifo do `LogoMark`, traço 2.2) em branco sobre tile verde da marca
+  chapado `#0b6e4f`, cantos 14/64 — o tile sólido é o que lê a 16 px, em
+  aba clara ou escura; sem gradiente, sem brilho.
+- **`favicon.ico` multi-tamanho + `apple-icon.png`** (gerados com PIL a
+  partir do mesmo desenho): ICO com 16/32/48 px (fallback legado) e PNG
+  180×180 p/ iOS. Os três arquivos vivem só em `app/` (convenção App
+  Router); nada em `public/`, nada declarado em `metadata`.
+- **404 com a marca** (`apps/web/app/not-found.tsx` + 2 regras em
+  `globals.css`): reusa o padrão `.state` — ícone do escudo em círculo,
+  título "Página não encontrada" em Sora, 1 linha ("O endereço pode ter
+  mudado ou foi digitado errado") e duas saídas: "Voltar para a página
+  inicial" (primário) e "Ir para a portaria" (secundário), lado a lado no
+  desktop, empilhadas no celular. Topbar e rodapé seguem (a 404 nasce
+  dentro do layout). Sem exclamação, sem período em rótulo curto.
+- Nenhuma regra de negócio, preço ou API tocada. Só arquivos novos + CSS.
+
+**Arquivos alterados**
+- `apps/web/app/icon.svg` (novo), `apps/web/app/favicon.ico` (novo),
+  `apps/web/app/apple-icon.png` (novo)
+- `apps/web/app/not-found.tsx` (novo)
+- `apps/web/app/globals.css` (+ `.not-found`, `.not-found-actions`)
+- `docs/product/IDEAS.md` (frente d, ciclo UI 9), `BACKLOG.md` (fila UI/UX)
+
+**Verificação** — `next build` em apps/web: **OK** (tipos válidos, 12
+rotas: /, /cadastro, /escola, /esqueci-senha, /login, /planos, /portaria,
+/redefinir-senha, /telao, /_not-found + as rotas de metadados
+`/apple-icon.png`, `/favicon.ico`, `/icon.svg` confirmadas no
+`.next/server/app` e no manifesto de rotas). Limitação: sem navegador
+neste sandbox p/ ver a aba com o ícone — a checagem foi por build +
+manifesto; a confirmação visual fica p/ a verificação ao vivo.
+
+**Próximo (fila UI)** — app do tutor (quando existir o esqueleto mobile);
+candidatas da varredura geral: tela de Segurança/2FA e persistência Prisma
+do restante.
+
 ## 2026-11-17 17:55–18:05 — Ciclo UI 8: telão em sentence case — fim do caixa alta com tracking largo
 
 **Pesquisa do ciclo (frente b — UX de fluxos de atendimento/check-in)**

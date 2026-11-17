@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Ícone da aba (favicon) — ciclo UI 9, 17/11/2026. Mesmo glifo da
+       marca (escudo + visto, traço 2.2) sobre o verde da marca chapado,
+       sem gradiente nem brilho (passada anti-genérica/unslop). O tile
+       sólido lê a 16 px e em aba clara ou escura. -->
+  <rect width="64" height="64" rx="14" fill="#0b6e4f" />
+  <g transform="translate(8 8) scale(2)" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3l7 3v5c0 4.5-3 8.1-7 10-4-1.9-7-5.5-7-10V6l7-3z" />
+    <path d="M9 12l2 2 4-4" />
+  </g>
+</svg>

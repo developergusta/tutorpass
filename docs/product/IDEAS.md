@@ -1596,6 +1596,37 @@ Fontes: tvpilot.app "Digital Signage Color Contrast: What Works on a Real TV" e 
   Esforço 0 — **registrado; medir numa TV real na verificação ao
   vivo**.
 
+## Semeado em 17/11/2026 — favicon + 404 no Next.js App Router (frente d, ciclo UI 9)
+- **Convenção App Router: `app/icon.svg` + `app/favicon.ico` + `app/apple-icon.png`**
+  (docs Next.js; appsnaps, 23/10/2026; copyprogramming, 2026): arquivos com
+  esses nomes dentro de `app/` são detectados automaticamente e viram rotas
+  de metadados — sem `<link>` manual no HTML e sem declarar `metadata.icons`.
+  Impacto 3, Esforço 1 — **implementado neste ciclo**.
+- **Um só lugar por convenção: nunca `app/favicon.ico` E `public/favicon.ico`
+  juntos** (iloveblogs, teste em Next 16.4.2): os dois respondem pelo mesmo
+  URL `/favicon.ico` e `next dev` serve um, `next start` o outro — o build
+  passa sem aviso e a aba mostra o ícone errado. Impacto 3, Esforço 0 —
+  **verificado neste ciclo: não havia `public/` nem `app/favicon.ico`**; o
+  trio novo vive só em `app/`.
+- **Stack mínimo 2026: SVG + ICO + apple-touch-icon** (copyprogramming,
+  2026; favicostudio): SVG escala sem perda e é o preferido dos navegadores
+  modernos; ICO fica como fallback legado e p/ exibição em PDF; apple-touch
+  180×180 p/ "adicionar à tela inicial" no iOS — pais e portaria usam o
+  celular, então o atalho na tela inicial é o caso de uso real do produto.
+  Impacto 3, Esforço 1 — **implementado neste ciclo**.
+- **Favicon com tile sólido lê a 16 px; detalhe fino some** (regra de
+  desenho de ícone, coerente com a passada anti-genérica): o glifo da marca
+  (escudo + visto, traço 2.2) sobre o verde chapado `#0b6e4f` é o que resta
+  legível no tamanho da aba; gradiente ou brilho no ícone viraria ruído.
+  Impacto 2, Esforço 1 — **implementado neste ciclo** (SVG + PNG desenhados
+  do mesmo glifo do `LogoMark`).
+- **404 de marca: dizer o que houve + dar o caminho de volta** (NN/g;
+  mesmo padrão dos estados do ciclo UI 5): a tela padrão do Next não diz
+  onde o usuário está nem para onde ir. O padrão é ícone + título curto +
+  1 linha + ação — no nosso caso, duas saídas claras (início e portaria).
+  Impacto 3, Esforço 1 — **implementado neste ciclo** (reusa `.state` e
+  `.btn`/`.btn.secondary`).
+
 ## Diferencial TutorPass (tese)
 Concorrente BR forte é suite ampla (comunicação/ERP/facial). TutorPass vence sendo **o melhor só em saída**:
 mais rápido de implantar, QR dinâmico anti-fraude (eles usam QR estático), auditoria imutável com hash
