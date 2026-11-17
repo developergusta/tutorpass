@@ -49,6 +49,17 @@ Tudo sobe com `docker-compose.prod.yml` (5 serviços):
    `docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build web caddy`
 4. O Caddy emite o certificado Let's Encrypt sozinho no primeiro acesso.
 
+## Publicação de código (automática)
+
+- A rotina de melhoria contínua de UI/UX (cron de 30 min) trabalha em
+  `~/workspace/tutorpass` (checkout git desta VM) e, ao fim de cada ciclo,
+  faz `git add -A && git commit && git push origin main` — o push usa uma
+  deploy key COM escrita desta VM (cadastrada em Settings → Deploy keys do
+  repo, título "Muse — melhoria contínua"; `core.sshCommand` do repo local
+  aponta para `~/.ssh/id_ed25519`). Sem força, sem outra branch: se o push
+  falhar, o ciclo registra no CHANGELOG-DEV.md e o próximo tenta de novo.
+- Com o commit na `main`, o timer do VPS (seção acima) faz o resto sozinho.
+
 ## Operação
 
 - Logs: `docker compose --env-file .env.production -f docker-compose.prod.yml logs -f api`
