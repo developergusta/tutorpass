@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Sora } from 'next/font/google';
+import { Inter, Open_Sans, Sora } from 'next/font/google';
 import Link from 'next/link';
 import Script from 'next/script';
 import type { ReactNode } from 'react';
@@ -14,6 +14,13 @@ const sora = Sora({
   variable: '--font-display',
   display: 'swap',
   weight: ['500', '600', '700'],
+});
+// Open Sans: só o texto da Hero Section da home (pedido do usuário,
+// 17/11/2026) — aplicada via .hero no globals.css.
+const openSans = Open_Sans({
+  subsets: ['latin'],
+  variable: '--font-open-sans',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
@@ -55,7 +62,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="pt-BR"
-      className={`${inter.variable} ${sora.variable}`}
+      className={`${inter.variable} ${sora.variable} ${openSans.variable}`}
       suppressHydrationWarning
     >
       <body>

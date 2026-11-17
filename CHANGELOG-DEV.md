@@ -183,6 +183,18 @@ contas de visão criadas no ciclo anterior).
 API tem setup/confirm/status, o web não tem a tela); depois o app do
 tutor quando existir o esqueleto mobile.
 
+## 2026-11-17 19:47 — Open Sans no hero, completado (pedido do usuário no WhatsApp)
+
+O pedido ("texto do Hero Section em Open Sans") chegou pelo
+WhatsApp às 19:36 e a metade do CSS entrou no ciclo UI 11, mas a
+definição da fonte em `layout.tsx` ficou de fora do commit — a
+variável `--font-open-sans` não existia e o hero caía no fallback
+Inter. Aqui: import do `Open_Sans` em `layout.tsx` + variável no
+`<html>`. `next build` OK (16/16) após limpar a concorrência com
+o build do ciclo seguinte (dois builds no mesmo `.next` flakearam
+de 3 jeitos diferentes; lição: não rodar build em paralelo no
+mesmo diretório).
+
 ## 2026-11-17 19:12 — Contas de visão criadas e verificadas (1 login por perfil)
 
 Na escola de teste, senha única `Visao#2026` p/ todas:
