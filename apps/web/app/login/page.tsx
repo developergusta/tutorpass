@@ -17,9 +17,61 @@ type Phase =
   | { kind: '2fa'; twoFactorToken: string }
   | { kind: 'done'; session: LoginSuccess };
 
+function EyeIcon({ off }: { off?: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+      <circle cx="12" cy="12" r="3" />
+      {off ? <path d="M4 4l16 16" /> : null}
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 12.5l5 5L20 6.5" />
+    </svg>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 3l7 3v5c0 4.5-3 8.1-7 10-4-1.9-7-5.5-7-10V6l7-3z" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  );
+}
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [code, setCode] = useState('');
   const [phase, setPhase] = useState<Phase>({ kind: 'form' });
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +84,9 @@ export default function LoginPage() {
     e.preventDefault();
     setBusy(true);
     setError(null);
+    // A senha volta a ficar oculta ao enviar, para o navegador não
+    // guardar o valor visível no autocompletar (WCAG 3.3.8 / NIST).
+    setShowPassword(false);
     try {
       const result = await login(email.trim(), password);
       if (isNeeds2fa(result)) {
@@ -76,9 +131,12 @@ export default function LoginPage() {
 
   if (phase.kind === 'done') {
     return (
-      <main className="container">
-        <section className="card">
-          <h1>Login feito ✅</h1>
+      <main className="auth-wrap">
+        <section className="card auth-card auth-success">
+          <span className="auth-success-icon">
+            <CheckIcon />
+          </span>
+          <h1>Login feito</h1>
           <p>
             Olá, <strong>{phase.session.user.name}</strong> ({phase.session.user.email}).
           </p>
@@ -89,7 +147,7 @@ export default function LoginPage() {
               que entra numa próxima versão do web.
             </p>
           ) : null}
-          <p style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <div className="auth-actions">
             <Link className="btn" href="/portaria">
               Abrir a portaria
             </Link>
@@ -99,16 +157,26 @@ export default function LoginPage() {
             <button className="btn secondary" type="button" onClick={onLogout}>
               Sair
             </button>
-          </p>
+          </div>
         </section>
       </main>
     );
   }
 
   return (
-    <main className="container">
-      <section className="card" style={{ maxWidth: 480, margin: '24px auto' }}>
-        <h1>Entrar no TutorPass</h1>
+    <main className="auth-wrap">
+      <section className="card auth-card">
+        <div className="auth-brand">
+          <span className="logo-mark">
+            <ShieldIcon />
+          </span>
+          <h1>{phase.kind === '2fa' ? 'Verificação em duas etapas' : 'Entrar no TutorPass'}</h1>
+          <p>
+            {phase.kind === '2fa'
+              ? 'Sua conta usa 2FA. Digite o código do aplicativo autenticador.'
+              : 'Acesso da equipe da escola — portaria, sala e gestão.'}
+          </p>
+        </div>
 
         {existing && phase.kind === 'form' ? (
           <p className="alert ok">
@@ -125,26 +193,41 @@ export default function LoginPage() {
 
         {phase.kind === 'form' ? (
           <form onSubmit={onLogin}>
-            <label htmlFor="email">E-mail</label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="username"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="voce@escola.com.br"
-            />
-            <label htmlFor="password">Senha</label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Sua senha"
-            />
+            <div className="field">
+              <label htmlFor="email">E-mail</label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="username"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="voce@escola.com.br"
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="password">Senha</label>
+              <div className="input-wrap">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Sua senha"
+                />
+                <button
+                  className="input-toggle"
+                  type="button"
+                  aria-pressed={showPassword}
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  onClick={() => setShowPassword((v) => !v)}
+                >
+                  <EyeIcon off={showPassword} />
+                </button>
+              </div>
+            </div>
             <p style={{ marginTop: 20 }}>
               <button className="btn" type="submit" disabled={busy} style={{ width: '100%' }}>
                 {busy ? 'Entrando…' : 'Entrar'}
@@ -153,23 +236,25 @@ export default function LoginPage() {
           </form>
         ) : (
           <form onSubmit={onVerify2fa}>
-            <p>
-              Sua conta usa verificação em duas etapas. Digite o código de 6
-              dígitos do aplicativo autenticador (ou um código de recuperação).
-            </p>
-            <label htmlFor="code">Código de verificação</label>
-            <input
-              id="code"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              required
-              minLength={6}
-              maxLength={12}
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="000000"
-            />
+            <div className="field">
+              <label htmlFor="code">Código de verificação</label>
+              <input
+                id="code"
+                className="code-input"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                required
+                minLength={6}
+                maxLength={12}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="000000"
+              />
+              <p className="hint">
+                Código de 6 dígitos do aplicativo autenticador — ou um código de recuperação.
+              </p>
+            </div>
             <p style={{ marginTop: 20, display: 'flex', gap: 12 }}>
               <button className="btn" type="submit" disabled={busy} style={{ flex: 1 }}>
                 {busy ? 'Verificando…' : 'Verificar e entrar'}
@@ -189,11 +274,11 @@ export default function LoginPage() {
           </form>
         )}
 
-        <p className="muted">
+        <p className="auth-foot">
           Ainda não tem conta?{' '}
           <Link href="/cadastro">Criar a conta da sua escola — grátis até 30 alunos</Link>
         </p>
-        <p className="muted">
+        <p className="auth-foot muted">
           Se o servidor estiver fora do ar, o erro aparece aqui em cima — a
           página não trava. Confira também se você está na rede certa da escola.
         </p>

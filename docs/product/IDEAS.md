@@ -1378,6 +1378,31 @@ sobrennan.myportfolio.com "School'sOut" (pesquisa UX, 16 semanas).
   real das famílias, não um atalho. Impacto — (validação, sem ação de
   código).
 
+## Semeado em 17/11/2026 — acessibilidade e mobile do login: mostrar senha + alvos de toque (frente c, ciclo UI 2)
+Fontes: copyprogramming.com "Password Eye Icon Toggle: Complete 2026 Guide"
+(WCAG 2.2, 2026); blog.a11yfix.dev "Accessible Login and Password Fields"
+(21/06/2026, EAA/WCAG 2.2 AA).
+
+- **Mostrar/ocultar senha é expectativa, não luxo (WCAG 3.3.8 Accessible
+  Authentication)**: esconder a senha não aumenta a segurança e derruba a
+  usabilidade — até ~20% das falhas de login vêm de erro de digitação; o
+  toggle reduz abandono em mobile porque o usuário confere o que digitou
+  antes de enviar. Regras: botão real (não ícone decorativo), nome
+  acessível que muda ("Mostrar senha" → "Ocultar senha"), `aria-pressed`,
+  operável por teclado, alvo de toque ≥ 44×44 px e a senha volta a ficar
+  oculta ao enviar (p/ o navegador não guardar o valor visível). Impacto
+  4, Esforço 1 — **implementado neste ciclo no /login** (botão olho com
+  SVG próprio, 44 px, `aria-pressed` + rótulo dinâmico, reset no submit).
+- **Login é a porta da frente — e é onde os testes de acessibilidade mais
+  falham**: os erros mais comuns são campos sem rótulo visível conectado
+  ao input, o olho sem nome acessível, alvos de toque minúsculos e o
+  zoom do iOS quando o input tem menos de 16 px. O nosso login já tinha
+  rótulos conectados, `autocomplete` correto e fonte 1rem — o que faltava
+  era o toggle e o layout centrado com marca. Próximo passo da mesma
+  frente: aplicar o mesmo padrão (`.auth-*` reutilizável) ao /cadastro e
+  revisar os botões da portaria p/ o mínimo de 44 px. Impacto 3, Esforço 2
+  — próxima candidata (portaria: alvos de toque + foco visível).
+
 ## Diferencial TutorPass (tese)
 Concorrente BR forte é suite ampla (comunicação/ERP/facial). TutorPass vence sendo **o melhor só em saída**:
 mais rápido de implantar, QR dinâmico anti-fraude (eles usam QR estático), auditoria imutável com hash

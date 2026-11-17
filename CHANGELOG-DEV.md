@@ -1,3 +1,52 @@
+## 2026-11-17 15:13–15:17 — Ciclo UI 2: login redesenhado (acessibilidade + mobile)
+
+**Pesquisa do ciclo (frente c — acessibilidade e mobile)**
+- **Mostrar/ocultar senha é expectativa, não luxo (WCAG 3.3.8, 2026)**:
+  esconder a senha não aumenta a segurança e derruba a usabilidade — até
+  ~20% das falhas de login vêm de erro de digitação; o toggle reduz o
+  abandono em mobile. Regras: botão real (não ícone decorativo), nome
+  acessível que muda com o estado, `aria-pressed`, operável por teclado,
+  alvo ≥ 44×44 px e a senha volta a ficar oculta ao enviar.
+- **Login é onde os testes de acessibilidade mais falham** (a11yfix,
+  21/06/2026): campos sem rótulo visível conectado, olho sem nome
+  acessível, alvos minúsculos e zoom do iOS com input < 16 px. O nosso
+  login já tinha rótulos, `autocomplete` correto e fonte 1rem — faltavam
+  o toggle e o layout centrado com marca.
+- Achados registrados em `docs/product/IDEAS.md` (frente c, ciclo UI 2);
+  promovido ao BACKLOG (fila UI/UX): **portaria — alvos de toque ≥ 44 px
+  + foco visível + hierarquia da fila** (Impacto 3, Esforço 2), e aplicar
+  o padrão `.auth-*` ao /cadastro.
+
+**O que foi feito**
+- **Layout de autenticação** (`globals.css`, `.auth-*` reutilizável):
+  `.auth-wrap` centralizado, `.auth-card` de 440 px, `.auth-brand` com a
+  marca (escudo 52 px) + título + subtítulo, botões com altura mínima de
+  48 px, `.field` com espaçamento consistente.
+- **Mostrar/ocultar senha** (`login/page.tsx`): botão olho com SVG
+  próprio (traço 2, cantos arredondados), 44×44 px dentro do campo,
+  `aria-pressed` + `aria-label` que muda ("Mostrar senha" ↔ "Ocultar
+  senha"), e a senha volta a ficar oculta no submit (o navegador não
+  guarda o valor visível no autocompletar).
+- **2FA**: campo do código com espaçamento de dígitos, centralizado e em
+  negrito, com dica de que aceita código de recuperação; botão "Voltar"
+  mantido.
+- **Sucesso**: estado "Login feito" redesenhado — ícone de confirmação em
+  círculo verde, saudação e ações centralizadas (Portaria / Telão / Sair).
+- Lógica de login/2FA/sessão intacta — só apresentação. Nenhuma regra de
+  negócio, preço ou API tocada.
+
+**Arquivos alterados**
+- `apps/web/app/login/page.tsx` (layout, toggle de senha, 2FA, sucesso)
+- `apps/web/app/globals.css` (+ `.auth-*`, `.input-wrap`, `.input-toggle`, `.code-input`)
+- `docs/product/IDEAS.md` (frente c, ciclo UI 2), `BACKLOG.md` (fila UI/UX)
+
+**Verificação** — `next build` em apps/web: **OK** (tipos válidos, 7
+rotas: /, /cadastro, /login, /planos, /portaria, /telao, /_not-found).
+
+**Próximo (fila UI)** — portaria: alvos de toque ≥ 44 px, foco visível e
+hierarquia da fila/status/ações; depois telão (já redesenhado), planos,
+estados vazios/erro e revisão mobile geral.
+
 ## 2026-11-17 15:01–15:20 — Kit essencial open-source no VPS + alerta da portaria via ntfy
 
 **Contexto** — o usuário pediu serviços open-source via Docker p/ dar um

@@ -569,3 +569,93 @@ input:focus {
 .footer strong { color: var(--ink); }
 .footer nav { display: flex; gap: 14px; flex-wrap: wrap; }
 .footer nav a { text-decoration: none; font-weight: 600; }
+
+/* Login / autenticação — layout centrado com marca (ciclo UI 2).
+   Reutilizável por /cadastro: .auth-wrap + .auth-card + .field. */
+.auth-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 16px 32px;
+}
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  margin-bottom: 0;
+}
+.auth-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+.auth-brand .logo-mark {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  box-shadow: var(--shadow-md);
+}
+.auth-brand .logo-mark svg { width: 28px; height: 28px; }
+.auth-brand h1 { margin: 0; font-size: 1.5rem; font-weight: 800; }
+.auth-brand p { margin: 0; color: var(--muted); }
+.auth-card .btn { min-height: 48px; }
+.field { margin: 16px 0 0; }
+.field label { margin: 0 0 6px; }
+.field .hint { margin: 6px 0 0; font-size: 0.9rem; color: var(--muted); font-weight: 400; }
+.input-wrap { position: relative; }
+.input-wrap input { padding-right: 52px; }
+.input-toggle {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.input-toggle:hover { background: var(--bg); color: var(--ink); }
+.input-toggle:focus-visible {
+  outline: 3px solid rgba(11, 110, 79, 0.35);
+  outline-offset: 1px;
+}
+.input-toggle svg { width: 22px; height: 22px; }
+.code-input {
+  text-align: center;
+  letter-spacing: 0.35em;
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.auth-foot {
+  margin: 20px 0 0;
+  text-align: center;
+  font-size: 0.95rem;
+}
+.auth-foot + .auth-foot { margin-top: 8px; }
+.auth-success { text-align: center; }
+.auth-success-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--brand-tint);
+  color: var(--brand-dark);
+  margin-bottom: 12px;
+}
+.auth-success-icon svg { width: 32px; height: 32px; }
+.auth-success h1 { margin: 0 0 8px; }
+.auth-success p { margin: 0 0 16px; }
+.auth-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.auth-actions .btn { flex: 1 1 160px; }

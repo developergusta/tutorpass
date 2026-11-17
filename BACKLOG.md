@@ -30,6 +30,10 @@
 - [x] Testes: unit (geofence/qr) — 25 testes em 16/11/2026 (geofencing, QR, chainHash); falta e2e do fluxo completo de retirada
 - [ ] Observabilidade: logs estruturados, métricas de fila, alerta de fila > N
 
+## Fila UI/UX (rotina de 30 min — ordem: login → portaria → telão → planos → estados vazios/erro → mobile)
+- [x] Login (ciclo UI 2, 17/11/2026): layout centrado com marca (`.auth-*` reutilizável em `globals.css`), botão mostrar/ocultar senha com SVG próprio, alvo 44 px, `aria-pressed` + rótulo dinâmico, senha reocultada ao enviar (WCAG 3.3.8), código 2FA com espaçamento e dica de recuperação, estado de sucesso com ícone de confirmação e ações centralizadas; lógica de login/2FA intacta; `next build` OK (7 rotas). Ver docs/product/IDEAS.md, frente c, ciclo UI 2.
+- [ ] Portaria: alvos de toque ≥ 44 px + foco visível nos botões da fila, hierarquia da fila/status/ações (Impacto 3, Esforço 2 — próxima candidata; ver IDEAS.md, frente c, ciclo UI 2) — e aplicar o padrão `.auth-*` ao /cadastro.
+
 ## Banco de ideias (pesquisa contínua)
 Ver `docs/product/IDEAS.md` — ideias com fonte, impacto e esforço, promovidas ao backlog
 conforme a tese (ser o melhor só em saída). Próxima candidata: **login de
