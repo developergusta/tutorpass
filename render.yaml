@@ -1,0 +1,41 @@
+# Render Blueprint — TutorPass API
+# Uso: no Render, "New + > Blueprint" apontando para este repositório, OU
+# criar o serviço manualmente (Web Service > Docker) com os mesmos valores.
+# Passo a passo completo: docs/04-deploy.md
+#
+# Observações:
+# - A API precisa de processo persistente (WebSocket Socket.io), por isso
+#   Web Service Docker — nunca serverless/static.
+# - O Dockerfile já roda `prisma migrate deploy` na subida (CMD).
+# - Healthcheck real: a API usa o prefixo global `api` (main.ts), então a
+#   rota é /api/health (não /health).
+# - Segredos (sync: false) são preenchidos no painel do Render, nunca aqui.
+services:
+  - type: web
+    name: tutorpass-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: ./apps/api
+    plan: starter
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3333
+      - key: DATABASE_URL
+        sync: false # Neon Postgres (connection string com ?schema=public)
+      - key: REDIS_URL
+        sync: false # Upstash Redis (rediss://...)
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: JWT_ACCESS_TTL
+        value: 15m
+      - key: JWT_REFRESH_TTL_DAYS
+        value: 30
+      - key: QR_TOKEN_SECRET
+        sync: false
+      - key: QR_WINDOW_SECONDS
+        value: 30
+      - key: CORS_ORIGINS
+        sync: false # URL do web na Vercel, ex.: https://tutorpass-web.vercel.app

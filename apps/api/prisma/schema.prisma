@@ -1,0 +1,677 @@
+// TutorPass — PostgreSQL, multitenant por schoolId em TODAS as tabelas de negócio
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  COORDINATOR
+  GATE_AGENT
+  TEACHER
+  TUTOR
+}
+
+enum MemberStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+}
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+  TRANSFERRED
+}
+
+enum Relationship {
+  FATHER
+  MOTHER
+  GRANDPARENT
+  SIBLING
+  GUARDIAN
+  OTHER
+}
+
+enum QueueStatus {
+  QUEUED
+  CALLED
+  AT_GATE
+  VALIDATED
+  RELEASED
+  BLOCKED
+  CANCELLED
+  EXPIRED
+  NO_SHOW
+}
+
+enum PickupEventType {
+  QUEUE_JOINED
+  QUEUE_CALLED
+  QR_SCANNED
+  QR_REJECTED
+  STUDENT_LEFT_CLASSROOM
+  RELEASED
+  BLOCKED
+  CANCELLED
+  EXPIRED
+}
+
+enum AuthorizationStatus {
+  PENDING
+  ACTIVE
+  USED
+  REVOKED
+  EXPIRED
+}
+
+enum EarlyDismissalStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  CANCELLED
+  USED
+  EXPIRED
+}
+
+enum GeoZone {
+  OUTSIDE
+  APPROACH
+  ARRIVAL
+}
+
+enum PlanTier {
+  FREE
+  TRIAL
+  PRO
+}
+
+enum DismissalMode {
+  CAR
+  WALK
+  BUS
+  AFTER_SCHOOL
+}
+
+enum DismissalExceptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+}
+
+model School {
+  id              String                  @id @default(uuid()) @db.Uuid
+  name            String
+  slug            String                  @unique // subdomínio: slug.tutorpass.app
+  document        String? // CNPJ
+  timezone        String                  @default("America/Sao_Paulo")
+  isActive        Boolean                 @default(true)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  members         SchoolMember[]
+  classrooms      Classroom[]
+  students        Student[]
+  tutors          Tutor[]
+  pickupPoints    PickupPoint[]
+  queueEntries    PickupQueueEntry[]
+  pickupLogs      PickupLog[]
+  auditLogs       AuditLog[]
+  authorizations  PickupAuthorization[]
+  earlyDismissals EarlyDismissalRequest[]
+  defaultPlans    DismissalDefaultPlan[]
+  exceptions      DismissalException[]
+  consentRecords  ConsentRecord[]
+  plan            SchoolPlan?
+  notifications   Notification[]
+  incidents       SecurityIncident[]
+  vanRoutes       VanRoute[]
+}
+
+enum NotificationKind {
+  EARLY_DISMISSAL_DECISION
+  STUDENT_CALLED
+  PLAN_CHANGED
+  AUTHORIZATION_CREATED
+  PICKUP_COMPLETED
+}
+
+enum NotificationPushStatus {
+  QUEUED
+  SENT
+  FAILED
+  SKIPPED_NO_CONSENT
+  SKIPPED_NO_TOKEN
+  NOT_CONFIGURED
+}
+
+model Notification {
+  id            String                 @id @default(uuid()) @db.Uuid
+  schoolId      String                 @db.Uuid
+  recipientId   String                 @db.Uuid
+  kind          NotificationKind
+  title         String
+  body          String
+  refId         String? // referência opaca ao objeto de origem (ex.: pedido de saída antecipada)
+  pushStatus    NotificationPushStatus @default(QUEUED)
+  pushAttempts  Int                    @default(0)
+  pushLastError String?
+  readAt        DateTime?
+  createdAt     DateTime               @default(now())
+  school        School                 @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  recipient     Tutor                  @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, readAt])
+  @@index([schoolId, createdAt])
+}
+
+// Notificação dual-path (push + registro durável in-app) — ver
+// modules/notifications/notification.service.ts. O registro in-app é a
+// entrega garantida; o push é best-effort e nunca a única cópia (ReadyBell,
+// 2026). Push só com consentimento PUSH_NOTIFICATIONS + token Expo (LGPD).
+// Retenção: expurgar só lidas e antigas (NotificationService.purgeReadOlderThan).
+
+model User {
+  id            String         @id @default(uuid()) @db.Uuid
+  email         String         @unique
+  passwordHash  String?
+  name          String
+  phone         String?
+  photoUrl      String?
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  memberships   SchoolMember[]
+  refreshTokens RefreshToken[]
+  twoFactorEnrollment TwoFactorEnrollment?
+  tutor         Tutor?
+}
+
+// Refresh token opaco (AuthService): guarda-se só o hash SHA-256 do segredo bruto.
+// Uma família = uma cadeia de rotações; reuso de token rotacionado revoga a família.
+model RefreshToken {
+  id              String    @id @default(uuid()) @db.Uuid // jti do refresh token
+  userId          String    @db.Uuid
+  familyId        String    @db.Uuid
+  tokenHash       String    @unique
+  expiresAt       DateTime
+  familyExpiresAt DateTime // teto absoluto da família (JWT_REFRESH_TTL_DAYS)
+  revokedAt       DateTime?
+  replacedByJti   String?   @db.Uuid
+  replacedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, familyId])
+}
+
+// 2FA TOTP (TwoFactorService): 1 enrollment por usuário. O segredo TOTP é
+// sensível como uma senha — cifrar em repouso com chave do KMS no Step 2
+// (nunca em claro); os códigos de recuperação ficam só como hash scrypt
+// (uso único; gerar novo lote invalida o anterior). lastUsedStep é o
+// anti-replay do TOTP: cada passo de 30 s vale uma única vez.
+model TwoFactorEnrollment {
+  id                   String    @id @default(uuid()) @db.Uuid
+  userId               String    @unique @db.Uuid
+  secretEncrypted      String // segredo Base32 cifrado (KMS) — nunca em claro
+  enabled              Boolean   @default(false)
+  enabledAt            DateTime?
+  recoveryCodeHashes   String[]
+  lastUsedStep         BigInt? // passo TOTP já consumido (anti-replay)
+  lastUsedAt           DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SchoolMember {
+  id          String       @id @default(uuid()) @db.Uuid
+  schoolId    String       @db.Uuid
+  userId      String       @db.Uuid
+  role        Role
+  status      MemberStatus @default(ACTIVE)
+  classroomId String?      @db.Uuid // professor vinculado à sala
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  school      School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classroom   Classroom?   @relation(fields: [classroomId], references: [id])
+
+  @@unique([schoolId, userId, role])
+  @@index([schoolId, role])
+}
+
+model Classroom {
+  id           String         @id @default(uuid()) @db.Uuid
+  schoolId     String         @db.Uuid
+  name         String // "3º A"
+  grade        String?
+  academicYear Int
+  roomLocation String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  school       School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  students     Student[]
+  members      SchoolMember[]
+
+  @@unique([schoolId, name, academicYear])
+  @@index([schoolId])
+}
+
+model Student {
+  id              String                       @id @default(uuid()) @db.Uuid
+  schoolId        String                       @db.Uuid
+  classroomId     String                       @db.Uuid
+  name            String
+  photoUrl        String?
+  birthDate       DateTime?                    @db.Date
+  enrollmentCode  String? // matrícula
+  status          StudentStatus                @default(ACTIVE)
+  pickupBlocked   Boolean                      @default(false) // bloqueio judicial/administrativo
+  blockReason     String?
+  createdAt       DateTime                     @default(now())
+  updatedAt       DateTime                     @updatedAt
+  school          School                       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classroom       Classroom                    @relation(fields: [classroomId], references: [id])
+  tutorLinks      TutorStudent[]
+  queueEntries    PickupQueueEntry[]
+  pickupLogs      PickupLog[]
+  authorizations  PickupAuthorizationStudent[]
+  earlyDismissals EarlyDismissalStudent[]
+  defaultPlans    DismissalDefaultPlan[]
+  exceptions      DismissalException[]
+  vanRouteStops   VanRouteStop[]
+
+  @@unique([schoolId, enrollmentCode])
+  @@index([schoolId, classroomId, status])
+}
+
+model Tutor {
+  id              String                  @id @default(uuid()) @db.Uuid
+  schoolId        String                  @db.Uuid
+  userId          String                  @unique @db.Uuid
+  document        String? // CPF (armazenar hash/criptografado em prod)
+  photoUrl        String?
+  qrSecret        String // segredo p/ QR dinâmico, rotacionável
+  isBlocked       Boolean                 @default(false)
+  blockReason     String?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  school          School                  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentLinks    TutorStudent[]
+  vehicles        Vehicle[]
+  queueEntries    PickupQueueEntry[]
+  notifications   Notification[]
+  authorizations  PickupAuthorization[]
+  earlyDismissals EarlyDismissalRequest[]
+
+  @@index([schoolId])
+}
+
+model TutorStudent {
+  tutorId      String       @db.Uuid
+  studentId    String       @db.Uuid
+  relationship Relationship
+  isPrimary    Boolean      @default(false)
+  canPickup    Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  tutor        Tutor        @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+  student      Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([tutorId, studentId])
+}
+
+model Vehicle {
+  id        String   @id @default(uuid()) @db.Uuid
+  tutorId   String   @db.Uuid
+  plate     String
+  model     String?
+  color     String?
+  createdAt DateTime @default(now())
+  tutor     Tutor    @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+
+  @@index([tutorId])
+}
+
+model PickupPoint {
+  id              String   @id @default(uuid()) @db.Uuid
+  schoolId        String   @db.Uuid
+  name            String // "Portão Principal"
+  latitude        Decimal  @db.Decimal(10, 7)
+  longitude       Decimal  @db.Decimal(10, 7)
+  approachRadiusM Int      @default(800)
+  arrivalRadiusM  Int      @default(250)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  school          School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+}
+
+model PickupAuthorization {
+  id                String                       @id @default(uuid()) @db.Uuid
+  schoolId          String                       @db.Uuid
+  tutorId           String                       @db.Uuid // quem delega
+  delegateName      String
+  delegateDocument  String
+  delegateSelfieUrl String // upload obrigatório
+  delegatePhotoUrl  String?
+  startsAt          DateTime
+  expiresAt         DateTime
+  status            AuthorizationStatus          @default(ACTIVE)
+  revokedAt         DateTime?
+  usedAt            DateTime?
+  createdAt         DateTime                     @default(now())
+  updatedAt         DateTime                     @updatedAt
+  school            School                       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tutor             Tutor                        @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+  students          PickupAuthorizationStudent[]
+
+  @@index([schoolId, status, expiresAt])
+}
+
+model PickupAuthorizationStudent {
+  authorizationId String              @db.Uuid
+  studentId       String              @db.Uuid
+  authorization   PickupAuthorization @relation(fields: [authorizationId], references: [id], onDelete: Cascade)
+  student         Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([authorizationId, studentId])
+}
+
+model EarlyDismissalRequest {
+  id           String                  @id @default(uuid()) @db.Uuid
+  schoolId     String                  @db.Uuid
+  tutorId      String                  @db.Uuid // quem pediu
+  requestedAt  DateTime // dia + hora da saída antecipada
+  reason       String // motivo obrigatório (auditável)
+  pickupBy     String // quem vai buscar (tutor ou delegado autorizado)
+  status       EarlyDismissalStatus    @default(REQUESTED)
+  decidedBy    String?                 @db.Uuid // staff que aprovou/recusou
+  decidedAt    DateTime?
+  decisionNote String? // motivo da recusa (obrigatório) ou obs. da aprovação
+  usedAt       DateTime?
+  cancelledAt  DateTime?
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  school       School                  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  tutor        Tutor                   @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+  students     EarlyDismissalStudent[]
+
+  @@index([schoolId, status, requestedAt])
+  @@index([tutorId])
+}
+
+model EarlyDismissalStudent {
+  requestId String                @db.Uuid
+  studentId String                @db.Uuid
+  request   EarlyDismissalRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  student   Student               @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([requestId, studentId])
+}
+
+model PickupQueueEntry {
+  id              String      @id @default(uuid()) @db.Uuid
+  schoolId        String      @db.Uuid
+  studentId       String      @db.Uuid
+  tutorId         String      @db.Uuid
+  authorizationId String?     @db.Uuid // se quem busca é delegado
+  pickupPointId   String?     @db.Uuid
+  gate            String? // nome livre do portão ("Portão A", "Fundos") — filtro da portaria; pickupPointId segue como o vínculo estruturado quando a escola cadastrar portões
+  vehicleId       String?     @db.Uuid
+  status          QueueStatus @default(QUEUED)
+  source          String      @default("GEOFENCE") // GEOFENCE | MANUAL | QR_GATE
+  joinedAt        DateTime    @default(now())
+  calledAt        DateTime?
+  validatedAt     DateTime?
+  releasedAt      DateTime?
+  waitSeconds     Int? // calculado na liberação p/ relatórios
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  school          School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student         Student     @relation(fields: [studentId], references: [id])
+  tutor           Tutor       @relation(fields: [tutorId], references: [id])
+  pickupLog       PickupLog?
+
+  @@index([schoolId, status, createdAt])
+  @@index([studentId])
+}
+
+model PickupLog {
+  id           String            @id @default(uuid()) @db.Uuid
+  schoolId     String            @db.Uuid
+  studentId    String            @db.Uuid
+  queueEntryId String?           @unique @db.Uuid
+  eventType    PickupEventType
+  actorUserId  String?           @db.Uuid
+  tutorId      String?           @db.Uuid
+  payload      Json // snapshot: nomes, fotos (urls), veículo, ponto, resultado da validação
+  prevHash     String?
+  hash         String
+  createdAt    DateTime          @default(now())
+  school       School            @relation(fields: [schoolId], references: [id])
+  student      Student           @relation(fields: [studentId], references: [id])
+  queueEntry   PickupQueueEntry? @relation(fields: [queueEntryId], references: [id])
+
+  @@index([schoolId, studentId, createdAt])
+  @@index([schoolId, createdAt])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  schoolId    String   @db.Uuid
+  actorUserId String?  @db.Uuid
+  action      String
+  entity      String
+  entityId    String?
+  before      Json?
+  after       Json?
+  ip          String?
+  prevHash    String?
+  hash        String
+  createdAt   DateTime @default(now())
+  school      School   @relation(fields: [schoolId], references: [id])
+
+  @@index([schoolId, createdAt])
+}
+
+model ConsentRecord {
+  id              String   @id @default(uuid()) @db.Uuid
+  schoolId        String   @db.Uuid
+  subjectId       String   @db.Uuid // aluno ou tutor
+  subjectUnder12  Boolean // criança (< 12): exige responsável legal + explícito
+  purpose         String // GUARDIAN_GEOLOCATION | DELEGATION_SELFIE | STUDENT_PHOTO | PUSH_NOTIFICATIONS
+  eventType       String // GRANT | REVOKE
+  grantedByUserId String   @db.Uuid
+  grantedByRole   String // GUARDIAN | SELF
+  explicit        Boolean // específico e em destaque
+  noticeVersion   String // versão do aviso de privacidade exibido (consentimento informado)
+  prevHash        String?
+  hash            String
+  createdAt       DateTime @default(now())
+  school          School   @relation(fields: [schoolId], references: [id])
+
+  @@index([schoolId, subjectId, purpose, createdAt])
+}
+
+// Plano de saída padrão por aluno + exceção do dia com cutoff: um modo por dia da
+// semana (0 = domingo … 6 = sábado), definido só pela secretaria; a exceção desvia
+// num dia específico e respeita o cutoff da escola — ver
+// modules/dismissal-plans/dismissal-plan.service.ts.
+model DismissalDefaultPlan {
+  id        String        @id @default(uuid()) @db.Uuid
+  schoolId  String        @db.Uuid
+  studentId String        @db.Uuid
+  weekday   Int // 0 = domingo … 6 = sábado
+  mode      DismissalMode
+  busLine   String? // exigido quando mode = BUS
+  pickupBy  String? // exigido quando mode = CAR (quem busca)
+  note      String?
+  setBy     String        @db.Uuid // staff que definiu
+  setByRole String // STAFF (só a secretaria define o padrão)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  school    School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student   Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, weekday])
+  @@index([schoolId])
+}
+
+model DismissalException {
+  id            String                   @id @default(uuid()) @db.Uuid
+  schoolId      String                   @db.Uuid
+  studentId     String                   @db.Uuid
+  date          DateTime                 @db.Date // dia do desvio (YYYY-MM-DD)
+  mode          DismissalMode
+  busLine       String?
+  pickupBy      String?
+  note          String?
+  status        DismissalExceptionStatus @default(ACTIVE)
+  createdBy     String                   @db.Uuid // tutor ou staff que criou
+  createdByRole String // TUTOR | STAFF
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  school        School                   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student       Student                  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId, date, status])
+  @@index([studentId, date])
+}
+
+// Plano comercial da escola: FREE (R$ 0, até 30 alunos/5 staff), TRIAL (30 dias sem cartão,
+// limites do PRO) e PRO (R$ 2,90/aluno/mês). 1 trial por escola (trialUsed); trial vencido
+// volta p/ FREE via PlanService.refresh() — ver modules/plans/plan.service.ts.
+model SchoolPlan {
+  id          String    @id @default(uuid()) @db.Uuid
+  schoolId    String    @unique @db.Uuid
+  tier        PlanTier  @default(FREE)
+  trialEndsAt DateTime?
+  trialUsed   Boolean   @default(false)
+  startedAt   DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  school      School    @relation(fields: [schoolId], references: [id])
+}
+
+enum SecurityIncidentCategory {
+  WRONG_RECIPIENT
+  OPEN_SPREADSHEET
+  LOST_DEVICE
+  UNAUTHORIZED_ACCESS
+  RANSOMWARE
+  OTHER
+}
+
+enum SecurityIncidentStatus {
+  OPEN
+  CONTAINED
+  COMMUNICATED
+  CLOSED
+}
+
+// Registro de incidentes de segurança com prazo de comunicação à ANPD
+// (Resolução CD/ANPD nº 15/2024: 3 dias úteis p/ comunicar ANPD + titulares
+// quando houver risco relevante; complementação em até 20 dias úteis).
+// Só categorias de dados + contagem de titulares — nunca o conteúdo vazado.
+// Eventos do incidente (REPORTED/CONTAINED/ANPD_NOTIFIED/...) ficam no log
+// append-only com hash encadeado do SecurityIncidentService (Step 2: modelo
+// SecurityIncidentEvent). Ver modules/incidents/security-incident.service.ts.
+model SecurityIncident {
+  id                 String                   @id @default(uuid()) @db.Uuid
+  schoolId           String                   @db.Uuid
+  title              String
+  description        String
+  category           SecurityIncidentCategory
+  dataCategories     String[] // categorias de dados envolvidos (nunca o conteúdo)
+  affectedCount      Int                      @default(0)
+  relevantRisk       Boolean
+  detectedAt         DateTime
+  reportedBy         String
+  dpoContact         String?
+  status             SecurityIncidentStatus   @default(OPEN)
+  communicationDueAt DateTime
+  supplementDueAt    DateTime
+  anpdNotifiedAt     DateTime?
+  subjectsNotifiedAt DateTime?
+  supplementSentAt   DateTime?
+  containedAt        DateTime?
+  closedAt           DateTime?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  school             School                   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId, status])
+  @@index([schoolId, communicationDueAt])
+}
+
+enum VanDirection {
+  TO_SCHOOL // ida — casa → escola
+  TO_HOME // volta — escola → casa
+}
+
+enum VanRouteStatus {
+  PLANNED
+  RUNNING
+  FINISHED
+  CANCELLED
+}
+
+enum VanStopStatus {
+  WAITING // aguardando a van passar
+  BOARDED // embarcou (a bordo agora)
+  DELIVERED // entregue (na escola, na ida; em casa, na volta)
+  ABSENT // "não estava no ponto"
+  NOT_RIDING // "não vai hoje" (responsável avisou)
+}
+
+// Rota de van/fretado (motorista retira vários alunos) — ver
+// modules/van-routes/van-route.service.ts. O registro de cada embarque é
+// prova auditável: eventos no log append-only com hash encadeado do
+// VanRouteService (Step 2: modelo VanRouteEvent).
+model VanRoute {
+  id                  String         @id @default(uuid()) @db.Uuid
+  schoolId            String         @db.Uuid
+  driverId            String // motorista (Step 2: modelo Driver ou Tutor com papel)
+  direction           VanDirection
+  date                String // dia letivo "YYYY-MM-DD"
+  expectedDurationMin Int            @default(90)
+  status              VanRouteStatus @default(PLANNED)
+  startedAt           DateTime?
+  finishedAt          DateTime?
+  cancelledAt         DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  school              School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  stops               VanRouteStop[]
+
+  @@index([schoolId, driverId, status])
+  @@index([schoolId, date])
+}
+
+model VanRouteStop {
+  id          String        @id @default(uuid()) @db.Uuid
+  vanRouteId  String        @db.Uuid
+  studentId   String        @db.Uuid
+  order       Int // posição na rota (1 = primeira parada)
+  status      VanStopStatus @default(WAITING)
+  boardedAt   DateTime?
+  deliveredAt DateTime?
+  absentAt    DateTime?
+  notRidingAt DateTime?
+  notRidingBy String? // tutor que avisou "não vai hoje"
+  note        String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  route       VanRoute      @relation(fields: [vanRouteId], references: [id], onDelete: Cascade)
+  student     Student       @relation(fields: [studentId], references: [id])
+
+  @@unique([vanRouteId, studentId])
+  @@index([vanRouteId, order])
+}

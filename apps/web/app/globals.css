@@ -1,0 +1,222 @@
+:root {
+  --bg: #f6f7f9;
+  --card: #ffffff;
+  --text: #17202b;
+  --muted: #5d6b7a;
+  --brand: #0b6e4f;
+  --brand-dark: #08573e;
+  --border: #dde3ea;
+  --warn-bg: #fff4e5;
+  --warn-text: #8a5a00;
+  --error-bg: #fdecec;
+  --error-text: #8f1d1d;
+  --ok: #0b6e4f;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.45;
+}
+
+a { color: var(--brand); }
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar .logo {
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.topbar nav { display: flex; gap: 14px; flex-wrap: wrap; }
+.topbar nav a { text-decoration: none; font-weight: 600; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.btn {
+  display: inline-block;
+  background: var(--brand);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+}
+.btn:hover { background: var(--brand-dark); }
+.btn:disabled { opacity: 0.6; cursor: wait; }
+.btn.secondary {
+  background: var(--card);
+  color: var(--brand);
+  border: 1px solid var(--brand);
+}
+
+.grid-links {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 640px) {
+  .grid-links { grid-template-columns: repeat(3, 1fr); }
+}
+
+label { display: block; font-weight: 600; margin: 12px 0 6px; }
+
+input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 1rem;
+  background: #fff;
+  color: var(--text);
+}
+
+.alert {
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 12px 0;
+  font-weight: 600;
+}
+.alert.error { background: var(--error-bg); color: var(--error-text); }
+.alert.warn { background: var(--warn-bg); color: var(--warn-text); }
+.alert.ok { background: #e6f4ec; color: var(--ok); }
+
+.muted { color: var(--muted); }
+
+.status-dot {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+  background: #b0b8c1;
+  vertical-align: middle;
+}
+.status-dot.on { background: var(--ok); }
+.status-dot.off { background: #c0392b; }
+
+.queue-list { list-style: none; margin: 0; padding: 0; }
+.queue-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--border);
+}
+.queue-list li:last-child { border-bottom: none; }
+.queue-list .name { font-weight: 700; }
+
+.empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 28px 12px;
+}
+
+/* Planos e preços */
+.pricing-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+@media (min-width: 640px) {
+  .pricing-grid { grid-template-columns: repeat(3, 1fr); }
+}
+.plan {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+.plan.recommended {
+  border: 2px solid var(--brand);
+}
+.plan .price {
+  font-size: 1.9rem;
+  font-weight: 800;
+  margin: 4px 0 8px;
+}
+.plan .price .muted { font-size: 1rem; font-weight: 600; }
+.plan ul {
+  margin: 8px 0 16px;
+  padding-left: 20px;
+  flex: 1;
+}
+.plan ul li { margin-bottom: 6px; }
+.plan .btn { margin-top: auto; }
+.calculator input { max-width: 220px; }
+.calc-result {
+  font-size: 1.15rem;
+  background: #e6f4ec;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+/* Telão / TV */
+.telao {
+  min-height: 100vh;
+  background: #101820;
+  color: #f2f6f9;
+  padding: 20px;
+}
+.telao h1 { font-size: clamp(1.6rem, 4vw, 3rem); margin: 0 0 4px; }
+.telao .cols {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+@media (min-width: 800px) {
+  .telao .cols { grid-template-columns: 1fr 1fr; }
+}
+.telao .col {
+  background: #182430;
+  border-radius: 16px;
+  padding: 20px;
+  min-height: 40vh;
+}
+.telao .col h2 { font-size: clamp(1.3rem, 3vw, 2.2rem); margin-top: 0; }
+.telao .big-list { list-style: none; margin: 0; padding: 0; }
+.telao .big-list li {
+  font-size: clamp(1.4rem, 3.4vw, 2.6rem);
+  font-weight: 800;
+  padding: 14px 0;
+  border-bottom: 1px solid #263646;
+}
+.telao .big-list .room {
+  display: block;
+  font-size: 0.55em;
+  font-weight: 600;
+  color: #9fb4c4;
+}
+.telao .empty { color: #9fb4c4; font-size: 1.2rem; }

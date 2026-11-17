@@ -1,0 +1,28 @@
+# 01 — Arquitetura
+
+## Monorepo, não repos separados
+Um produto, três clientes (API/Web/Mobile) que mudam juntos: o contrato do evento
+`student.called` muda na API, no painel do professor e no app no mesmo PR.
+Repos separados gerariam versionamento de contrato sem ganho — time pequeno, deploy independente
+continua possível (Turbo filtra por app, Docker só da API, Vercel só do web).
+
+## Módulos NestJS (apps/api/src/modules)
+- `auth` — login, refresh, RBAC (ADMIN, COORDINATOR, GATE_AGENT, TEACHER, TUTOR)
+- `tenancy` — resolve `schoolId` do JWT/subdomínio, injeta no request, nunca aceita do body
+- `schools` — tenant, campi, pontos de retirada, configuração de raio/tempos
+- `students` / `classrooms` — alunos, turmas, matrícula do ano
+- `tutors` — tutores, vínculo tutor↔aluno, veículos
+- `delegations` — autorização temporária de terceiro (selfie, documento, janela de validade)
+- `pickup` — máquina de estados da fila e da retirada (núcleo)
+- `qr` — emissão/validação do token dinâmico de 30s
+- `geofencing` — ingestão de localização, haversine, histerese, transição de zona
+- `realtime` — Gateway Socket.io, rooms, snapshot, adapter Redis
+- `audit` — PickupLog/AuditLog append-only com hash encadeado
+- `reports` — tempo de espera, retiradas/dia, exportação
+
+## Regras que não são negociáveis
+1. **Toda tabela de negócio tem `schoolId`** e toda query passa pelo tenant scope.
+2. **PickupLog é append-only**: sem UPDATE/DELETE (revogado no banco + bloqueado no Prisma).
+3. **QR nunca carrega dado do aluno** — só `tutorId + schoolId + exp + nonce`, assinado (HMAC).
+4. **Localização bruta não é persistida** — só a transição de zona vira evento. GPS é efêmero (Redis, TTL 10 min). Privacidade/LGPD.
+5. **Bloqueio vence fila**: aluno bloqueado (decisão judicial, tutor suspenso) nunca é liberado só porque chegou na fila.
