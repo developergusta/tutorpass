@@ -14,6 +14,15 @@
 	handle /socket.io/* {
 		reverse_proxy api:3333
 	}
+	# Dozzle (logs dos containers) — sem porta pública; só por aqui, atrás
+	# de basic_auth (o hash bcrypt é gerado com `caddy hash-password` no
+	# servidor; a senha em claro fica com o dono, nunca no git).
+	handle /dozzle* {
+		basic_auth {
+			gustavo $2a$14$a6C5RdNnUBzWskTXkv9eTOp9JMKWAYXBgyJu/3N3Uoze8w26OVNHq
+		}
+		reverse_proxy dozzle:8080
+	}
 	handle {
 		reverse_proxy web:3000
 	}

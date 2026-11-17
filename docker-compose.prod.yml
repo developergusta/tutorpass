@@ -68,4 +68,70 @@ services:
     depends_on: [web, api]
     restart: unless-stopped
 
-volumes: { pgdata: {}, redisdata: {}, caddy_data: {}, caddy_config: {} }
+  # --- Kit essencial (17/11/2026): monitoramento, backup, analytics, push e logs.
+  # Desenho de exposição (sem domínio por enquanto):
+  # - uptime-kuma e umami têm login próprio → porta direta (3001/3002).
+  # - ntfy → porta direta (2586) com autenticação ligada (deny-all por padrão);
+  #   tópicos são o canal de alerta do dono e, no produto, da portaria.
+  # - dozzle NÃO tem porta: só o Caddy alcança, em /dozzle atrás de basic_auth
+  #   (ele enxerga TODOS os logs — nunca expor direto).
+  # - db-backup é interno, sem porta.
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    volumes: [kuma_data:/app/data]
+    ports: ["3001:3001"]
+    restart: unless-stopped
+
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    environment:
+      DATABASE_URL: "postgresql://tutorpass:${POSTGRES_PASSWORD}@postgres:5432/umami"
+      APP_SECRET: "${UMAMI_APP_SECRET:?defina UMAMI_APP_SECRET no .env.production}"
+    ports: ["3002:3000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: unless-stopped
+
+  ntfy:
+    image: binwiederhier/ntfy:latest
+    command: serve
+    environment:
+      NTFY_BASE_URL: "${PUBLIC_ORIGIN}:2586"
+      # iOS: o app recebe via APNs da ntfy.sh — o upstream encaminha o push
+      # p/ servidores self-hosted (o conteúdo continua no nosso servidor).
+      NTFY_UPSTREAM_BASE_URL: "https://ntfy.sh"
+      NTFY_AUTH_FILE: /var/lib/ntfy/user.db
+      NTFY_AUTH_DEFAULT_ACCESS: "deny-all"
+      NTFY_CACHE_FILE: /var/cache/ntfy/cache.db
+      NTFY_ATTACHMENT_CACHE_DIR: /var/cache/ntfy/attachments
+    volumes:
+      - ntfy_data:/var/lib/ntfy
+      - ntfy_cache:/var/cache/ntfy
+    ports: ["2586:80"]
+    restart: unless-stopped
+
+  dozzle:
+    image: amir20/dozzle:latest
+    environment:
+      DOZZLE_BASE: /dozzle
+      DOZZLE_NO_ANALYTICS: "true"
+    volumes: ["/var/run/docker.sock:/var/run/docker.sock:ro"]
+    restart: unless-stopped
+
+  db-backup:
+    image: prodrigestivill/postgres-backup-local:latest
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: tutorpass
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env.production}"
+      POSTGRES_DB: tutorpass
+      SCHEDULE: "@daily"
+      BACKUP_KEEP_DAYS: "7"
+      BACKUP_KEEP_WEEKS: "4"
+      BACKUP_KEEP_MONTHS: "6"
+    volumes: [db_backups:/db/data/backups]
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: unless-stopped
+
+volumes: { pgdata: {}, redisdata: {}, caddy_data: {}, caddy_config: {}, kuma_data: {}, ntfy_data: {}, ntfy_cache: {}, db_backups: {} }
