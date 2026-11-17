@@ -11,7 +11,7 @@
 // e é montada a partir dos eventos. Sem API/socket, as telas mostram o
 // estado vazio amigável em vez de travar.
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { API_URL, checkApiHealth } from './api';
 
@@ -101,6 +101,8 @@ export interface PickupQueueState {
   enRoute: QueueItem[];
   socketConnected: boolean;
   apiOnline: boolean | null; // null = ainda verificando
+  /** Re-verifica a saúde da API e reconecta o socket (botão "Tentar de novo"). */
+  retry: () => void;
 }
 
 export function usePickupQueue(): PickupQueueState {
@@ -108,6 +110,9 @@ export function usePickupQueue(): PickupQueueState {
   const [socketConnected, setSocketConnected] = useState(false);
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  const retryRef = useRef<() => void>(() => {});
+
+  const retry = useCallback(() => retryRef.current(), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -119,6 +124,12 @@ export function usePickupQueue(): PickupQueueState {
     };
     check();
     const healthTimer = setInterval(check, 30_000);
+    // Retry manual: re-verifica a API e reconecta o socket (o socket
+    // desiste sozinho após 5 tentativas — o botão devolve o controle).
+    retryRef.current = () => {
+      check();
+      socketRef.current?.connect();
+    };
 
     const token = (() => {
       try {
@@ -185,5 +196,5 @@ export function usePickupQueue(): PickupQueueState {
   const ready = useMemo(() => items.filter((i) => i.group === 'ready'), [items]);
   const enRoute = useMemo(() => items.filter((i) => i.group === 'enRoute'), [items]);
 
-  return { items, ready, enRoute, socketConnected, apiOnline };
+  return { items, ready, enRoute, socketConnected, apiOnline, retry };
 }

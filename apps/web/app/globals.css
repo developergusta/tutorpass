@@ -83,7 +83,23 @@ a { color: var(--brand); }
 }
 .logo-mark svg { width: 19px; height: 19px; }
 
-.topbar nav { display: flex; gap: 14px; flex-wrap: wrap; }
+.topbar nav { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+/* Estado de logado na topbar (AuthNav): avatar com inicial + nome + Sair. */
+.nav-user { display: inline-flex; align-items: center; gap: 8px; }
+.nav-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.nav-user-name { font-weight: 600; }
+.btn.small { padding: 8px 14px; min-height: 40px; font-size: 0.95rem; }
 .topbar nav a { text-decoration: none; font-weight: 600; }
 
 .card {
@@ -185,10 +201,49 @@ input:focus {
 .queue-list li:last-child { border-bottom: none; }
 .queue-list .name { font-weight: 700; }
 
-.empty {
-  text-align: center;
-  color: var(--muted);
-  padding: 28px 12px;
+/* Estados: vazio / erro / carregando — padrão único (ciclo UI 5).
+   Anatomia (Carbon/NN/g, 2026): ícone + título curto + 1 linha de texto
+   + no máximo 1 ação. O vazio ensina o próximo passo; o erro diz o que
+   houve, o que fazer e oferece retry; o carregamento é um skeleton no
+   formato do conteúdo real, sem salto de layout — e nunca um "vazio"
+   enquanto ainda está carregando. */
+.state { text-align: center; padding: 28px 16px; }
+.state-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--brand-tint); color: var(--brand-dark); margin-bottom: 12px;
+}
+.state-title {
+  font-family: var(--font-display), var(--font-inter), system-ui, sans-serif;
+  font-weight: 600; font-size: 1.1rem; color: var(--ink); margin: 0 0 4px;
+}
+.state-text { color: var(--muted); margin: 0 auto; max-width: 42ch; }
+.state-action { margin-top: 16px; }
+.state-error {
+  background: var(--error-bg);
+  border: 1px solid #f3c2c2;
+  border-radius: var(--radius);
+}
+.state-error .state-icon { background: #f8d7d7; color: var(--error-text); }
+
+/* Skeleton: linhas no formato das linhas da fila, p/ nada pular quando
+   o conteúdo chegar. Pulso suave; sem movimento quando o usuário pede. */
+.skeleton-list { list-style: none; margin: 0; padding: 0; }
+.skeleton-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 4px; border-bottom: 1px solid var(--border);
+}
+.skeleton-row:last-child { border-bottom: none; }
+.skeleton-pos { width: 32px; height: 32px; border-radius: 50%; background: var(--border); flex: none; }
+.skeleton-bars { flex: 1; display: grid; gap: 8px; }
+.skeleton-bar { height: 12px; border-radius: 6px; background: var(--border); }
+.skeleton-bar.short { width: 55%; }
+.skeleton-pos, .skeleton-bar { animation: skeleton-shimmer 1.4s ease-in-out infinite; }
+@keyframes skeleton-shimmer { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
 
 /* Planos e preços */
@@ -438,6 +493,16 @@ input:focus {
   font-weight: 800;
   margin: 0;
 }
+/* Skeleton do telão: barras no formato dos nomes, p/ a TV não afirmar
+   "ninguém pronto" enquanto a fila ainda está conectando. */
+.telao-skeleton { display: grid; gap: 14px; padding: 18px 6px; }
+.telao-skeleton span {
+  display: block; height: 34px; border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+.telao-skeleton span:nth-child(2) { width: 72%; }
+.telao-skeleton span:nth-child(3) { width: 48%; }
 .telao-foot {
   display: flex;
   justify-content: space-between;
@@ -456,6 +521,7 @@ input:focus {
 }
 @media (prefers-reduced-motion: reduce) {
   .telao-list li, .telao-dot, .telao-tag.tag-now { animation: none; }
+  .skeleton-pos, .skeleton-bar, .telao-skeleton span { animation: none; }
 }
 
 /* Home — hero, seções, recursos (redesign UI/UX, ciclo UI 1) */

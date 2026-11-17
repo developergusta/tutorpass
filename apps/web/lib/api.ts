@@ -45,12 +45,23 @@ const SESSION_KEY = 'tutorpass.session';
 // O access token é de curta duração (15 min) e fica em sessionStorage
 // (some ao fechar a aba). O refresh token NUNCA passa pelo web: ele vai
 // em cookie httpOnly setado pela API (ver auth.controller.ts).
+// A topbar (AuthNav) escuta este evento p/ refletir login/logout na hora,
+// sem recarregar a página (sessionStorage não dispara 'storage' na própria aba).
+function notifySessionChanged() {
+  try {
+    window.dispatchEvent(new Event('tutorpass:session'));
+  } catch {
+    // fora do navegador — ignorar
+  }
+}
+
 export function saveSession(session: LoginSuccess) {
   try {
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
   } catch {
     // sessionStorage indisponível (modo privado etc.) — login segue em memória.
   }
+  notifySessionChanged();
 }
 
 export function loadSession(): LoginSuccess | null {
@@ -68,6 +79,7 @@ export function clearSession() {
   } catch {
     // ignorar
   }
+  notifySessionChanged();
 }
 
 async function postJson<T>(path: string, body: unknown): Promise<T> {
@@ -176,6 +188,37 @@ export function verify2fa(
   code: string,
 ): Promise<LoginSuccess> {
   return postJson<LoginSuccess>('/auth/2fa/verify', { twoFactorToken, code });
+}
+
+/**
+ * Renova a sessão pelo cookie httpOnly de refresh (a API rotaciona o token
+ * a cada uso). Devolve a sessão nova — já salva — ou null quando não há
+ * sessão válida (aí limpa o que restou localmente). É o que mantém o
+ * usuário logado entre abas/dias sem pedir a senha de novo.
+ */
+export async function refreshSession(): Promise<LoginSuccess | null> {
+  try {
+    const session = await postJson<LoginSuccess>('/auth/refresh', {});
+    saveSession(session);
+    return session;
+  } catch {
+    clearSession();
+    return null;
+  }
+}
+
+/**
+ * Logout de verdade: revoga o refresh token na API (ela limpa o cookie) e
+ * apaga a sessão local. Sem esta chamada, "sair" só escondia a sessão
+ * nesta aba e o cookie continuava válido.
+ */
+export async function logout(): Promise<void> {
+  try {
+    await postJson<{ ok: boolean }>('/auth/logout', {});
+  } catch {
+    // API fora do ar: a sessão local sai mesmo assim.
+  }
+  clearSession();
 }
 
 /** true quando a API responde no healthcheck; false quando está fora do ar. */

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import RequireAuth from '../../components/RequireAuth';
 import { usePickupQueue, type QueueItem } from '../../lib/use-pickup-queue';
 
 // Telão — design próprio de "painel de saída" (não é uma página do admin):
@@ -18,14 +19,23 @@ function useClock(): Date {
   return now;
 }
 
-function ReadyPanel({ items }: { items: QueueItem[] }) {
+function ReadyPanel({ items, loading }: { items: QueueItem[]; loading: boolean }) {
   return (
     <section className="telao-panel is-ready">
       <header className="telao-panel-head">
         <h2>Pode retirar agora</h2>
-        <span className="telao-count">{items.length}</span>
+        <span className="telao-count">{loading ? '–' : items.length}</span>
       </header>
-      {items.length === 0 ? (
+      {loading && items.length === 0 ? (
+        <div role="status">
+          <span className="sr-only">Carregando a fila de saída…</span>
+          <div className="telao-skeleton" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+        </div>
+      ) : items.length === 0 ? (
         <div className="telao-empty">
           <p className="telao-empty-big">Nenhum aluno pronto agora</p>
           <p>Quando um tutor chegar, o nome aparece aqui na hora.</p>
@@ -49,14 +59,23 @@ function ReadyPanel({ items }: { items: QueueItem[] }) {
   );
 }
 
-function EnRoutePanel({ items }: { items: QueueItem[] }) {
+function EnRoutePanel({ items, loading }: { items: QueueItem[]; loading: boolean }) {
   return (
     <section className="telao-panel is-route">
       <header className="telao-panel-head">
         <h2>A caminho</h2>
-        <span className="telao-count">{items.length}</span>
+        <span className="telao-count">{loading ? '–' : items.length}</span>
       </header>
-      {items.length === 0 ? (
+      {loading && items.length === 0 ? (
+        <div role="status">
+          <span className="sr-only">Carregando a fila de saída…</span>
+          <div className="telao-skeleton" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+        </div>
+      ) : items.length === 0 ? (
         <div className="telao-empty">
           <p className="telao-empty-big">Ninguém a caminho agora</p>
           <p>Os tutores a caminho aparecem aqui com o tempo estimado.</p>
@@ -82,9 +101,10 @@ function EnRoutePanel({ items }: { items: QueueItem[] }) {
   );
 }
 
-export default function TelaoPage() {
+function TelaoPanel() {
   const { ready, enRoute, apiOnline, socketConnected } = usePickupQueue();
   const now = useClock();
+  const loading = apiOnline === null;
 
   const status =
     apiOnline === false
@@ -129,16 +149,24 @@ export default function TelaoPage() {
       </header>
 
       <div className="telao-cols">
-        <ReadyPanel items={ready} />
-        <EnRoutePanel items={enRoute} />
+        <ReadyPanel items={ready} loading={loading} />
+        <EnRoutePanel items={enRoute} loading={loading} />
       </div>
 
       <footer className="telao-foot">
         <span>
-          {ready.length} pronto(s) · {enRoute.length} a caminho
+          {loading ? '–' : ready.length} pronto(s) · {loading ? '–' : enRoute.length} a caminho
         </span>
         <span>Aproxime-se da portaria quando o nome aparecer em verde.</span>
       </footer>
     </main>
+  );
+}
+
+export default function TelaoPage() {
+  return (
+    <RequireAuth area="telão">
+      <TelaoPanel />
+    </RequireAuth>
   );
 }

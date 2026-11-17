@@ -58,9 +58,17 @@ function parseCookies(header: string | undefined): Record<string, string> {
 }
 
 function refreshCookieOptions(): Record<string, unknown> {
+  // `secure` acompanha o protocolo da origem pública: com HTTPS, cookie
+  // Secure; na era do IP (HTTP puro), Secure faria o navegador recusar o
+  // cookie e o refresh nunca funcionaria. A flag vira sozinha quando o
+  // domínio com HTTPS entrar (CORS_ORIGINS passa a ser https://...).
+  const firstOrigin = (process.env.CORS_ORIGINS ?? '').split(',')[0]?.trim();
+  const secure = firstOrigin
+    ? firstOrigin.startsWith('https://')
+    : process.env.NODE_ENV === 'production';
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure,
     sameSite: 'strict',
     path: REFRESH_COOKIE_PATH,
     maxAge: REFRESH_TTL_DAYS * 86_400_000,

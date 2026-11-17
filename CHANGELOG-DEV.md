@@ -49,6 +49,48 @@ rotas: /, /cadastro, /login, /planos, /portaria, /telao, /_not-found).
 único p/ telas sem dados, falhas de API e carregamento; depois revisão
 mobile geral e app do tutor quando existir.
 
+## 2026-11-17 16:27 — Sistema de login completo e funcional (pedido do usuário)
+
+**Auditoria (o que o usuário desconfiou, confirmado no código)**
+- A API já era completa: register, login + 2FA, refresh com rotação
+  (cookie httpOnly), logout com revogação, /auth/me, sessões, troca de
+  senha. O buraco era todo no web:
+- Topbar 100% estática: depois do login, NADA na tela dizia que você
+  estava logado — "Entrar/Criar conta" continuavam aparecendo.
+- O único botão "Sair" era o da tela de sucesso do login, e ele só
+  apagava o sessionStorage: o cookie de refresh continuava válido (a
+  sessão NÃO era encerrada no servidor).
+- O web não tinha refresh ligado: access token (15 min) vencia e a
+  portaria/telão degradavam em silêncio; fechar a aba matava a sessão
+  visual mesmo com o cookie válido por dias.
+- /portaria e /telao abriam sem sessão nenhuma, mostrando fila vazia
+  e confusa em vez de pedir login.
+- BUG de produção: o cookie de refresh saía com `Secure` sempre que
+  NODE_ENV=production — mas o site roda em HTTP (era do IP), então o
+  navegador recusava o cookie e o refresh NUNCA funcionou no ar.
+
+**Correções**
+- API: `refreshCookieOptions` deriva `secure` do protocolo da origem
+  pública (CORS_ORIGINS): https → Secure; http → sem Secure. Vira
+  sozinho quando o domínio com HTTPS entrar.
+- Web `lib/api.ts`: `refreshSession()` (renova e salva; falha limpa) e
+  `logout()` de verdade (POST /auth/logout + limpa local); save/clear
+  disparam o evento `tutorpass:session` p/ a interface reagir na hora.
+- Novo `components/AuthNav.tsx` na topbar (todas as páginas): logado
+  mostra avatar com inicial + primeiro nome + **Sair**; deslogado,
+  Entrar/Criar conta; ao montar sem sessão local, tenta o refresh —
+  a sessão volta sozinha ao reabrir o navegador.
+- Novo `components/RequireAuth.tsx` guardando /portaria e /telao:
+  sem sessão, cartão "Você precisa entrar" com botão p/ o login; com
+  sessão, renova o token a cada 10 min (essas telas ficam abertas a
+  tarde inteira).
+- Login: o "Sair" da tela de sucesso agora chama o logout da API.
+
+**Verificação** — jest da API + `next build` antes do push; prova ao
+vivo do ciclo completo (register → login → me → refresh → logout →
+refresh recusado) contra a API em produção, registrada na entrada
+seguinte.
+
 ## 2026-11-17 16:21 — Unslop na prática: passada anti-genérica na home (pedido do usuário)
 
 **Método** — skill `unslop` (github.com/heydamir/unslop, instalada em

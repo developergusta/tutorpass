@@ -3,6 +3,7 @@ import { Inter, Sora } from 'next/font/google';
 import Link from 'next/link';
 import Script from 'next/script';
 import type { ReactNode } from 'react';
+import AuthNav from '../components/AuthNav';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
@@ -58,13 +59,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </span>
             TutorPass
           </Link>
-          <nav>
-            <Link href="/planos">Planos</Link>
-            <Link href="/cadastro">Criar conta</Link>
-            <Link href="/login">Entrar</Link>
-            <Link href="/portaria">Portaria</Link>
-            <Link href="/telao">Telão</Link>
-          </nav>
+          <AuthNav />
         </header>
         {children}
         <footer className="footer">

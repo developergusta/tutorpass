@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import {
-  clearSession,
   isNeeds2fa,
   loadSession,
   login,
+  logout,
   saveSession,
   verify2fa,
   type LoginSuccess,
@@ -76,7 +76,7 @@ export default function LoginPage() {
   const [phase, setPhase] = useState<Phase>({ kind: 'form' });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [existing] = useState<LoginSuccess | null>(() =>
+  const [existing, setExisting] = useState<LoginSuccess | null>(() =>
     typeof window === 'undefined' ? null : loadSession(),
   );
 
@@ -122,8 +122,11 @@ export default function LoginPage() {
     }
   }
 
-  function onLogout() {
-    clearSession();
+  async function onLogout() {
+    // Logout de verdade: revoga a sessão na API (cookie de refresh) e não
+    // só o sessionStorage desta aba.
+    await logout();
+    setExisting(null);
     setPhase({ kind: 'form' });
     setPassword('');
     setCode('');
