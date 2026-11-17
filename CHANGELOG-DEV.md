@@ -206,6 +206,24 @@ rotas: /, /cadastro, /login, /planos, /portaria, /telao, /_not-found).
 único p/ telas sem dados, falhas de API e carregamento; depois revisão
 mobile geral e app do tutor quando existir.
 
+## 2026-11-17 17:21 — Tempo real CONFIRMADO no navegador (verificação final)
+
+A pedido do usuário ("acessa pelo próprio browser"), verificação
+visual em navegador de verdade, com a conta de teste e o fluxo
+normal de login:
+- **Portaria:** selo "Tempo real conectado" (ponto verde), estável
+  após 10 s; fila carregada ("0 na fila", estados vazios corretos);
+  nenhum erro.
+- **Telão:** abre em "Conectando…" e vira "Ao vivo" (ponto verde)
+  em até ~15 s; painéis carregados e vazios; nenhum erro.
+
+O bug está encerrado. Quem já estava logado precisa sair e entrar
+de novo uma vez (a sessão antiga é "sem escola"; o refresh preserva
+a escola da sessão original). Lição de infraestrutura: a saída
+desta VM trava o caminho /socket.io (proxy de egress) — provas de
+socket daqui não são confiáveis; o canal de prova deste tipo de
+bug é o navegador.
+
 ## 2026-11-17 16:55 — BUG: tempo real nunca conectava no web (reportado pelo usuário)
 
 **Sintoma** — telão preso em "Conectando" e portaria em "API no ar ·
