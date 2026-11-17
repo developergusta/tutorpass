@@ -9,6 +9,7 @@ import { EventLogService } from './realtime/event-log.service';
 import { PickupGateway } from './realtime/pickup.gateway';
 import { RedisService } from './infra/redis/redis.service';
 import { OnboardingService } from './modules/onboarding/onboarding.service';
+import { UnrecognizedReleaseService } from './modules/disputes/release-dispute.service';
 
 // Regressão (ciclo 16): 3 bugs de DI impediam o AppModule de subir e só
 // apareceriam no boot — nenhum teste unitário os pegava, porque cada serviço
@@ -32,6 +33,7 @@ describe('AppModule (fiação DI)', () => {
     // Redis sem conectar: só compila (onModuleInit não roda aqui).
     expect(moduleRef.get(RedisService)).toBeInstanceOf(RedisService);
     expect(moduleRef.get(OnboardingService)).toBeInstanceOf(OnboardingService);
+    expect(moduleRef.get(UnrecognizedReleaseService)).toBeInstanceOf(UnrecognizedReleaseService);
     await moduleRef.close();
   });
 });

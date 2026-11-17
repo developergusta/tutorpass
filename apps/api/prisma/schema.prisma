@@ -131,6 +131,7 @@ model School {
   incidents       SecurityIncident[]
   vanRoutes       VanRoute[]
   dataSubjectRequests DataSubjectRequest[]
+  releaseDisputes ReleaseDispute[]
 }
 
 enum NotificationKind {
@@ -287,6 +288,7 @@ model Student {
   defaultPlans    DismissalDefaultPlan[]
   exceptions      DismissalException[]
   vanRouteStops   VanRouteStop[]
+  releaseDisputes ReleaseDispute[]
 
   @@unique([schoolId, enrollmentCode])
   @@index([schoolId, classroomId, status])
@@ -803,4 +805,57 @@ model DataSubjectRequestEvent {
   request   DataSubjectRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
   @@index([requestId, at])
+}
+
+enum ReleaseDisputeStatus {
+  OPEN
+  RESOLVED_LEGITIMATE
+  ESCALATED
+}
+
+// Contestação de saída não reconhecida — ver
+// modules/disputes/release-dispute.service.ts. O tutor contesta um evento
+// RELEASED do PickupLog em até 24 h; a contestação abre um incidente de
+// segurança (UNAUTHORIZED_ACCESS) e a escola apura com nota obrigatória.
+// O snapshot da liberação (quem retirou, hora, portão) fica no registro —
+// só ids e hora, nunca nome/foto. Eventos no log append-only com hash
+// encadeado do UnrecognizedReleaseService (Step 2: modelo
+// ReleaseDisputeEvent).
+model ReleaseDispute {
+  id                 String               @id @default(uuid()) @db.Uuid
+  schoolId           String               @db.Uuid
+  studentId          String               @db.Uuid
+  releaseLogId       String               @unique @db.Uuid // 1 contestação por liberação
+  releasedTutorId    String?              @db.Uuid
+  releasedAt         DateTime
+  gate               String?
+  reportedByTutorId  String               @db.Uuid
+  note               String?
+  incidentId         String               @db.Uuid
+  status             ReleaseDisputeStatus @default(OPEN)
+  resolutionNote     String?
+  resolvedBy         String?
+  resolvedAt         DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  school             School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student            Student              @relation(fields: [studentId], references: [id])
+  events             ReleaseDisputeEvent[]
+
+  @@index([schoolId, status])
+  @@index([schoolId, studentId, createdAt])
+}
+
+model ReleaseDisputeEvent {
+  id        String         @id @default(uuid()) @db.Uuid
+  disputeId String         @db.Uuid
+  type      String // REPORTED / NOTE / RESOLVED_LEGITIMATE / ESCALATED
+  actor     String
+  note      String?
+  at        DateTime
+  prevHash  String?
+  hash      String
+  dispute   ReleaseDispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+
+  @@index([disputeId, at])
 }

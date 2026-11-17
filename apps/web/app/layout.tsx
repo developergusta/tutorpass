@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import './globals.css';
+
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 
 export const metadata: Metadata = {
   title: 'TutorPass — saída escolar segura',
@@ -9,12 +12,32 @@ export const metadata: Metadata = {
     'TutorPass: check-in/check-out e saída segura de alunos em escolas particulares, sem fila no drive-thru e com auditoria imutável.',
 };
 
+function LogoMark() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 3l7 3v5c0 4.5-3 8.1-7 10-4-1.9-7-5.5-7-10V6l7-3z" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  );
+}
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" className={inter.variable}>
       <body>
         <header className="topbar">
           <Link className="logo" href="/">
+            <span className="logo-mark">
+              <LogoMark />
+            </span>
             TutorPass
           </Link>
           <nav>
@@ -25,6 +48,20 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </nav>
         </header>
         {children}
+        <footer className="footer">
+          <div className="container footer-inner">
+            <span>
+              <strong>TutorPass</strong> — saída escolar segura, com auditoria imutável e LGPD
+              desde o primeiro dia.
+            </span>
+            <nav>
+              <Link href="/planos">Planos</Link>
+              <Link href="/login">Entrar</Link>
+              <Link href="/portaria">Portaria</Link>
+              <Link href="/telao">Telão</Link>
+            </nav>
+          </div>
+        </footer>
       </body>
     </html>
   );

@@ -1,3 +1,34 @@
+## 2026-11-17 14:07–14:15 — Ciclo UI 1 (pedido do usuário): redesign da home + base visual
+
+**Contexto** — o usuário redirecionou a rotina de melhoria contínua (30 min)
+para UI/UX: sistema "muito mais caprichado", com base em boas práticas de
+front-end. Este é o primeiro ciclo do novo foco, executado na hora a pedido
+dele; o cron foi atualizado para os próximos ciclos seguirem a mesma linha.
+
+**Implementado**
+- **Home nova** (`apps/web/app/page.tsx`): hero com gradiente da marca,
+  badge, headline, 2 CTAs e linha de provas (QR dinâmico · implantação em
+  1 dia · grátis até 30 alunos); seção "Como funciona" em 3 passos;
+  grade de 6 recursos com ícones SVG próprios (QR anti-fraude, geofencing,
+  auditoria imutável, fila em tempo real, LGPD, telão/tag impressa);
+  "Acesso rápido" (Entrar/Portaria/Telão) com ícones; faixa final de
+  preços com os valores confirmados (89/199/349). Saiu o texto "versão web
+  mínima" e a grade 4-em-3 que quebrava torta.
+- **Base visual** (`globals.css` + `layout.tsx`): fonte Inter
+  (next/font), tokens novos (sombras, raio, tinta da marca), topbar fixa
+  com blur e logotipo com marca SVG (escudo), rodapé com navegação,
+  botões com transição/hover/foco visível, inputs com foco em anel da
+  marca, cards com sombra suave e hover nos recursos. Login, portaria,
+  telão e planos herdam a base automaticamente.
+
+**Verificação** — `next build` OK (tipos válidos, 5 rotas geradas).
+Deploy: push à main → auto-deploy do VPS (timer systemd).
+
+**Próximo (fila UI)** — login (layout centralizado com marca e estados),
+portaria (hierarquia da fila, status e ações), telão (tipografia TV),
+planos (cards com destaque e calculadora), micro-interações e revisão
+mobile de todas as telas.
+
 ## 2026-11-17 13:24–13:45 — Exercício de direitos do titular (art. 18/19 LGPD)
 
 **Pesquisa do ciclo (frente b — concorrentes Brasil)**

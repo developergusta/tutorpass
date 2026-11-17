@@ -14,6 +14,7 @@ continua possível (Turbo filtra por app, Docker só da API, Vercel só do web).
 - `tutors` — tutores, vínculo tutor↔aluno, veículos
 - `delegations` — autorização temporária de terceiro (selfie, documento, janela de validade) e tag/cartão impresso p/ delegado sem smartphone (código de 6 dígitos + QR)
 - `data-subject-requests` — exercício de direitos do titular (LGPD arts. 18/19): acesso simplificado imediato + declaração completa em 15 dias, identidade verificada antes de entregar dado, retenção do art. 16 na eliminação
+- `disputes` — sinalizar saída não reconhecida: o tutor contesta uma liberação em até 24 h, abre incidente de segurança (UNAUTHORIZED_ACCESS, risco relevante) e a escola apura (LEGITIMATE / UNRECOGNIZED) com nota obrigatória e log com hash encadeado
 - `pickup` — máquina de estados da fila e da retirada (núcleo)
 - `qr` — emissão/validação do token dinâmico de 30s
 - `geofencing` — ingestão de localização, haversine, histerese, transição de zona

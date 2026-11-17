@@ -23,5 +23,6 @@ import { RosterModule } from './modules/roster/roster.module';
 import { ComplianceModule } from './modules/compliance/compliance.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { DataSubjectRequestsModule } from './modules/data-subject-requests/data-subject-request.module';
-@Module({ imports: [RedisModule, PrismaModule, RealtimeModule, GeofencingModule, QrModule, PickupModule, ConsentModule, RetentionModule, PlanModule, DelegationsModule, EarlyPickupModule, DismissalPlansModule, NotificationsModule, IncidentsModule, EtaModule, DisplayBoardModule, VanRoutesModule, ReportsModule, AuthModule, RosterModule, ComplianceModule, OnboardingModule, DataSubjectRequestsModule], controllers: [HealthController] })
+import { DisputesModule } from './modules/disputes/disputes.module';
+@Module({ imports: [RedisModule, PrismaModule, RealtimeModule, GeofencingModule, QrModule, PickupModule, ConsentModule, RetentionModule, PlanModule, DelegationsModule, EarlyPickupModule, DismissalPlansModule, NotificationsModule, IncidentsModule, EtaModule, DisplayBoardModule, VanRoutesModule, ReportsModule, AuthModule, RosterModule, ComplianceModule, OnboardingModule, DataSubjectRequestsModule, DisputesModule], controllers: [HealthController] })
 export class AppModule {}
