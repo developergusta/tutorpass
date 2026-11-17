@@ -190,6 +190,10 @@ export default function LoginPage() {
         )}
 
         <p className="muted">
+          Ainda não tem conta?{' '}
+          <Link href="/cadastro">Criar a conta da sua escola — grátis até 30 alunos</Link>
+        </p>
+        <p className="muted">
           Se o servidor estiver fora do ar, o erro aparece aqui em cima — a
           página não trava. Confira também se você está na rede certa da escola.
         </p>

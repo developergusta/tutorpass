@@ -1,3 +1,54 @@
+## 2026-11-17 14:22–14:40 — Cadastro completo (pedido do usuário) + telão com design único
+
+**Contexto** — o usuário perguntou como alguém se cadastra e a checagem
+confirmou um furo: não existia página de cadastro, o botão "Criar conta
+grátis" dos planos caía no login, não havia rota de criar escola e os
+dados viviam só em memória (um cadastro se perderia a cada deploy). Ele
+mandou fazer o cadastro completo na hora; a rotina de UI foi pausada
+durante o trabalho p/ não escrever no mesmo diretório.
+
+**Implementado**
+- **Persistência da espinha de identidade (Step 2 parcial)** — `User` e
+  `SchoolMember` (AuthService) e `School` (RosterService) agora persistem
+  no Postgres: hidratação no boot (`onModuleInit`) + write-through de cada
+  mutação pela fila serial nova `PrismaService.enqueueWrite` (falha de
+  escrita é logada, nunca derruba o pedido). Injeção do Prisma é
+  `@Optional` — os testes unitários seguem 100% em memória. Refresh
+  tokens, lockout, 2FA e as demais entidades (turmas/alunos/tutores,
+  pickup etc.) seguem em memória: um restart pede login novo, mas conta
+  e escola sobrevivem. `RosterService.createSchool` passou a gerar UUID
+  (o `School.id` do schema é uuid); `SchoolMember.classroomId` persiste
+  null nesta etapa (o FK exige a sala persistida — ela ainda é memória).
+- **POST /api/schools** (`modules/schools`, novo) — com o access token da
+  sessão "sem escola", cria a escola e vincula o criador como ADMIN. Só
+  JwtAuthGuard (a rota CRIA o tenant; TenantGuard não se aplica). O
+  cliente refaz o login com o schoolId p/ a sessão nascer completa pelo
+  fluxo normal (cookie de refresh incluso).
+- **Página /cadastro** — formulário (escola, nome, e-mail, senha) que faz
+  register → login → criar escola → login com a escola, salva a sessão e
+  mostra a tela de sucesso. Erros da API aparecem no formulário; e-mail
+  duplicado oferece o caminho do login. CTAs corrigidos: os 3 botões de
+  planos, o CTA fantasma do hero, a topbar/rodapé ("Criar conta") e o
+  rodapé do login apontam p/ /cadastro.
+- **Telão com design único** (pedido do usuário no meio do trabalho) —
+  deixou de ser "página do admin em modo escuro": palco em tela cheia
+  (cobre topbar/rodapé), gradiente verde-profundo próprio, marca + relógio
+  ao vivo com data, selo de status (Ao vivo/Conectando/Sem conexão),
+  painel "Pode retirar agora" em verde aceso com o item mais recente
+  destacado (selo AGORA pulsante), painel "A caminho" calmo com chip de
+  ETA, contadores por painel, estados vazios serenos e rodapé com
+  orientação à família. Só apresentação: o hook da fila não mudou.
+
+**Verificação** — Jest **495/495** (40 suítes; +3 arquivos novos:
+schools.controller, auth-persistence e roster-persistence provando o
+fluxo de cadastro e a sobrevivência a "restart" via hidratação), `tsc`
+limpo e `next build` OK (6 rotas, /cadastro nova). Teste ao vivo pós-
+deploy registrado abaixo nesta entrada quando concluído.
+
+**Próximo** — rotina de UI retoma (fila: login → portaria → planos →
+estados vazios/erro → mobile). Step 2 restante: persistir roster
+completo, pickup, refresh tokens e 2FA.
+
 ## 2026-11-17 14:07–14:15 — Ciclo UI 1 (pedido do usuário): redesign da home + base visual
 
 **Contexto** — o usuário redirecionou a rotina de melhoria contínua (30 min)

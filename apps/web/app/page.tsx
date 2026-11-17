@@ -148,8 +148,8 @@ export default function HomePage() {
             <Link className="btn btn-hero" href="/planos">
               Ver planos e preços
             </Link>
-            <Link className="btn btn-hero-ghost" href="/portaria">
-              Abrir a portaria
+            <Link className="btn btn-hero-ghost" href="/cadastro">
+              Criar conta grátis
             </Link>
           </div>
           <ul className="hero-proof">

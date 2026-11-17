@@ -42,6 +42,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </Link>
           <nav>
             <Link href="/planos">Planos</Link>
+            <Link href="/cadastro">Criar conta</Link>
             <Link href="/login">Entrar</Link>
             <Link href="/portaria">Portaria</Link>
             <Link href="/telao">Telão</Link>
@@ -56,6 +57,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </span>
             <nav>
               <Link href="/planos">Planos</Link>
+              <Link href="/cadastro">Criar conta</Link>
               <Link href="/login">Entrar</Link>
               <Link href="/portaria">Portaria</Link>
               <Link href="/telao">Telão</Link>

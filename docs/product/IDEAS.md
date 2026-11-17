@@ -1337,6 +1337,47 @@ Arcádia / SOS Gestor Escolar (out/2026); Instagram Instituto Dom Barreto
   o módulo de agenda não tem. Impacto — (alerta estratégico, sem ação de
   código).
 
+## Semeado em 17/11/2026 — UX/design de painéis e apps de fila: exceção sem travar a fila + alerta de guarda (frente c, ciclo 30)
+Fontes: khantkyawhtet.space "NIS Dismissal Management System" (2024, 784
+alunos, 3 zonas, Dubai); technothera.com "Smart Dismissal System" (2026);
+positive-proof.com "Custody Alert Systems for Schools" (2026);
+sobrennan.myportfolio.com "School'sOut" (pesquisa UX, 16 semanas).
+
+- **NIS Dismissal — "uma exceção trava a fila inteira" é o anti-padrão**:
+  um veículo não cadastrado parava todas as famílias atrás dele; a
+  correção foi o registro paralelo — a fila continua enquanto a exceção é
+  resolvida à parte. O mesmo vale p/ a nossa contestação: sinalizar uma
+  saída não reconhecida NUNCA pode travar a portaria nem reverter a
+  liberação — o aluno já saiu; a contestação corre em paralelo, via
+  incidente + fila do DPO. Impacto — (princípio de design aplicado na
+  implementação deste ciclo).
+- **Technothera Smart Dismissal — o selo ARRIVED pulsa em todas as telas**:
+  4 interfaces sincronizadas (app do responsável, telão, app do staff,
+  painel do admin), contagem regressiva por pedido e "um toque atualiza
+  4 interfaces". O refinamento p/ nós é o mesmo padrão aplicado à
+  contestação: um badge "CONTESTADA" pulsante no painel da portaria e no
+  telão da sala quando uma saída é contestada — a exceção tem de ser
+  visível onde o staff já está olhando. Impacto 3, Esforço 2 — fase 2 do
+  item implementado neste ciclo (badge no DisplayBoardService).
+- **Positive Proof — alerta de guarda/restrição no ponto de contato**:
+  os tribunais NÃO avisam a escola quando a guarda muda (ordem de
+  segunda não está no registro de terça); a lista de quem pode buscar
+  fica desatualizada mais rápido que o papel acompanha, e a portaria
+  decide no meio do caos da saída. A resposta é o alerta aplicado NA
+  HORA da retirada: quando alguém com restrição (guarda, medida
+  protetiva, bloqueio da secretaria) tenta retirar, o sistema sinaliza
+  antes de liberar — e o registro vira defesa jurídica da escola (houve
+  caso de condenação por liberar p/ pessoa não autorizada). O nosso
+  bloqueio de aluno (PickupService.block) já barra a retirada, mas não
+  existe o bloqueio por PESSOA: um tutor/restrito cuja guarda mudou
+  continua liberado se o aluno não estiver bloqueado. Impacto 4, Esforço
+  3 — próxima candidata (bloqueio por pessoa + sinal na validação do QR).
+- **School'sOut (pesquisa UX) — o responsável compartilha o código com
+  um familiar p/ autorizar a retirada**: valida a nossa autorização
+  temporária + tag impressa — o compartilhamento do código é o fluxo
+  real das famílias, não um atalho. Impacto — (validação, sem ação de
+  código).
+
 ## Diferencial TutorPass (tese)
 Concorrente BR forte é suite ampla (comunicação/ERP/facial). TutorPass vence sendo **o melhor só em saída**:
 mais rápido de implantar, QR dinâmico anti-fraude (eles usam QR estático), auditoria imutável com hash

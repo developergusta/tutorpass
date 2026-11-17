@@ -4,9 +4,12 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  OnModuleDestroy,
+  OnModuleInit,
   Optional,
   UnauthorizedException,
 } from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
 import {
   createHash,
   createHmac,
@@ -22,9 +25,12 @@ import {
 // uso, com detecção de reuso — se um refresh já rotacionado reaparecer, a família inteira
 // é revogada (sinal de roubo) e o usuário precisa logar de novo. Refresh nunca é JWT:
 // opaco + só o hash SHA-256 é guardado, então vazar o store não entrega sessões.
-// Step 2: trocar os stores in-memory por Prisma (User/SchoolMember já existem no schema;
-// RefreshToken também) e Redis p/ o lockout entre instâncias; o controller devolve o
-// refresh em cookie httpOnly + Secure + SameSite com path /auth/refresh (nunca localStorage).
+// Step 2 (parcial, 17/11/2026): User e SchoolMember persistidos no Postgres via
+// hidratação no boot + write-through (ver o construtor) — contas e vínculos
+// sobrevivem a restart/deploy. Refresh tokens e lockout seguem em memória
+// (RefreshToken no schema é o passo seguinte; Redis p/ o lockout entre
+// instâncias); o controller devolve o refresh em cookie httpOnly + Secure +
+// SameSite com path /auth/refresh (nunca localStorage).
 
 export type Role = 'ADMIN' | 'COORDINATOR' | 'GATE_AGENT' | 'TEACHER' | 'TUTOR';
 export type MemberStatus = 'ACTIVE' | 'INVITED' | 'SUSPENDED';
@@ -141,7 +147,7 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit, OnModuleDestroy {
   private readonly secret: string;
   private users = new Map<string, AuthUser>(); // id -> user
   private usersByEmail = new Map<string, string>(); // email normalizado -> id
@@ -157,6 +163,15 @@ export class AuthService {
   // dependencies of the AuthService (String)").
   constructor(
     @Optional() @Inject('JWT_ACCESS_SECRET') secret?: string,
+    // Persistência (Step 2, parcial — espinha de identidade): com o
+    // PrismaService presente (app real, via PrismaModule global), usuários e
+    // vínculos são hidratados do Postgres no boot e cada mutação é gravada
+    // em write-through (fila serial do PrismaService). Nos testes unitários
+    // (new AuthService('segredo')) o parâmetro fica undefined e o serviço é
+    // 100% em memória, como antes. Sessões/refresh e lockout seguem em
+    // memória por enquanto: um restart pede login novo, mas ninguém perde a
+    // conta nem a escola.
+    @Optional() @Inject(PrismaService) private readonly prisma?: PrismaService,
   ) {
     this.secret = secret ?? process.env.JWT_ACCESS_SECRET ?? '';
     if (!this.secret) {
@@ -169,6 +184,51 @@ export class AuthService {
     if (this.secret.length < 32) {
       throw new Error('JWT_ACCESS_SECRET precisa ter ao menos 32 caracteres');
     }
+  }
+
+  // --- Persistência (hidratação + write-through) ------------------------------
+
+  async onModuleInit(): Promise<void> {
+    if (!this.prisma) return;
+    const [users, members] = await Promise.all([
+      this.prisma.user.findMany(),
+      this.prisma.schoolMember.findMany(),
+    ]);
+    for (const u of users) {
+      const user: AuthUser = {
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        passwordHash: u.passwordHash ?? '',
+        isActive: u.isActive,
+        createdAt: u.createdAt,
+      };
+      this.users.set(user.id, user);
+      this.usersByEmail.set(user.email, user.id);
+    }
+    for (const m of members) {
+      this.memberships.set(`${m.schoolId}:${m.userId}:${m.role}`, {
+        userId: m.userId,
+        schoolId: m.schoolId,
+        role: m.role,
+        status: m.status,
+        classroomId: m.classroomId,
+      });
+    }
+    // eslint-disable-next-line no-console
+    console.log(
+      `[AuthService] hidratação: ${users.length} usuário(s), ${members.length} vínculo(s) do Postgres`,
+    );
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    await this.prisma?.flushWrites();
+  }
+
+  private persist(op: (prisma: PrismaService) => Promise<unknown>): void {
+    const prisma = this.prisma;
+    if (!prisma) return;
+    prisma.enqueueWrite(() => op(prisma));
   }
 
   // --- Usuários -------------------------------------------------------------
@@ -195,6 +255,18 @@ export class AuthService {
     };
     this.users.set(user.id, user);
     this.usersByEmail.set(normalized, user.id);
+    this.persist((prisma) =>
+      prisma.user.create({
+        data: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          passwordHash: user.passwordHash,
+          isActive: user.isActive,
+          createdAt: user.createdAt,
+        },
+      }),
+    );
     return user;
   }
 
@@ -210,6 +282,9 @@ export class AuthService {
   deactivateUser(userId: string): void {
     const user = this.getUserOrThrow(userId);
     user.isActive = false;
+    this.persist((prisma) =>
+      prisma.user.update({ where: { id: userId }, data: { isActive: false } }),
+    );
     this.revokeAllForUser(userId, new Date());
   }
 
@@ -220,6 +295,10 @@ export class AuthService {
     }
     this.validatePassword(newPassword);
     user.passwordHash = hashPassword(newPassword);
+    const newHash = user.passwordHash;
+    this.persist((prisma) =>
+      prisma.user.update({ where: { id: userId }, data: { passwordHash: newHash } }),
+    );
     // Troca de senha derruba TODAS as sessões (o refresh roubado morre junto).
     this.revokeAllForUser(userId, new Date());
   }
@@ -502,6 +581,16 @@ export class AuthService {
     if (existing) return existing;
     const membership: Membership = { userId, schoolId, role, status: 'ACTIVE', classroomId: classroomId ?? null };
     this.memberships.set(key, membership);
+    // classroomId fica null no banco nesta etapa: a sala é do RosterService
+    // (ainda em memória) e o FK exige a sala persistida. O vínculo
+    // escola/usuário/papel — o que o login e o RBAC usam — persiste inteiro.
+    this.persist((prisma) =>
+      prisma.schoolMember.upsert({
+        where: { schoolId_userId_role: { schoolId, userId, role } },
+        create: { schoolId, userId, role, status: 'ACTIVE', classroomId: null },
+        update: {},
+      }),
+    );
     return membership;
   }
 
@@ -509,6 +598,12 @@ export class AuthService {
     const membership = this.memberships.get(`${schoolId}:${userId}:${role}`);
     if (!membership) throw new BadRequestException('Vínculo não encontrado');
     membership.status = status;
+    this.persist((prisma) =>
+      prisma.schoolMember.updateMany({
+        where: { schoolId, userId, role },
+        data: { status },
+      }),
+    );
     return membership;
   }
 

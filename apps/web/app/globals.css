@@ -225,44 +225,193 @@ input:focus {
   padding: 14px;
 }
 
-/* Telão / TV */
+/* Telão / TV — design único de "painel de saída": palco escuro em tela
+   cheia (cobre a topbar/rodapé do site), verde da marca como luz de
+   "pode retirar", tipografia gigante p/ leitura a distância. Não reutiliza
+   os componentes do admin de propósito — é outra superfície, outra leitura. */
 .telao {
-  min-height: 100vh;
-  background: #101820;
-  color: #f2f6f9;
-  padding: 20px;
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: clamp(16px, 2.5vw, 36px);
+  color: #eef7f2;
+  background:
+    radial-gradient(1100px 700px at 15% -10%, rgba(16, 122, 87, 0.38) 0%, transparent 60%),
+    radial-gradient(900px 650px at 110% 115%, rgba(14, 90, 120, 0.30) 0%, transparent 55%),
+    linear-gradient(160deg, #081711 0%, #050d0a 70%);
 }
-.telao h1 { font-size: clamp(1.6rem, 4vw, 3rem); margin: 0 0 4px; }
-.telao .cols {
+.telao-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.telao-brand { display: flex; align-items: center; gap: 14px; }
+.telao-mark {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(140deg, #0e7f5c, #0b6e4f);
+  color: #d9f7e8;
+  box-shadow: 0 8px 28px rgba(14, 127, 92, 0.45);
+}
+.telao-brand-text { display: flex; flex-direction: column; line-height: 1.1; }
+.telao-brand-text strong { font-size: clamp(1.5rem, 2.6vw, 2.2rem); letter-spacing: -0.01em; }
+.telao-brand-text span {
+  color: #9fc4b2;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: clamp(0.65rem, 1vw, 0.8rem);
+  font-weight: 700;
+}
+.telao-top-right { display: flex; align-items: center; gap: 22px; }
+.telao-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(238, 247, 242, 0.16);
+  background: rgba(238, 247, 242, 0.05);
+  font-weight: 700;
+  font-size: clamp(0.8rem, 1.1vw, 0.95rem);
+}
+.telao-dot { width: 10px; height: 10px; border-radius: 50%; background: #8aa79a; }
+.telao-status.is-live .telao-dot { background: #34d399; animation: telao-pulse 1.8s ease-in-out infinite; }
+.telao-status.is-wait .telao-dot { background: #fbbf24; animation: telao-pulse 1s ease-in-out infinite; }
+.telao-status.is-off .telao-dot { background: #f87171; }
+.telao-clock { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.05; }
+.telao-clock strong {
+  font-size: clamp(1.9rem, 3.4vw, 3rem);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.telao-clock span { color: #9fc4b2; font-size: clamp(0.8rem, 1.2vw, 1rem); text-transform: capitalize; }
+.telao-cols {
+  flex: 1;
   display: grid;
   grid-template-columns: 1fr;
-  gap: 16px;
-  margin-top: 16px;
+  gap: 18px;
+  min-height: 0;
 }
-@media (min-width: 800px) {
-  .telao .cols { grid-template-columns: 1fr 1fr; }
+@media (min-width: 900px) {
+  .telao-cols { grid-template-columns: 1.25fr 1fr; }
 }
-.telao .col {
-  background: #182430;
-  border-radius: 16px;
-  padding: 20px;
-  min-height: 40vh;
+.telao-panel {
+  border-radius: 22px;
+  padding: clamp(16px, 2vw, 28px);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
-.telao .col h2 { font-size: clamp(1.3rem, 3vw, 2.2rem); margin-top: 0; }
-.telao .big-list { list-style: none; margin: 0; padding: 0; }
-.telao .big-list li {
-  font-size: clamp(1.4rem, 3.4vw, 2.6rem);
+.telao-panel.is-ready {
+  background: linear-gradient(180deg, rgba(13, 84, 58, 0.62), rgba(8, 52, 37, 0.62));
+  border: 1px solid rgba(52, 211, 153, 0.38);
+  box-shadow: 0 18px 50px rgba(6, 40, 27, 0.55), inset 0 1px 0 rgba(167, 243, 208, 0.12);
+}
+.telao-panel.is-route {
+  background: rgba(148, 184, 205, 0.055);
+  border: 1px solid rgba(148, 184, 205, 0.18);
+}
+.telao-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.telao-panel-head h2 {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: clamp(1.05rem, 1.9vw, 1.6rem);
+}
+.telao-panel.is-ready .telao-panel-head h2 { color: #a7f3d0; }
+.telao-panel.is-route .telao-panel-head h2 { color: #c3d7e4; }
+.telao-count {
+  font-size: clamp(1.1rem, 2vw, 1.7rem);
   font-weight: 800;
-  padding: 14px 0;
-  border-bottom: 1px solid #263646;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 14px;
+  border-radius: 999px;
+  background: rgba(238, 247, 242, 0.08);
+  border: 1px solid rgba(238, 247, 242, 0.14);
 }
-.telao .big-list .room {
-  display: block;
-  font-size: 0.55em;
-  font-weight: 600;
-  color: #9fb4c4;
+.telao-list { list-style: none; margin: 0; padding: 0; overflow: hidden; }
+.telao-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: clamp(10px, 1.4vh, 18px) 6px;
+  border-bottom: 1px solid rgba(238, 247, 242, 0.09);
+  animation: telao-in 0.45s ease both;
 }
-.telao .empty { color: #9fb4c4; font-size: 1.2rem; }
+.telao-list li:last-child { border-bottom: none; }
+.telao-name { font-weight: 800; letter-spacing: -0.01em; line-height: 1.05; }
+.telao-panel.is-ready .telao-name { font-size: clamp(1.9rem, 3.8vw, 3.4rem); color: #ffffff; }
+.telao-panel.is-route .telao-name { font-size: clamp(1.5rem, 3vw, 2.5rem); color: #dcebf5; }
+.telao-list li.is-now {
+  background: linear-gradient(90deg, rgba(52, 211, 153, 0.20), transparent 75%);
+  border-radius: 14px;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+.telao-tags { display: flex; gap: 8px; flex-shrink: 0; }
+.telao-tag {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: clamp(0.8rem, 1.2vw, 1rem);
+  font-weight: 700;
+  background: rgba(238, 247, 242, 0.09);
+  border: 1px solid rgba(238, 247, 242, 0.15);
+  color: #cfe6da;
+  white-space: nowrap;
+}
+.telao-tag.tag-now {
+  background: #34d399;
+  border-color: #34d399;
+  color: #052e21;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  animation: telao-pulse 1.8s ease-in-out infinite;
+}
+.telao-tag.tag-eta { color: #bcd8ea; font-variant-numeric: tabular-nums; }
+.telao-empty { margin: auto 0; padding: 24px 6px; }
+.telao-empty p { color: #9fc4b2; font-size: clamp(1rem, 1.5vw, 1.25rem); margin: 6px 0 0; }
+.telao-panel.is-route .telao-empty p { color: #93a9ba; }
+.telao-empty .telao-empty-big {
+  color: #e7f4ec;
+  font-size: clamp(1.5rem, 2.6vw, 2.2rem);
+  font-weight: 800;
+  margin: 0;
+}
+.telao-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  color: #8fb8a5;
+  font-size: clamp(0.85rem, 1.2vw, 1.05rem);
+}
+@keyframes telao-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes telao-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .telao-list li, .telao-dot, .telao-tag.tag-now { animation: none; }
+}
 
 /* Home — hero, seções, recursos (redesign UI/UX, ciclo UI 1) */
 .hero {

@@ -53,7 +53,7 @@ export default function PlanosPage() {
               <li key={f}>{f}</li>
             ))}
           </ul>
-          <Link className="btn secondary" href="/login">
+          <Link className="btn secondary" href="/cadastro">
             Criar conta grátis
           </Link>
         </div>
@@ -72,7 +72,7 @@ export default function PlanosPage() {
               <li key={f}>{f}</li>
             ))}
           </ul>
-          <Link className="btn" href="/login">
+          <Link className="btn" href="/cadastro">
             Começar o teste grátis
           </Link>
         </div>
@@ -92,7 +92,7 @@ export default function PlanosPage() {
               <li key={f}>{f}</li>
             ))}
           </ul>
-          <Link className="btn secondary" href="/login">
+          <Link className="btn secondary" href="/cadastro">
             Assinar o PRO
           </Link>
         </div>

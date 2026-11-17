@@ -1,4 +1,14 @@
-import { BadRequestException, NotFoundException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  OnModuleDestroy,
+  OnModuleInit,
+  Optional,
+} from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { PrismaService } from '../../prisma/prisma.service';
 
 // Cadastro (roster) da escola: escolas, turmas, alunos, tutores e importação
 // CSV de alunos — a peça que prova a tese "implantação em 1 dia".
@@ -269,13 +279,49 @@ function parseCsv(text: string): string[][] {
 }
 
 @Injectable()
-export class RosterService {
+export class RosterService implements OnModuleInit, OnModuleDestroy {
   private schools: SchoolRecord[] = [];
   private classrooms: ClassroomRecord[] = [];
   private students: StudentRecord[] = [];
   private tutors: TutorRecord[] = [];
   private links: TutorLink[] = [];
   private studentLimits = new Map<string, number>();
+
+  // Persistência (Step 2, parcial): com o PrismaService presente, as ESCOLAS
+  // são hidratadas do Postgres no boot e gravadas em write-through — a escola
+  // sobrevive a restart/deploy. Turmas, alunos e tutores seguem em memória
+  // até o próximo passo do Step 2. Nos testes (new RosterService()) o
+  // parâmetro fica undefined e nada muda.
+  constructor(
+    @Optional() @Inject(PrismaService) private readonly prisma?: PrismaService,
+  ) {}
+
+  async onModuleInit(): Promise<void> {
+    if (!this.prisma) return;
+    const rows = await this.prisma.school.findMany();
+    this.schools = rows.map((s) => ({
+      id: s.id,
+      name: s.name,
+      slug: s.slug,
+      document: s.document ?? undefined,
+      timezone: s.timezone,
+      isActive: s.isActive,
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
+    }));
+    // eslint-disable-next-line no-console
+    console.log(`[RosterService] hidratação: ${rows.length} escola(s) do Postgres`);
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    await this.prisma?.flushWrites();
+  }
+
+  private persist(op: (prisma: PrismaService) => Promise<unknown>): void {
+    const prisma = this.prisma;
+    if (!prisma) return;
+    prisma.enqueueWrite(() => op(prisma));
+  }
 
   // ---------------------------------------------------------------- escolas
 
@@ -296,7 +342,10 @@ export class RosterService {
       throw new BadRequestException('CNPJ inválido — esperado 14 dígitos');
     }
     const school: SchoolRecord = {
-      id: newId('school'),
+      // UUID (e não o newId prefixado das demais entidades) porque a escola é
+      // persistida no Postgres, onde School.id é uuid — e o schoolId viaja no
+      // JWT e nos FKs de SchoolMember.
+      id: randomUUID(),
       name,
       slug,
       document,
@@ -306,6 +355,20 @@ export class RosterService {
       updatedAt: now,
     };
     this.schools.push(school);
+    this.persist((prisma) =>
+      prisma.school.create({
+        data: {
+          id: school.id,
+          name: school.name,
+          slug: school.slug,
+          document: school.document ?? null,
+          timezone: school.timezone,
+          isActive: school.isActive,
+          createdAt: school.createdAt,
+          updatedAt: school.updatedAt,
+        },
+      }),
+    );
     return { ...school };
   }
 
@@ -329,6 +392,17 @@ export class RosterService {
     }
     if (input.timezone !== undefined) school.timezone = input.timezone.trim();
     school.updatedAt = now;
+    this.persist((prisma) =>
+      prisma.school.update({
+        where: { id: school.id },
+        data: {
+          name: school.name,
+          document: school.document ?? null,
+          timezone: school.timezone,
+          updatedAt: school.updatedAt,
+        },
+      }),
+    );
     return { ...school };
   }
 
@@ -337,6 +411,12 @@ export class RosterService {
     const school = this.requireSchool(schoolId);
     school.isActive = false;
     school.updatedAt = now;
+    this.persist((prisma) =>
+      prisma.school.update({
+        where: { id: school.id },
+        data: { isActive: false, updatedAt: now },
+      }),
+    );
     return { ...school };
   }
 
@@ -344,6 +424,12 @@ export class RosterService {
     const school = this.requireSchool(schoolId);
     school.isActive = true;
     school.updatedAt = now;
+    this.persist((prisma) =>
+      prisma.school.update({
+        where: { id: school.id },
+        data: { isActive: true, updatedAt: now },
+      }),
+    );
     return { ...school };
   }
 

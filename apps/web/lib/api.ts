@@ -97,8 +97,78 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   return data;
 }
 
-export function login(email: string, password: string): Promise<LoginResult> {
-  return postJson<LoginResult>('/auth/login', { email, password });
+export function login(
+  email: string,
+  password: string,
+  schoolId?: string,
+): Promise<LoginResult> {
+  return postJson<LoginResult>('/auth/login', {
+    email,
+    password,
+    ...(schoolId ? { schoolId } : {}),
+  });
+}
+
+export interface RegisteredUser {
+  id: string;
+  email: string;
+  name: string;
+  createdAt: string;
+}
+
+/** Cadastro da conta (passo 1 do /cadastro): cria só o usuário, sem escola. */
+export function register(
+  name: string,
+  email: string,
+  password: string,
+): Promise<RegisteredUser> {
+  return postJson<RegisteredUser>('/auth/register', { name, email, password });
+}
+
+export interface CreatedSchool {
+  id: string;
+  name: string;
+  slug: string;
+  timezone: string;
+  createdAt: string;
+}
+
+/**
+ * Criação da escola (passo 2 do /cadastro): POST /api/schools com o access
+ * token da sessão "sem escola"; o servidor vincula o criador como ADMIN.
+ * Depois, o cliente faz login de novo COM o schoolId p/ a sessão da escola.
+ */
+export async function createSchool(
+  accessToken: string,
+  name: string,
+): Promise<CreatedSchool> {
+  let res: Response;
+  try {
+    res = await fetch(apiUrl('/schools'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      credentials: 'include',
+      body: JSON.stringify({ name }),
+    });
+  } catch {
+    throw new Error(
+      'Não foi possível falar com o servidor do TutorPass. Verifique se a API está no ar e tente de novo.',
+    );
+  }
+  const data = (await res.json().catch(() => null)) as
+    | (CreatedSchool & { message?: string | string[] })
+    | null;
+  if (!res.ok) {
+    const message = Array.isArray(data?.message)
+      ? data.message.join(' ')
+      : data?.message;
+    throw new Error(message ?? `Erro no servidor (HTTP ${res.status}). Tente de novo.`);
+  }
+  if (!data) throw new Error('Resposta vazia do servidor. Tente de novo.');
+  return data;
 }
 
 export function verify2fa(
