@@ -100,6 +100,78 @@ a { color: var(--brand); }
 }
 .nav-user-name { font-weight: 600; }
 .btn.small { padding: 8px 14px; min-height: 40px; font-size: 0.95rem; }
+
+/* Área da escola (cadastro): abas, formulários e listas do roster. */
+.admin-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 20px 0 16px; }
+.admin-tab {
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 9px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+}
+.admin-tab.is-active { background: var(--brand); border-color: var(--brand); color: #fff; }
+.roster-form { margin-bottom: 20px; }
+.roster-form h2 { margin-top: 0; font-size: 1.15rem; }
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px 16px;
+}
+@media (min-width: 720px) {
+  .form-grid { grid-template-columns: 1fr 1fr; }
+}
+.roster-filters { margin-bottom: 8px; }
+.roster-list { list-style: none; margin: 0; padding: 0; }
+.roster-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 4px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.roster-item { border-bottom: 1px solid var(--border); }
+.roster-item .roster-row { border-bottom: none; }
+.row-actions { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+.badge {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 2px 8px;
+  background: var(--brand-tint);
+  color: var(--brand-dark);
+  vertical-align: middle;
+}
+.badge.off { background: #eceff2; color: var(--muted); }
+.badge.danger { background: #fdecec; color: #a11; }
+.student-tutors {
+  padding: 4px 4px 16px;
+}
+.student-tutors ul { margin: 0 0 12px; padding-left: 18px; }
+textarea {
+  width: 100%;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font: inherit;
+  background: #fff;
+}
+select {
+  width: 100%;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font: inherit;
+  background: #fff;
+  min-height: 48px;
+}
 .topbar nav a { text-decoration: none; font-weight: 600; }
 
 .card {

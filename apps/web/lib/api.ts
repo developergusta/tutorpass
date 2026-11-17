@@ -221,6 +221,181 @@ export async function logout(): Promise<void> {
   clearSession();
 }
 
+// ------------------------------------------------------------ roster
+// Cadastro da escola (turmas, alunos, tutores) — /api/roster/*, com o
+// schoolId indo na sessão (o servidor nunca aceita escola pelo body).
+
+export interface Classroom {
+  id: string;
+  name: string;
+  grade?: string;
+  academicYear: number;
+  roomLocation?: string;
+  isActive: boolean;
+}
+
+export interface Student {
+  id: string;
+  name: string;
+  classroomId: string;
+  enrollmentCode?: string;
+  birthDate?: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'TRANSFERRED';
+  pickupBlocked: boolean;
+}
+
+export interface Tutor {
+  id: string;
+  name: string;
+  phone: string;
+  document?: string;
+  isBlocked: boolean;
+}
+
+export interface StudentTutor {
+  tutorId: string;
+  studentId: string;
+  relationship: string;
+  isPrimary: boolean;
+  canPickup: boolean;
+  tutor: Tutor;
+}
+
+export interface ImportReport {
+  totalRows: number;
+  created: number;
+  updated: number;
+  skippedDuplicates: number;
+  tutorsCreated: number;
+  tutorsLinked: number;
+  classroomsCreated: string[];
+  errors: { row: number; message: string }[];
+  dryRun: boolean;
+}
+
+/** Fetch autenticado: Bearer da sessão; em 401, renova 1x e repete. */
+async function authedJson<T>(path: string, init: RequestInit = {}): Promise<T> {
+  async function attempt(token: string): Promise<Response> {
+    return fetch(apiUrl(path), {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        ...(init.headers ?? {}),
+      },
+      credentials: 'include',
+    });
+  }
+  let session = loadSession();
+  if (!session) {
+    session = await refreshSession();
+    if (!session) throw new Error('Sessão expirada — entre de novo.');
+  }
+  let res = await attempt(session.accessToken);
+  if (res.status === 401) {
+    const renewed = await refreshSession();
+    if (!renewed) throw new Error('Sessão expirada — entre de novo.');
+    res = await attempt(renewed.accessToken);
+  }
+  const data = (await res.json().catch(() => null)) as
+    | (T & { message?: string | string[] })
+    | null;
+  if (!res.ok) {
+    const message = Array.isArray(data?.message)
+      ? data.message.join(' ')
+      : data?.message;
+    throw new Error(message ?? `Erro no servidor (HTTP ${res.status}). Tente de novo.`);
+  }
+  if (!data) throw new Error('Resposta vazia do servidor. Tente de novo.');
+  return data;
+}
+
+export function listClassrooms(): Promise<Classroom[]> {
+  return authedJson<Classroom[]>('/roster/classrooms?includeInactive=true');
+}
+
+export function createClassroom(input: {
+  name: string;
+  grade?: string;
+  academicYear: number;
+  roomLocation?: string;
+}): Promise<Classroom> {
+  return authedJson<Classroom>('/roster/classrooms', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deactivateClassroom(id: string): Promise<Classroom> {
+  return authedJson<Classroom>(`/roster/classrooms/${id}`, { method: 'DELETE' });
+}
+
+export function listStudents(classroomId?: string, search?: string): Promise<Student[]> {
+  const q = new URLSearchParams();
+  if (classroomId) q.set('classroomId', classroomId);
+  if (search) q.set('search', search);
+  const suffix = q.toString() ? `?${q}` : '';
+  return authedJson<Student[]>(`/roster/students${suffix}`);
+}
+
+export function createStudent(input: {
+  name: string;
+  classroomId: string;
+  enrollmentCode?: string;
+  birthDate?: string;
+}): Promise<Student> {
+  return authedJson<Student>('/roster/students', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function setStudentStatus(
+  id: string,
+  status: Student['status'],
+): Promise<Student> {
+  return authedJson<Student>(`/roster/students/${id}/status`, {
+    method: 'POST',
+    body: JSON.stringify({ status }),
+  });
+}
+
+export function listTutors(): Promise<Tutor[]> {
+  return authedJson<Tutor[]>('/roster/tutors');
+}
+
+export function createTutor(input: {
+  name: string;
+  phone: string;
+  document?: string;
+}): Promise<Tutor> {
+  return authedJson<Tutor>('/roster/tutors', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function listStudentTutors(studentId: string): Promise<StudentTutor[]> {
+  return authedJson<StudentTutor[]>(`/roster/students/${studentId}/tutors`);
+}
+
+export function linkTutor(
+  tutorId: string,
+  input: { studentId: string; relationship: string; isPrimary?: boolean; canPickup?: boolean },
+): Promise<unknown> {
+  return authedJson(`/roster/tutors/${tutorId}/link`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function importStudents(csv: string, dryRun: boolean): Promise<ImportReport> {
+  return authedJson<ImportReport>('/roster/import', {
+    method: 'POST',
+    body: JSON.stringify({ csv, dryRun }),
+  });
+}
+
 /** true quando a API responde no healthcheck; false quando está fora do ar. */
 export async function checkApiHealth(): Promise<boolean> {
   try {
