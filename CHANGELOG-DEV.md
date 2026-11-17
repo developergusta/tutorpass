@@ -1,3 +1,71 @@
+## 2026-11-17 18:55–19:05 — Ciclo UI 10: aba Equipe na /escola (vincular por e-mail + papel)
+
+**Pesquisa do ciclo (frente a — gestão de equipe em SaaS)**
+- **Papéis poucos e descritos onde se escolhe** (saasui.design, 2026): o
+  nome do papel sozinho não diz o que a pessoa pode fazer — a descrição em
+  linguagem simples vai junto da escolha.
+- **Convidar por e-mail + papel no mesmo passo** (saasui.design, 2026;
+  helpcenterkit, 10/11/2026): o convite é a porta de entrada da equipe e
+  precisa ser rápido — e-mail + papel juntos, sem etapa administrativa
+  depois.
+- **A lista de membros é a sala de controle** (saasui.design, 2026): nome,
+  e-mail, papel e status num olhar; pendente e desativado visualmente
+  distintos, p/ a lista dizer a verdade sobre quem pode entrar agora.
+- **Só quem pode ver, vê** (hostrepute, 2026): só ADMIN/COORDINATOR veem a
+  equipe; os demais veem a lista como leitura.
+- Achados registrados em `docs/product/IDEAS.md` (frente a, ciclo UI 10);
+  o item implementado era o da fila UI: **aba Equipe na /escola**
+  (BACKLOG, IMPORTANTE — follow-up do vínculo por API do ciclo anterior).
+
+**Direção (unslop)** — Produto: a equipe da escola — quem pode abrir o
+portão, chamar alunos e ver o cadastro. Caráter: calmo, exato. Momento:
+um só — o formulário de vínculo (e-mail + papel com a frase que diz o
+que o papel faz). Assinatura: o selo do papel em verde da marca e o
+avatar com a inicial, o mesmo gesto da topbar.
+
+**O que foi feito**
+- **Aba Equipe** (`escola/page.tsx`): 5ª aba da Área da escola, no mesmo
+  padrão das demais (`.admin-tab`, `.roster-form`, `.roster-list`).
+- **Lista da equipe**: avatar com inicial em círculo (`.member-avatar`,
+  verde da marca sobre tint), nome + e-mail, selo do papel em pt-BR
+  (Portaria, Coordenação, Professor(a), Responsável com login, Direção) e
+  `Inativo` em `.badge.off` quando o vínculo não está ativo; vazio com o
+  próximo passo ("vincule quem opera a portaria no formulário acima").
+- **Vincular em um passo** (só ADMIN): e-mail da conta + seletor de papel
+  com a frase de uma linha que muda com o papel (ex.: Portaria — "Opera a
+  fila: chama, valida o QR e confirma a retirada"); padrão GATE_AGENT, o
+  papel mais comum. A nota explica que a conta precisa existir antes (o
+  cadastro é o normal) e que o vínculo vale só para esta escola.
+- **Visibilidade pelo papel da sessão**: a lista é ADMIN/COORDINATOR e o
+  formulário é só ADMIN — a tela lê `loadSession()?.roles` e nem tenta
+  carregar o que não pode ver; quem não tem o papel vê 1 frase explicando
+  ("A lista da equipe só aparece para a direção e a coordenação"), em vez
+  de um erro 403.
+- **Erros com orientação**: 404 (conta não existe) e 409 (já tem o papel)
+  já chegam com a mensagem em pt-BR da API e são mostrados no alerta da
+  página; sucesso com o nome da pessoa e o papel vinculado.
+- `lib/api.ts`: `SchoolMember`/`SchoolRole` + `listSchoolMembers()` e
+  `addSchoolMember()` sobre GET/POST `/schools/members` (schoolId sempre
+  da sessão). Nenhuma regra de negócio, preço ou API tocada — só o web
+  usando as rotas que já existiam.
+
+**Arquivos alterados**
+- `apps/web/app/escola/page.tsx` (aba Equipe + `EquipeTab` + `ROLES`)
+- `apps/web/lib/api.ts` (+ `SchoolMember`, `list/addSchoolMember`)
+- `apps/web/app/globals.css` (+ `.member-avatar`, `.member-id`)
+- `docs/product/IDEAS.md` (frente a, ciclo UI 10), `BACKLOG.md` (Equipe
+  feito; fase 2 registrada)
+
+**Verificação** — `next build` em apps/web: **OK** (tipos válidos, 15
+páginas; `/escola` com 8,11 kB). Limitação: sem navegador neste sandbox
+p/ ver a aba com a conta de teste — a conferência visual e o vínculo de
+um papel de verdade ficam p/ a verificação ao vivo (o usuário tem as
+contas de visão criadas no ciclo anterior).
+
+**Próximo (fila UI)** — tela de Segurança/2FA (BACKLOG, IMPORTANTE — a
+API tem setup/confirm/status, o web não tem a tela); depois o app do
+tutor quando existir o esqueleto mobile.
+
 ## 2026-11-17 19:00 — Equipe da escola: admin vincula papel a conta existente
 
 **Pedido** — "crie logins diversificados pra mim com cada um dos

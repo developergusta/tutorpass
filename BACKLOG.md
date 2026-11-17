@@ -25,11 +25,14 @@ mesmo do login: **o motor existe e é testado; falta a camada de uso**.
   obrigado a usar 2FA (ADMIN) cai no aviso da tela de login apontando
   p/ uma tela que não existe. Precisa: página de Segurança (2FA +
   trocar senha + sessões ativas — as 3 APIs já existem).
-- [ ] **IMPORTANTE — Equipe sem tela no web.** A API ganhou
+- [x] **IMPORTANTE — Equipe sem tela no web.** A API ganhou
   GET/POST /schools/members em 17/11/2026 (admin vincula conta
   existente a um papel; lista a equipe), mas a /escola ainda não
-  tem a aba Equipe usando essas rotas — hoje o vínculo é só por
-  API. Precisa: aba Equipe (listar + adicionar por e-mail/papel).
+  tinha a aba Equipe usando essas rotas — hoje o vínculo é só por
+  API. FEITO no ciclo UI 10, 17/11/2026: aba Equipe na /escola
+  (listar + vincular por e-mail/papel; ver CHANGELOG-DEV). Fase 2
+  (falta rota na API): mudar papel de quem já está na equipe,
+  remover/desativar membro e reenviar convite.
 - [ ] **IMPORTANTE — Persistência parcial (Step 2 aberto).** Só User/
   School/SchoolMember persistem no Postgres; roster, fila, planos de
   saída etc. seguem em memória — restart da API apaga os dados
@@ -72,6 +75,17 @@ mesmo do login: **o motor existe e é testado; falta a camada de uso**.
 - [ ] Observabilidade: logs estruturados, métricas de fila, alerta de fila > N
 
 ## Fila UI/UX (rotina de 30 min — ordem: login → portaria → telão → planos → estados vazios/erro → mobile)
+- [x] **Equipe (ciclo UI 10, 17/11/2026): aba Equipe na /escola** — lista
+  da equipe (avatar com inicial + nome + e-mail + selo do papel em verde
+  da marca, `Inativo` em `.badge.off`) e formulário de vínculo em um passo
+  (e-mail + papel, com a frase de uma linha que descreve o papel e muda com
+  o seletor; padrão GATE_AGENT); só ADMIN vê o formulário e só
+  ADMIN/COORDINATOR veem a lista — os demais papéis veem 1 frase explicando
+  (o papel vem da sessão, a tela nem tenta carregar); erros 404/409 da API
+  já chegam com a orientação em pt-BR e são mostrados; vazio com o próximo
+  passo; `next build` OK (15 páginas). Fase 2 (falta rota na API): mudar
+  papel, remover/desativar membro, reenviar convite. Ver docs/product/IDEAS.md,
+  frente a, ciclo UI 10.
 - [x] Login (ciclo UI 2, 17/11/2026): layout centrado com marca (`.auth-*` reutilizável em `globals.css`), botão mostrar/ocultar senha com SVG próprio, alvo 44 px, `aria-pressed` + rótulo dinâmico, senha reocultada ao enviar (WCAG 3.3.8), código 2FA com espaçamento e dica de recuperação, estado de sucesso com ícone de confirmação e ações centralizadas; lógica de login/2FA intacta; `next build` OK (7 rotas). Ver docs/product/IDEAS.md, frente c, ciclo UI 2.
 - [x] Portaria (ciclo UI 3, 17/11/2026): resumo em 3 contadores no topo (na fila / prontos p/ retirada / a caminho, com numerais tabulares), selo de conexão com texto + cor (ao vivo/conectando/fora do ar, `role="status"`), seção "Pronto para retirada" com destaque verde e badge de contagem, linhas numeradas com nome maior e chips de turma/portão/ETA, estados vazios por seção, botão "Ver no telão" centralizado; `.btn` com `min-height: 48px` em todo o site (alvos ≥ 44 px) e foco visível já global; hook expõe o `gate` da entrada p/ o chip de portão; lógica da fila intacta; `next build` OK (7 rotas). Padrão `.auth-*` aplicado ao /cadastro no mesmo ciclo (marca, mostrar/ocultar senha, sucesso com ícone). Ver docs/product/IDEAS.md, frente a, ciclo UI 3.
 - [x] Planos/calculadora (ciclo UI 4, 17/11/2026): selo "Recomendado" visível no cartão do teste de 30 dias (antes só a borda verde o distinguia), cartão elevado (sombra + scale 1.02 no desktop) com CTA primário, recomendado em 1º na pilha mobile (`order: -1` abaixo de 640 px), faixas do PRO como lista faixa ↔ preço com numerais tabulares (mesmos valores da API: 89/199/349) e resultado da calculadora com `aria-live="polite"`; `next build` OK (7 rotas). Ver docs/product/IDEAS.md, frente d, ciclo UI 4.

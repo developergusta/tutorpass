@@ -248,6 +248,32 @@ export function listPasswordResets(): Promise<PendingReset[]> {
   return authedJson<PendingReset[]>('/auth/password-resets');
 }
 
+// ------------------------------------------------------------ equipe
+// Equipe da escola — GET/POST /api/schools/members, com o schoolId
+// indo na sessão (o servidor nunca aceita escola pelo body). A lista
+// é ADMIN/COORDINATOR; o vínculo é só ADMIN.
+
+export type SchoolRole = 'ADMIN' | 'COORDINATOR' | 'GATE_AGENT' | 'TEACHER' | 'TUTOR';
+
+export interface SchoolMember {
+  userId: string;
+  name: string;
+  email: string;
+  role: SchoolRole;
+  status: 'ACTIVE' | 'INACTIVE';
+}
+
+export function listSchoolMembers(): Promise<SchoolMember[]> {
+  return authedJson<SchoolMember[]>('/schools/members');
+}
+
+export function addSchoolMember(email: string, role: SchoolRole): Promise<SchoolMember> {
+  return authedJson<SchoolMember>('/schools/members', {
+    method: 'POST',
+    body: JSON.stringify({ email, role }),
+  });
+}
+
 // ------------------------------------------------------------ roster
 // Cadastro da escola (turmas, alunos, tutores) — /api/roster/*, com o
 // schoolId indo na sessão (o servidor nunca aceita escola pelo body).

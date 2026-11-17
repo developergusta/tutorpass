@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import RequireAuth from '../../components/RequireAuth';
 import {
+  addSchoolMember,
   createClassroom,
   createStudent,
   createTutor,
@@ -11,13 +12,17 @@ import {
   linkTutor,
   listClassrooms,
   listPasswordResets,
+  listSchoolMembers,
   listStudentTutors,
   listStudents,
   listTutors,
+  loadSession,
   setStudentStatus,
   type Classroom,
   type ImportReport,
   type PendingReset,
+  type SchoolMember,
+  type SchoolRole,
   type Student,
   type StudentTutor,
   type Tutor,
@@ -36,7 +41,7 @@ const RELATIONSHIPS: { value: string; label: string }[] = [
   { value: 'OTHER', label: 'Outro' },
 ];
 
-type Tab = 'turmas' | 'alunos' | 'tutores' | 'importar';
+type Tab = 'turmas' | 'alunos' | 'tutores' | 'importar' | 'equipe';
 
 // Entrega v1 dos links de redefinição de senha: só aparece p/ ADMIN
 // (a API responde 403 p/ os demais — aí o cartão nem renderiza).
@@ -151,6 +156,7 @@ function EscolaPanel() {
             ['alunos', 'Alunos'],
             ['tutores', 'Responsáveis'],
             ['importar', 'Importar CSV'],
+            ['equipe', 'Equipe'],
           ] as [Tab, string][]
         ).map(([value, label]) => (
           <button
@@ -181,6 +187,7 @@ function EscolaPanel() {
         <TutoresTab tutors={tutors} onChanged={reloadBase} onError={setError} onNotice={flash} />
       ) : null}
       {tab === 'importar' ? <ImportarTab onDone={reloadBase} onError={setError} /> : null}
+      {tab === 'equipe' ? <EquipeTab onError={setError} onNotice={flash} /> : null}
     </main>
   );
 }
@@ -726,6 +733,153 @@ function ImportarTab({
           ) : null}
         </div>
       ) : null}
+    </section>
+  );
+}
+
+// Papéis da equipe, descritos onde se escolhe (o nome sozinho não diz
+// o que a pessoa pode fazer — a frase de uma linha é o que evita o
+// papel errado; ver IDEAS.md, frente a, ciclo UI 10).
+const ROLES: { value: SchoolRole; label: string; desc: string }[] = [
+  { value: 'GATE_AGENT', label: 'Portaria', desc: 'Opera a fila: chama, valida o QR e confirma a retirada.' },
+  { value: 'COORDINATOR', label: 'Coordenação', desc: 'Acompanha a fila e a saída; vê a equipe e o cadastro.' },
+  { value: 'TEACHER', label: 'Professor(a)', desc: 'Vê a fila e acompanha a saída da própria turma.' },
+  { value: 'TUTOR', label: 'Responsável (com login)', desc: 'Entra na fila e acompanha a retirada do próprio filho.' },
+  { value: 'ADMIN', label: 'Direção', desc: 'Gerencia a escola, a equipe e as configurações.' },
+];
+
+function EquipeTab({
+  onError,
+  onNotice,
+}: {
+  onError: (m: string | null) => void;
+  onNotice: (m: string) => void;
+}) {
+  // A lista é ADMIN/COORDINATOR e o vínculo é só ADMIN (a API responde
+  // 403 p/ os demais) — o papel vem da sessão, então a tela nem tenta
+  // carregar o que não pode ver.
+  const roles = loadSession()?.roles ?? [];
+  const canView = roles.includes('ADMIN') || roles.includes('COORDINATOR');
+  const canAdd = roles.includes('ADMIN');
+  const [members, setMembers] = useState<SchoolMember[] | null>(null);
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<SchoolRole>('GATE_AGENT');
+  const [busy, setBusy] = useState(false);
+
+  const reload = useCallback(async () => {
+    try {
+      setMembers(await listSchoolMembers());
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Não foi possível carregar a equipe.');
+    }
+  }, [onError]);
+
+  useEffect(() => {
+    if (canView) void reload();
+  }, [canView, reload]);
+
+  if (!canView) {
+    return (
+      <section className="card">
+        <h2>Equipe</h2>
+        <p className="muted">
+          A lista da equipe só aparece para a direção e a coordenação. Quem opera a
+          portaria não precisa ver quem mais tem acesso — só usar a fila.
+        </p>
+      </section>
+    );
+  }
+
+  async function onAdd(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    onError(null);
+    try {
+      const added = await addSchoolMember(email.trim(), role);
+      setEmail('');
+      await reload();
+      onNotice(
+        `${added.name} agora é ${ROLES.find((r) => r.value === role)?.label ?? role} da escola.`,
+      );
+    } catch (err) {
+      // 404 (conta não existe) e 409 (já tem o papel) já vêm com a
+      // orientação em pt-BR da API — basta mostrar.
+      onError(err instanceof Error ? err.message : 'Não foi possível vincular.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section>
+      {canAdd ? (
+        <form className="card roster-form" onSubmit={onAdd}>
+          <h2>Vincular alguém à equipe</h2>
+          <p className="muted">
+            A pessoa precisa já ter uma conta no TutorPass — ela se cadastra normalmente
+            em Criar conta e você vincula o papel aqui. O vínculo vale só para esta escola.
+          </p>
+          <div className="form-grid">
+            <div className="field">
+              <label htmlFor="m-email">E-mail da conta</label>
+              <input
+                id="m-email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="pessoa@escola.com.br"
+                autoComplete="email"
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="m-role">Papel na escola</label>
+              <select id="m-role" value={role} onChange={(e) => setRole(e.target.value as SchoolRole)}>
+                {ROLES.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+              <p className="muted">{ROLES.find((r) => r.value === role)?.desc}</p>
+            </div>
+          </div>
+          <p>
+            <button className="btn" type="submit" disabled={busy}>
+              {busy ? 'Vinculando…' : 'Vincular à equipe'}
+            </button>
+          </p>
+        </form>
+      ) : null}
+
+      {members === null ? (
+        <p className="muted">Carregando a equipe…</p>
+      ) : members.length === 0 ? (
+        <p className="muted">
+          Nenhum membro além de você ainda
+          {canAdd ? ' — vincule quem opera a portaria no formulário acima.' : '.'}
+        </p>
+      ) : (
+        <ul className="roster-list">
+          {members.map((m) => (
+            <li className="roster-row" key={`${m.userId}:${m.role}`}>
+              <span className="member-id">
+                <span className="member-avatar" aria-hidden="true">
+                  {(m.name || m.email).charAt(0).toUpperCase()}
+                </span>
+                <span>
+                  <strong>{m.name || m.email}</strong>
+                  {m.name ? <span className="muted"> · {m.email}</span> : null}
+                  <span className="badge">
+                    {ROLES.find((r) => r.value === m.role)?.label ?? m.role}
+                  </span>
+                  {m.status !== 'ACTIVE' ? <span className="badge off">Inativo</span> : null}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

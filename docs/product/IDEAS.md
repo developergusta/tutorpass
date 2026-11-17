@@ -1627,6 +1627,42 @@ Fontes: tvpilot.app "Digital Signage Color Contrast: What Works on a Real TV" e 
   Impacto 3, Esforço 1 — **implementado neste ciclo** (reusa `.state` e
   `.btn`/`.btn.secondary`).
 
+## Semeado em 17/11/2026 — gestão de equipe em SaaS (frente a, ciclo UI 10)
+- **Papéis poucos, bem diferenciados e descritos onde se escolhe**
+  (saasui.design, 2026): o valor do papel é o humano olhar o nome e saber
+  o que a pessoa pode fazer — a descrição em linguagem simples vai junto
+  da escolha, não num manual à parte. Impacto 3, Esforço 1 —
+  **implementado neste ciclo** (seletor de papel da aba Equipe com a frase
+  de uma linha que muda com o papel; padrão em pt-BR: Portaria, Coordenação,
+  Professor(a), Responsável com login, Direção).
+- **Convidar por e-mail + papel no mesmo passo** (saasui.design, 2026;
+  helpcenterkit, 10/11/2026): o convite é a porta de entrada da equipe e
+  precisa ser rápido e tolerante — e-mail + papel juntos, sem etapa
+  administrativa depois. Impacto 3, Esforço 1 — **implementado neste ciclo**
+  (o vínculo é um formulário só; a conta precisa existir antes — o erro 404
+  da API já orienta em pt-BR e a tela o mostra).
+- **A lista de membros é a sala de controle: nome, e-mail, papel e status
+  num olhar** (saasui.design, 2026): cada linha mostra quem é, o papel e o
+  estado — pendente e desativado visualmente distintos, p/ a lista dizer a
+  verdade sobre quem pode entrar agora. Impacto 3, Esforço 1 —
+  **implementado neste ciclo** (avatar com inicial + nome + e-mail + selo
+  do papel em verde da marca; `Inativo` com `.badge.off`; vazio com o
+  próximo passo).
+- **Só quem pode ver, vê — e quem não pode, entende por quê**
+  (hostrepute, 2026): só ADMIN/COORDINATOR veem a equipe; os demais veem
+  a lista como leitura. No nosso caso a API responde 403 — a tela usa o
+  papel da sessão p/ nem tentar carregar e explica em 1 frase, em vez de
+  mostrar erro. Impacto 2, Esforço 1 — **implementado neste ciclo**.
+- **Padrão de 1 linha sob o campo (resumo do papel) é o que evita o papel
+  errado** (hostrepute, 2026): "começa em Viewer, e a linha sob o campo
+  resume o papel". Impacto 2, Esforço 0 — **verificado neste ciclo: é o
+  padrão adotado** (a descrição muda com o seletor).
+- **O que falta p/ o padrão completo (não neste ciclo)**: mudar o papel de
+  quem já está na equipe sem re-vincular, remover/desativar membro e
+  reenviar convite — hoje a API só vincula e lista (409 se já tem o papel);
+  sem rota de remoção, a tela não inventa o botão. Impacto 3, Esforço 2 —
+  **registrado no BACKLOG (Equipe, fase 2)**.
+
 ## Diferencial TutorPass (tese)
 Concorrente BR forte é suite ampla (comunicação/ERP/facial). TutorPass vence sendo **o melhor só em saída**:
 mais rápido de implantar, QR dinâmico anti-fraude (eles usam QR estático), auditoria imutável com hash
