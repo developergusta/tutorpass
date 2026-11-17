@@ -236,11 +236,20 @@ tempo real conectando…", para sempre.
   já está logado precisa sair e entrar de novo p/ pegar a sessão
   nova (o refresh preserva a escola da sessão original).
 
-**Prova parcial (17:08)** — cliente socket.io de verdade contra
-produção, com schoolId explícito: conectou, entrou na fila (201) e
-recebeu `queue.entry.created` como ADMIN. A prova do fluxo real
-(login SEM escola → sessão já vem com a escola) roda após o deploy
-desta terceira correção.
+**Provas (17:08–17:20, com correção de registro)** — a 1ª prova
+mostrou o socket CONECTADO com schoolId explícito, mas a perna do
+evento não rodou: o deploy anterior tinha apagado o roster em
+memória e o script quebrou antes do join (uma leitura truncada do
+log sugeriu sucesso que NÃO houve — corrigido aqui). A 2ª prova,
+já com o login corrigido, confirmou ao vivo: **login sem escola →
+schoolId + roles na sessão** e roster recriado; mas o socket, a
+partir DESTA VM, deu timeout nos dois transportes. Diagnóstico:
+handshake interno (dentro do container) e via Caddy NO servidor
+respondem na hora — o gargalo é a saída desta VM (proxy de egress
+trava o caminho /socket.io; a REST /api passa). Ou seja, prova de
+socket a partir daqui não é confiável; a verificação final é pelo
+navegador de verdade (sessão do usuário), registrada na entrada
+seguinte.
 
 **Verificação** — jest realtime + app.module (17 testes) e `next
 build` OK; prova ao vivo com cliente socket.io de verdade (login →
