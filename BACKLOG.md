@@ -1,5 +1,42 @@
 # Backlog priorizado — melhoria contínua
 
+## Lacunas críticas — varredura geral de 17/11/2026 (pedido do usuário)
+
+Auditoria completa web + API depois do conserto do login. O padrão é o
+mesmo do login: **o motor existe e é testado; falta a camada de uso**.
+
+- [ ] **CRÍTICO — A escola não consegue operar: não há cadastro de
+  alunos/turmas/tutores em lugar nenhum.** RosterService/Students/
+  Classrooms/Tutors têm lógica + testes, mas NENHUM controller HTTP;
+  o web não tem área da escola. Sem alunos cadastrados, a fila nunca
+  tem dado real e o produto não funciona ponta a ponta. Precisa:
+  controller(s) REST do roster (CRUD + importação CSV que o serviço
+  já tem) + telas de gestão no web (turmas, alunos, tutores).
+- [ ] **CRÍTICO — Portaria é só um painel de leitura.** A API tem
+  call/validate-qr/release/cancel/block (13 rotas no PickupController),
+  mas o web não chama nenhuma: a portaria não consegue chamar o aluno,
+  validar o QR nem confirmar a retirada pela tela (1 botão na página =
+  "tentar de novo" da conexão).
+- [ ] **CRÍTICO — Não existe "esqueci minha senha".** Nenhuma rota de
+  reset na API e nenhum link no web: admin que esquecer a senha perde
+  a conta (só outro admin ou acesso ao banco resolve). Precisa: fluxo
+  de reset com token de uso único (e-mail quando houver provedor; por
+  ora, geração por admin/log + tela de redefinição).
+- [ ] **IMPORTANTE — 2FA sem tela de configuração.** A API tem
+  setup/confirm/status, o web não tem tela de Segurança: quem é
+  obrigado a usar 2FA (ADMIN) cai no aviso da tela de login apontando
+  p/ uma tela que não existe. Precisa: página de Segurança (2FA +
+  trocar senha + sessões ativas — as 3 APIs já existem).
+- [ ] **IMPORTANTE — Persistência parcial (Step 2 aberto).** Só User/
+  School/SchoolMember persistem no Postgres; roster, fila, planos de
+  saída etc. seguem em memória — restart da API apaga os dados
+  operacionais. (A prova ao vivo do cadastro segue pendente de aval.)
+- [ ] **MENOR — Sem página 404 e sem favicon** no web (link errado cai
+  na tela padrão do Next; aba do navegador sem ícone da marca).
+- [ ] **MENOR — Mobile é esqueleto:** apps/mobile existe sem telas —
+  o app do tutor (entrar na fila, QR dinâmico) ainda não existe como
+  produto usável; hoje o tutor não tem como entrar na fila.
+
 ## Bugs descobertos (topo)
 - [x] QR: assinatura truncada/adulterada virava 500 (`RangeError` no `timingSafeEqual`) em vez de 401 — corrigido em 16/11/2026, com teste de regressão.
 - [x] Geofencing: regra "ARRIVAL exige 2 pings" nunca valia — 1º ping já emitia `ENTER_ARRIVAL` — corrigido em 16/11/2026 com flag `confirmed`, com testes.
