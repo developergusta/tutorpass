@@ -151,10 +151,11 @@ a { color: var(--brand-text); }
 @media (max-width: 480px) {
   .nav-user-name { display: none; }
 }
-/* Alvos de toque da topbar e do rodapé (revisão mobile, ciclo UI 6):
+/* Alvos de toque da topbar (revisão mobile, ciclo UI 6; o rodapé
+   perdeu o menu em 17/11/2026 e a regra ficou só com a topbar):
    os links eram texto puro (~20 px de altura — inalcançável com o
    polegar). Agora têm 44 px de altura mínima, sem mudar o visual. */
-.topbar nav a, .footer nav a {
+.topbar nav a {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
@@ -1051,8 +1052,6 @@ input:focus {
   padding-bottom: 0;
 }
 .footer strong { color: var(--ink); }
-.footer nav { display: flex; gap: 14px; flex-wrap: wrap; }
-.footer nav a { text-decoration: none; font-weight: 600; }
 
 /* Login / autenticação — layout centrado com marca (ciclo UI 2).
    Reutilizável por /cadastro: .auth-wrap + .auth-card + .field. */

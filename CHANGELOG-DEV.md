@@ -1,3 +1,15 @@
+## 2026-11-17 18:52 — Rodapé sem menu duplicado (pedido do usuário)
+
+**Pedido** — "arruma tbm o footer, não tem pra q dois menus": o
+rodapé repetia Planos/Criar conta/Entrar/Portaria/Telão, a mesma
+navegação da topbar.
+
+**O que foi feito** — `layout.tsx`: fora o `<nav>` do rodapé; fica
+a frase da marca e "© 2026 TutorPass" no lugar. `globals.css`:
+removidas as regras mortas `.footer nav`/`.footer nav a` e a regra
+de alvos de toque ficou só com a topbar (comentário atualizado).
+**Verificação** — `next build` OK (15 páginas).
+
 ## 2026-11-17 18:47 — Tema claro e tema escuro (pedido do usuário)
 
 **Pedido** — "faz um tema escuro e tema claro".

@@ -91,13 +91,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <strong>TutorPass</strong> — saída escolar segura, com auditoria imutável e LGPD
               desde o primeiro dia.
             </span>
-            <nav>
-              <Link href="/planos">Planos</Link>
-              <Link href="/cadastro">Criar conta</Link>
-              <Link href="/login">Entrar</Link>
-              <Link href="/portaria">Portaria</Link>
-              <Link href="/telao">Telão</Link>
-            </nav>
+            {/* Sem menu aqui (pedido do usuário, 17/11/2026): o rodapé
+                repetia a navegação inteira da topbar. Fica só a marca
+                e o ano — navegação é trabalho do topo. */}
+            <span>© 2026 TutorPass</span>
           </div>
         </footer>
       </body>
