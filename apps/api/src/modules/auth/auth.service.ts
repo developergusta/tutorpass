@@ -646,6 +646,29 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * Equipe de UMA escola (p/ a tela de membros e p/ conferir quem tem
+   * acesso): vínculos da escola com nome/e-mail da conta, ordenados
+   * por papel e nome. Sem hash nem dado sensível — é a visão do admin.
+   */
+  listSchoolMembers(
+    schoolId: string,
+  ): { userId: string; name: string; email: string; role: Role; status: MemberStatus }[] {
+    return [...this.memberships.values()]
+      .filter((m) => m.schoolId === schoolId)
+      .map((m) => {
+        const user = this.users.get(m.userId);
+        return {
+          userId: m.userId,
+          name: user?.name ?? '',
+          email: user?.email ?? '',
+          role: m.role,
+          status: m.status,
+        };
+      })
+      .sort((a, b) => a.role.localeCompare(b.role) || a.name.localeCompare(b.name));
+  }
+
+  /**
    * Autorização por tenant + papel, a partir do payload do access token.
    * O schoolId NUNCA vem do body — só do token (docs/01-arquitetura.md, módulo tenancy).
    * Retorna { allowed, reason } em vez de lançar, p/ o guard decidir o status HTTP.

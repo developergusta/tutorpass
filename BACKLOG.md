@@ -25,6 +25,11 @@ mesmo do login: **o motor existe e é testado; falta a camada de uso**.
   obrigado a usar 2FA (ADMIN) cai no aviso da tela de login apontando
   p/ uma tela que não existe. Precisa: página de Segurança (2FA +
   trocar senha + sessões ativas — as 3 APIs já existem).
+- [ ] **IMPORTANTE — Equipe sem tela no web.** A API ganhou
+  GET/POST /schools/members em 17/11/2026 (admin vincula conta
+  existente a um papel; lista a equipe), mas a /escola ainda não
+  tem a aba Equipe usando essas rotas — hoje o vínculo é só por
+  API. Precisa: aba Equipe (listar + adicionar por e-mail/papel).
 - [ ] **IMPORTANTE — Persistência parcial (Step 2 aberto).** Só User/
   School/SchoolMember persistem no Postgres; roster, fila, planos de
   saída etc. seguem em memória — restart da API apaga os dados

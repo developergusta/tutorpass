@@ -1,3 +1,29 @@
+## 2026-11-17 19:00 — Equipe da escola: admin vincula papel a conta existente
+
+**Pedido** — "crie logins diversificados pra mim com cada um dos
+perfis, justamente para eu ver oq muda em cada visão". Não existia
+porta p/ isso: o único vínculo criado por HTTP era o do criador da
+escola (ADMIN). Construída a porta que faltava (e que o produto
+precisa p/ qualquer escola real montar a equipe).
+
+**O que foi feito**
+- `SchoolMembersController` (`schools/members`): POST (só ADMIN)
+  vincula uma conta EXISTENTE, pelo e-mail, a um papel da escola
+  da sessão (404 se a conta não existe, com a orientação; 409 se já
+  tem o papel); GET (ADMIN/COORDINATOR) lista a equipe.
+- `AuthService.listSchoolMembers(schoolId)`: vínculos da escola
+  com nome/e-mail, ordenados por papel/nome. O vínculo persiste
+  (addMembership já fazia write-through no Postgres).
+- DTO com class-validator (e-mail + papel no enum dos 5).
+- Spec nova (4 casos: vínculo + login com o papel, 404, 409 e
+  papel extra, isolamento da lista por escola). Suíte do recorte:
+  75/75.
+- BACKLOG: aba Equipe na /escola usando as rotas (follow-up de UI).
+
+**Contas de visão criadas em produção** (escola de teste) após o
+deploy — registradas na entrada seguinte, com a verificação de
+login de cada uma.
+
 ## 2026-11-17 18:52 — Rodapé sem menu duplicado (pedido do usuário)
 
 **Pedido** — "arruma tbm o footer, não tem pra q dois menus": o
