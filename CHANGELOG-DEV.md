@@ -132,6 +132,23 @@ rotas: /, /cadastro, /login, /planos, /portaria, /telao, /_not-found).
 único p/ telas sem dados, falhas de API e carregamento; depois revisão
 mobile geral e app do tutor quando existir.
 
+## 2026-11-17 16:35 — Prova ao vivo do login (deploy fc90ddd) + varredura geral
+
+**Login provado em produção** (usuário descartável
+teste.login@tutorpass.com.br, via curl contra http://187.53.122.5):
+register 201 → login 201 com Set-Cookie de refresh → GET /auth/me 200
+→ POST /auth/refresh 201 (rotação ok) → POST /auth/logout 201 →
+refresh de novo: **401** (sessão revogada de verdade). O ciclo que
+estava quebrado pela flag Secure em HTTP agora fecha inteiro.
+
+**Varredura geral** (mesmo pedido): o padrão do login se repete — motor
+pronto e testado sem a camada de uso. Lacunas registradas no topo do
+BACKLOG.md ("Lacunas críticas — varredura geral de 17/11/2026"):
+roster sem controller HTTP nem telas (a escola não cadastra alunos),
+portaria só de leitura (API tem call/validate-qr/release; o web não
+chama), sem fluxo de "esqueci minha senha", 2FA sem tela de Segurança,
+persistência ainda parcial, sem 404/favicon, mobile esqueleto.
+
 ## 2026-11-17 16:27 — Sistema de login completo e funcional (pedido do usuário)
 
 **Auditoria (o que o usuário desconfiou, confirmado no código)**
