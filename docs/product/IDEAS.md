@@ -1485,6 +1485,47 @@ Fontes: syntaqx.com "Error & Empty States" (atual. 03/11/2026); medium.com/@anja
   30 s já move o selo p/ "fora do ar", mas sem trocar a tela p/ o estado
   de erro sozinha.
 
+## Semeado em 17/11/2026 — revisão mobile geral (frente c, ciclo UI 6)
+Fontes: web-developpeur.com "Mobile CSS Best Practices 2026: Touch Targets and iOS Zoom" (out/2026); acuityscan.com "Zoom disabled, tap targets too small, and the sideways scroll you will never see on a desktop" (20/10/2026); pwd.com.au "How to make a website mobile friendly: 2026 checklist"; cheatgrid.com "Mobile App Design Cheat Sheet" (29/04/2026).
+
+- **Nunca bloquear o zoom p/ consertar o zoom do iOS** (web-developpeur;
+  acuityscan, 2026): `maximum-scale=1`/`user-scalable=no` impede quem
+  tem baixa visão de ampliar e o iOS ignora o bloqueio no pinça desde o
+  iOS 10 — o conserto é input com ≥ 16 px, que é o que dispara o zoom
+  automático do Safari. Impacto 2, Esforço 1 — **verificado neste ciclo:
+  já era o caso** (todos os inputs/selects/textarea têm 1rem; nenhum
+  viewport restritivo no projeto) e registrado no `layout.tsx` p/ não
+  regredir.
+- **Alvo de toque 44–48 px com 8 px entre vizinhos** (Apple 44 pt,
+  Material 48 dp, WCAG 2.2 AA 24 px / AAA 44 px): o conserto é área de
+  toque maior, não ícone maior — `min-height` + padding. Impacto 3,
+  Esforço 1 — **aplicado neste ciclo** (`.btn.small` 40 → 44 px; links
+  da topbar e do rodapé, antes texto puro de ~20 px, ganharam 44 px).
+- **Rolagem lateral vem de UM elemento mais largo que a tela**
+  (acuityscan; pwd, 2026): corrigir o elemento, não esconder o overflow
+  no body — e `overflow-x: hidden` no `html`/`body` quebra `position:
+  sticky`; `overflow-x: clip` corta sem criar scroll container.
+  Impacto 3, Esforço 1 — **aplicado neste ciclo** (`overflow-x: clip` em
+  `html, body`; linhas do hero e nomes do telão ganharam `min-width: 0`
+  + quebra, p/ o selo `nowrap` não empurrar o conteúdo p/ fora).
+- **Safe-area com `viewport-fit=cover`** (web-developpeur; cheatgrid,
+  2026): sem `cover` a página nem chega ao notch; com `cover`, o CSS
+  precisa de `env(safe-area-inset-*)` na topbar, no rodapé e nas telas
+  cheias — e as ações primárias ficam no terço inferior, ao alcance do
+  polegar. Impacto 3, Esforço 1 — **aplicado neste ciclo** (`viewportFit:
+  'cover'` no `layout.tsx`; respiro de safe-area na topbar, no telão,
+  no rodapé e no `.container`).
+- **Nome do usuário some na topbar estreita** (cheatgrid, 2026 — zona do
+  polegar e economia de espaço): em telas ≤ 480 px, a topbar logada
+  (4 links + avatar + nome + Sair) não cabe sem apertar os alvos; o
+  avatar mantém a identidade. Impacto 2, Esforço 1 — **aplicado neste
+  ciclo** (`.nav-user-name` oculto abaixo de 480 px).
+- **Testar em aparelho real, não só em emulação** (futuristicmarketing,
+  2026): o DevTools não replica o zoom do Safari nem o toque real.
+  Impacto 2, Esforço 2 — **não feito neste ciclo** (sem aparelho no
+  sandbox; a checagem foi por inspeção de CSS + build); fica p/ a
+  verificação ao vivo no celular do usuário.
+
 ## Diferencial TutorPass (tese)
 Concorrente BR forte é suite ampla (comunicação/ERP/facial). TutorPass vence sendo **o melhor só em saída**:
 mais rápido de implantar, QR dinâmico anti-fraude (eles usam QR estático), auditoria imutável com hash

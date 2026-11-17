@@ -453,6 +453,13 @@ input:focus {
   flex-direction: column;
   gap: 18px;
   padding: clamp(16px, 2.5vw, 36px);
+  /* Safe-area (revisão mobile, ciclo UI 6): o telão é tela cheia fixa e
+     também abre no celular — sem o respiro, o relógio e o rodapé
+     ficariam sob o notch e a barra de gestos. */
+  padding-top: calc(clamp(16px, 2.5vw, 36px) + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(clamp(16px, 2.5vw, 36px) + env(safe-area-inset-bottom, 0px));
+  padding-left: max(clamp(16px, 2.5vw, 36px), env(safe-area-inset-left, 0px));
+  padding-right: max(clamp(16px, 2.5vw, 36px), env(safe-area-inset-right, 0px));
   color: #eef7f2;
   background:
     radial-gradient(1100px 700px at 15% -10%, rgba(16, 122, 87, 0.38) 0%, transparent 60%),
@@ -570,7 +577,7 @@ input:focus {
   animation: telao-in 0.45s ease both;
 }
 .telao-list li:last-child { border-bottom: none; }
-.telao-name { font-weight: 800; letter-spacing: -0.01em; line-height: 1.05; }
+.telao-name { font-weight: 800; letter-spacing: -0.01em; line-height: 1.05; min-width: 0; overflow-wrap: break-word; }
 .telao-panel.is-ready .telao-name { font-size: clamp(1.9rem, 3.8vw, 3.4rem); color: #ffffff; }
 .telao-panel.is-route .telao-name { font-size: clamp(1.5rem, 3vw, 2.5rem); color: #dcebf5; }
 .telao-list li.is-now {
@@ -744,12 +751,13 @@ input:focus {
 .hb-row {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: 4px 10px;
+  flex-wrap: wrap;
   padding: 10px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 .hb-row:last-child { border-bottom: none; }
-.hb-name { color: #eafaf2; font-weight: 600; }
+.hb-name { color: #eafaf2; font-weight: 600; min-width: 0; }
 .hb-meta { color: #9fc9b4; font-size: 0.88rem; }
 .hb-tag {
   margin-left: auto;
@@ -896,7 +904,7 @@ input:focus {
   border-top: 1px solid var(--border);
   background: var(--card);
   margin-top: 40px;
-  padding: 22px 0;
+  padding: 22px 0 calc(22px + env(safe-area-inset-bottom, 0px));
   color: var(--muted);
   font-size: 0.95rem;
 }

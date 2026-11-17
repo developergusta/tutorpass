@@ -1,3 +1,77 @@
+## 2026-11-17 16:54–16:59 — Ciclo UI 6: revisão mobile geral de todas as telas
+
+**Pesquisa do ciclo (frente c — acessibilidade e mobile)**
+- **Nunca bloquear o zoom p/ consertar o zoom do iOS** (web-developpeur,
+  out/2026; acuityscan, 20/10/2026): `maximum-scale=1` /
+  `user-scalable=no` impede quem tem baixa visão de ampliar, e o iOS
+  ignora o bloqueio no pinça desde o iOS 10 — o conserto é o input com
+  ≥ 16 px, que é o gatilho do zoom automático do Safari.
+- **Alvo de toque 44–48 px com ~8 px entre vizinhos** (Apple 44 pt,
+  Material 48 dp, WCAG 2.2 AA 24 px / AAA 44 px): o conserto é área de
+  toque maior, não ícone maior — `min-height` + padding.
+- **Rolagem lateral vem de UM elemento mais largo que a tela**
+  (acuityscan; pwd, 2026): corrigir o elemento, não esconder o overflow
+  no body — e `overflow-x: hidden` em `html`/`body` quebra o `position:
+  sticky`; `overflow-x: clip` corta sem criar scroll container.
+- **Safe-area com `viewport-fit=cover`** (web-developpeur; cheatgrid,
+  29/04/2026): sem `cover` a página nem chega ao notch; com `cover`, o
+  CSS precisa de `env(safe-area-inset-*)` na topbar, no rodapé e nas
+  telas cheias; ações primárias no terço inferior, ao alcance do
+  polegar.
+- Achados registrados em `docs/product/IDEAS.md` (frente c, ciclo UI 6);
+  o item implementado era o da fila UI: **revisão mobile geral**
+  (Impacto 3, Esforço 1).
+
+**O que foi feito**
+- **Trava de rolagem lateral** (`globals.css`): `overflow-x: clip` +
+  `max-width: 100%` em `html, body` — o guarda global que faltava; o
+  sticky da topbar continua funcionando (clip não cria scroll
+  container, diferente de hidden).
+- **Alvos de toque em 44 px** (o defeito real da auditoria): `.btn.small`
+  era 40 px — subiu p/ 44 px (botão Sair da topbar, ações
+  Chamar/Validar/Liberar/Cancelar da portaria e ações das linhas da
+  /escola); os links da topbar (Planos/Portaria/Telão/Escola/Criar
+  conta/Entrar) e do rodapé eram texto puro de ~20 px de altura —
+  ganharam `min-height: 44px` com padding, sem mudar o visual.
+- **Safe-area / notch** (`layout.tsx` + `globals.css`): `viewportFit:
+  'cover'` no export `viewport` do Next; respiro de
+  `env(safe-area-inset-*)` na topbar, no telão (tela cheia fixa, que
+  também abre no celular), no rodapé e no `.container`. Sem
+  `maximum-scale` nem `user-scalable=no` — o zoom de pinça continua
+  livre.
+- **Topbar logada cabe em 320 px**: abaixo de 480 px o nome do usuário
+  some e ficam só avatar + Sair (4 links + avatar + nome + Sair não
+  cabiam sem apertar os alvos); a identidade continua visível pelo
+  avatar.
+- **Fim do estouro por `nowrap`**: as linhas do painel do hero
+  (`.hb-row`) ganharam `flex-wrap: wrap` e `.hb-name` `min-width: 0`;
+  os nomes do telão (`.telao-name`) ganharam `min-width: 0` +
+  `overflow-wrap: break-word` — nome comprido + selo AGORA/ETA não
+  empurram mais o conteúdo p/ fora da tela.
+- **Verificado sem mudança**: todos os inputs/selects/textarea já têm
+  1rem (16 px) — o zoom automático do iOS ao focar o campo não
+  acontece; o resumo da fila (3 colunas) cabe em 320 px. Nenhuma regra
+  de negócio, preço ou API tocada.
+
+**Arquivos alterados**
+- `apps/web/app/globals.css` (overflow-x clip, `.btn.small` 44 px,
+  alvos da topbar/rodapé, safe-area, nome oculto ≤ 480 px, wrap do hero
+  e do telão)
+- `apps/web/app/layout.tsx` (export `viewport` com `viewportFit:
+  'cover'`)
+- `docs/product/IDEAS.md` (frente c, ciclo UI 6), `BACKLOG.md` (fila UI/UX)
+
+**Verificação** — `next build` em apps/web: **OK** (tipos válidos, 10
+rotas: /, /cadastro, /escola, /esqueci-senha, /login, /planos,
+/portaria, /redefinir-senha, /telao, /_not-found). Limitação: sem
+aparelho real neste sandbox — a checagem foi por inspeção de CSS +
+build; o teste em iPhone/Android de verdade fica p/ a verificação ao
+vivo (registrado no IDEAS.md).
+
+**Próximo (fila UI)** — passada anti-genérica (skill `unslop`) nas
+telas restantes (login, portaria, telão, planos, escola): corrigir os
+3 maiores sinais por ciclo; depois o app do tutor quando existir.
+
 ## 2026-11-17 16:24–16:40 — Ciclo UI 5: estados vazios/erro/carregando (padrão único)
 
 **Pesquisa do ciclo (frente a/c — estados de tela: vazio, erro, carregamento)**

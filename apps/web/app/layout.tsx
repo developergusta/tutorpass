@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter, Sora } from 'next/font/google';
 import Link from 'next/link';
 import Script from 'next/script';
@@ -20,6 +20,18 @@ export const metadata: Metadata = {
   title: 'TutorPass — saída escolar segura',
   description:
     'TutorPass: check-in/check-out e saída segura de alunos em escolas particulares, sem fila no drive-thru e com auditoria imutável.',
+};
+
+// Viewport com safe-area (revisão mobile, ciclo UI 6): `cover` deixa a
+// página ir até sob o notch/barra de gestos e o CSS compensa com
+// env(safe-area-inset-*) na topbar, no telão e no rodapé. Sem
+// maximum-scale nem user-scalable=no — o zoom de pinça continua livre
+// (o zoom automático do iOS em campo < 16 px já não acontece: todos os
+// inputs têm 1rem).
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 };
 
 function LogoMark() {
