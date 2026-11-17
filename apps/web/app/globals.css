@@ -124,6 +124,50 @@ a { color: var(--brand); }
 }
 .btn.small { padding: 8px 14px; min-height: 44px; font-size: 0.95rem; }
 
+/* Menu hambúrguer no mobile (pedido do usuário, 17/11/2026): até
+   720 px a navegação da topbar sai da linha e vira um painel que
+   abre pelo botão — links em linhas cheias de 48 px, fáceis de
+   tocar, e o nome do usuário volta a aparecer (no painel cabe).
+   No desktop o botão some e nada muda. */
+.nav-toggle { display: none; }
+@media (max-width: 720px) {
+  .topbar { flex-wrap: wrap; }
+  .nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin-left: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .nav-toggle svg { width: 22px; height: 22px; }
+  .nav-toggle:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .topbar nav { display: none; }
+  .topbar nav.nav-open {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    width: 100%;
+    padding-top: 10px;
+  }
+  .topbar nav.nav-open a {
+    width: 100%;
+    min-height: 48px;
+    padding: 10px 10px;
+    border-radius: 10px;
+  }
+  .topbar nav.nav-open a:hover { background: var(--brand-tint); }
+  .topbar nav.nav-open .nav-user { padding: 8px 10px; }
+  .topbar nav.nav-open .nav-user-name { display: inline; }
+  .topbar nav.nav-open .btn { width: 100%; margin-top: 6px; }
+}
+
 /* Área da escola (cadastro): abas, formulários e listas do roster. */
 .admin-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 20px 0 16px; }
 .admin-tab {

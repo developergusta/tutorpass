@@ -1,3 +1,23 @@
+## 2026-11-17 18:41 — Menu hambúrguer no mobile (pedido do usuário)
+
+**Pedido** — "o topo tem q ser um menu hamburguer no mobile".
+
+**O que foi feito**
+- `components/AuthNav.tsx`: botão hambúrguer (44 px, ícone próprio em
+  SVG no estilo do projeto; vira X quando aberto) visível só ≤720 px,
+  com `aria-expanded`/`aria-controls`. O painel abre com os mesmos
+  links da topbar em linhas cheias de 48 px; fecha ao tocar num link,
+  ao trocar de rota (`usePathname`) e com Esc. Sair também fecha.
+- `app/globals.css`: bloco `@media (max-width: 720px)` — topbar com
+  `flex-wrap`, nav oculta por padrão e `.nav-open` em coluna com
+  largura cheia, hover em `--brand-tint`, botão Sair em largura
+  cheia e o nome do usuário de volta no painel (a regra de ≤480 px
+  que o escondia era p/ caber na linha; no painel cabe).
+- Desktop: nada muda (botão com `display: none`).
+
+**Verificação** — `next build` OK (15 páginas). Conferência visual no
+celular fica com o usuário (o navegador daqui é desktop).
+
 ## 2026-11-17 18:24–18:29 — Ciclo UI 9: 404 + favicon (a aba e o beco sem saída ganham a marca)
 
 **Pesquisa do ciclo (frente d — design systems / boas práticas de CSS/Next)**
