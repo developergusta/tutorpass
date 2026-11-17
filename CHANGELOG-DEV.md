@@ -132,6 +132,24 @@ rotas: /, /cadastro, /login, /planos, /portaria, /telao, /_not-found).
 único p/ telas sem dados, falhas de API e carregamento; depois revisão
 mobile geral e app do tutor quando existir.
 
+## 2026-11-17 16:48 — Provas ao vivo dos 3 itens (deploy b6d8806)
+
+Script de fumaça contra http://187.53.122.5 com a conta de teste —
+**tudo passou**:
+- **Roster**: login → POST /schools criou "Escola Teste da Varredura"
+  (a35fa897-2b69-4b9a-a0ac-83b19cec6600) → login com escola → turma
+  "3º B", aluna "Alice Varredura" e responsável "Maria Varredura"
+  criados pelas rotas novas → vínculo 201 → GET responsáveis do aluno
+  = 1.
+- **Reset**: forgot-password → token apareceu em GET
+  /auth/password-resets (admin) → reset 201 → login com a senha velha
+  = 401, com a nova (TesteLogin#2027) = 201.
+- **Portaria**: join na fila (pq_1) → call = CALLED → release sem
+  validar = **400** (a regra "só sai validado" vale ao vivo) → cancel
+  = CANCELLED.
+Artefatos de teste ficam em produção (escola de teste + 1 turma/aluna/
+responsável + entrada cancelada) — inofensivos e úteis p/ demonstração.
+
 ## 2026-11-17 16:38 — Varredura: os 3 itens críticos corrigidos (ordem aprovada pelo usuário)
 
 **Item 1 — a escola consegue se cadastrar (roster com HTTP + telas)**
