@@ -1,3 +1,11 @@
+## 2026-11-17 15:52 — Uptime Kuma: tag 1 → 2 (linha 1.x descontinuada)
+
+O usuário abriu o Kuma e viu o aviso do próprio projeto: a v1.23.17
+(tag `1`/`latest`) não é mais mantida e não recebe correções de
+segurança. Compose trocado para `louislam/uptime-kuma:2` (tag
+recomendada); o volume `kuma_data` é o mesmo e a base migra sozinha na
+primeira subida da v2 — conta e monitores criados na v1 se mantêm.
+
 ## 2026-11-17 15:24–15:35 — Ciclo UI 3: portaria redesenhada (hierarquia da fila + cadastro no padrão auth)
 
 **Pesquisa do ciclo (frente a — referências de design de SaaS e painéis)**

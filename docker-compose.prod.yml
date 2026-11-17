@@ -81,7 +81,9 @@ services:
   #   (ele enxerga TODOS os logs — nunca expor direto).
   # - db-backup é interno, sem porta.
   uptime-kuma:
-    image: louislam/uptime-kuma:1
+    # Tag "2": a linha 1.x (tag "1"/"latest") foi descontinuada e o próprio
+    # Kuma avisa que não recebe mais correções — usar a tag recomendada.
+    image: louislam/uptime-kuma:2
     volumes: [kuma_data:/app/data]
     ports: ["3001:3001"]
     restart: unless-stopped
