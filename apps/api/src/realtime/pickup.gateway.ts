@@ -14,7 +14,12 @@ export class PickupGateway {
   async handleConnection(client: Socket) {
     const { schoolId, classroomId, role, tutorId } = client.handshake.auth as any;
     if (!schoolId) return client.disconnect();
-    if (role === 'GATE_AGENT' || role === 'COORDINATOR') client.join(`school:${schoolId}:gate`);
+    // ADMIN também entra na room do portão: em escola pequena é o admin
+    // quem opera a portaria e o telão — sem isso, logado como admin o
+    // painel nunca recebia `queue.entry.created` (só status_changed vai
+    // p/ a room admin) e ficava em "conectando" p/ sempre (bug de
+    // 17/11/2026, reportado pelo usuário).
+    if (role === 'GATE_AGENT' || role === 'COORDINATOR' || role === 'ADMIN') client.join(`school:${schoolId}:gate`);
     if (role === 'ADMIN' || role === 'COORDINATOR') client.join(`school:${schoolId}:admin`);
     if (role === 'TEACHER' && classroomId) client.join(`school:${schoolId}:classroom:${classroomId}`);
     if (role === 'TUTOR' && tutorId) client.join(`tutor:${tutorId}`);

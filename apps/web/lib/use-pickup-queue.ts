@@ -137,20 +137,40 @@ export function usePickupQueue(): PickupQueueState {
       socketRef.current?.connect();
     };
 
-    const token = (() => {
-      try {
-        const raw = sessionStorage.getItem('tutorpass.session');
-        return raw ? (JSON.parse(raw) as { accessToken?: string }).accessToken : undefined;
-      } catch {
-        return undefined;
-      }
-    })();
-
+    // O gateway EXIGE schoolId no handshake (sem ele, desconecta na
+    // hora) e usa o `role` p/ escolher a room — a portaria/telão
+    // precisam da room do portão. Mandar só o token era o bug do
+    // "conectando…" eterno (17/11/2026). A forma de função faz o
+    // socket.io reler a sessão a cada (re)conexão — token renovado
+    // pelo RequireAuth entra sozinho.
     const socket = io(`${API_URL}/pickup`, {
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 5,
       timeout: 5_000,
-      auth: token ? { token } : undefined,
+      auth: (cb) => {
+        try {
+          const raw = sessionStorage.getItem('tutorpass.session');
+          const session = raw
+            ? (JSON.parse(raw) as {
+                accessToken?: string;
+                schoolId?: string | null;
+                roles?: string[];
+              })
+            : null;
+          const roles = session?.roles ?? [];
+          const role =
+            ['GATE_AGENT', 'COORDINATOR', 'ADMIN', 'TEACHER'].find((r) =>
+              roles.includes(r),
+            ) ?? roles[0];
+          cb({
+            token: session?.accessToken,
+            schoolId: session?.schoolId ?? undefined,
+            role,
+          });
+        } catch {
+          cb({});
+        }
+      },
     });
     socketRef.current = socket;
 

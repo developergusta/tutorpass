@@ -132,6 +132,33 @@ rotas: /, /cadastro, /login, /planos, /portaria, /telao, /_not-found).
 único p/ telas sem dados, falhas de API e carregamento; depois revisão
 mobile geral e app do tutor quando existir.
 
+## 2026-11-17 16:55 — BUG: tempo real nunca conectava no web (reportado pelo usuário)
+
+**Sintoma** — telão preso em "Conectando" e portaria em "API no ar ·
+tempo real conectando…", para sempre.
+
+**Causa (duas, somadas)**
+1. O `PickupGateway` exige `schoolId` no handshake do socket e
+   desconecta quem não manda; o web mandava SÓ o token. O transporte
+   subia (handshake HTTP ok via Caddy), o servidor derrubava em
+   seguida — por isso a API aparecia "no ar" (REST/health respondia)
+   mas o tempo real nunca conectava.
+2. Mesmo com schoolId, as rooms são por papel e `queue.entry.created`
+   só vai p/ a room do portão (GATE_AGENT/COORDINATOR); o ADMIN — quem
+   opera a portaria em escola pequena — entrava só na room admin e
+   nunca veria as entradas novas.
+
+**Correção**
+- Web (`use-pickup-queue`): handshake passa a mandar token + schoolId
+  + role da sessão, na forma de função (relê a sessão a cada
+  reconexão — token renovado entra sozinho).
+- API (`pickup.gateway`): ADMIN também entra na room do portão.
+
+**Verificação** — jest realtime + app.module (17 testes) e `next
+build` OK; prova ao vivo com cliente socket.io de verdade (login →
+conecta → join na fila → recebe `queue.entry.created`) após o deploy,
+registrada na entrada seguinte.
+
 ## 2026-11-17 16:48 — Provas ao vivo dos 3 itens (deploy b6d8806)
 
 Script de fumaça contra http://187.53.122.5 com a conta de teste —

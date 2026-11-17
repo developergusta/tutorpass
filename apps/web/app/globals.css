@@ -23,6 +23,11 @@
 * { box-sizing: border-box; }
 
 html, body { margin: 0; padding: 0; }
+/* Trava de rolagem lateral no celular (revisão mobile, ciclo UI 6):
+   `clip` corta o excesso sem criar um scroll container, então o
+   `position: sticky` da topbar continua funcionando — `hidden` quebraria
+   o sticky. O conteúdo que estourava era invisível no desktop. */
+html, body { overflow-x: clip; max-width: 100%; }
 
 body {
   background: var(--bg);
@@ -43,7 +48,7 @@ a { color: var(--brand); }
 .container {
   max-width: 960px;
   margin: 0 auto;
-  padding: 16px;
+  padding: 16px max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px));
 }
 
 .topbar {
@@ -54,7 +59,10 @@ a { color: var(--brand); }
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 16px;
+  /* Safe-area: com viewport-fit=cover a página vai até sob o notch;
+     o respiro em cima (e nas laterais) impede a topbar de ficar
+     escondida atrás dele. */
+  padding: calc(12px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
@@ -99,7 +107,22 @@ a { color: var(--brand); }
   font-size: 0.9rem;
 }
 .nav-user-name { font-weight: 600; }
-.btn.small { padding: 8px 14px; min-height: 40px; font-size: 0.95rem; }
+/* No celular o nome some e fica só o avatar + Sair: a topbar logada
+   (4 links + avatar + nome + Sair) não cabe em 320–360 px sem apertar
+   os links. A identidade continua visível pelo avatar. */
+@media (max-width: 480px) {
+  .nav-user-name { display: none; }
+}
+/* Alvos de toque da topbar e do rodapé (revisão mobile, ciclo UI 6):
+   os links eram texto puro (~20 px de altura — inalcançável com o
+   polegar). Agora têm 44 px de altura mínima, sem mudar o visual. */
+.topbar nav a, .footer nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 6px 4px;
+}
+.btn.small { padding: 8px 14px; min-height: 44px; font-size: 0.95rem; }
 
 /* Área da escola (cadastro): abas, formulários e listas do roster. */
 .admin-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 20px 0 16px; }
