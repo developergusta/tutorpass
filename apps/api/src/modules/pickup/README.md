@@ -74,6 +74,7 @@ QUEUED / CALLED → EXPIRED       (dia anterior — job diário via expireStale(
 | POST | `queue/:entryId/cancel` | TUTOR, GATE_AGENT, COORDINATOR, ADMIN | Cancela a entrada na fila |
 | GET | `queue` | GATE_AGENT, COORDINATOR, ADMIN, TEACHER | Fila ativa da escola (FIFO); `?gate=` filtra um portão |
 | GET | `gates` | GATE_AGENT, COORDINATOR, ADMIN, TEACHER | Portões com fila ativa + contagem (`[{ gate, count }]`) |
+| GET | `sibling-gate-conflicts` | GATE_AGENT, COORDINATOR, ADMIN, TEACHER | Tutores com filhos ativos em portões diferentes (`[{ tutorId, studentIds, gates: [{ gate, studentIds }] }]`) — o painel sinaliza p/ ninguém esperar no portão errado |
 | GET | `students/:studentId/queue` | TUTOR, GATE_AGENT, COORDINATOR, ADMIN, TEACHER | Histórico de entradas do aluno |
 | GET | `logs` | ADMIN, COORDINATOR | Trilha de auditoria da escola |
 | GET | `logs/verify-chain` | ADMIN, COORDINATOR | Revalida a cadeia de hashes (`{ valid, firstBadIndex }`) |

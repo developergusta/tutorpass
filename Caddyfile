@@ -1,0 +1,20 @@
+# Caddy — porta de entrada única do TutorPass no VPS (docker-compose.prod.yml).
+# SITE_ADDRESS vem do .env.production:
+#   - ":80"            → só IP, HTTP (teste inicial, sem domínio)
+#   - "seudominio.com" → HTTPS automático (Let's Encrypt) quando o DNS
+#                        apontar p/ o VPS. Trocar e reiniciar o Caddy basta.
+{$SITE_ADDRESS} {
+	encode gzip
+
+	# API REST (prefixo global /api do NestJS) e o WebSocket da fila
+	# (namespace Socket.io /pickup) vão p/ a API; o resto é o web.
+	handle /api/* {
+		reverse_proxy api:3333
+	}
+	handle /socket.io/* {
+		reverse_proxy api:3333
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+}

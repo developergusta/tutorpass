@@ -328,3 +328,70 @@ describe('PickupService — múltiplos portões', () => {
     ]);
   });
 });
+
+describe('PickupService — irmãos em portões diferentes', () => {
+  const SCHOOL = 'school-1';
+  const TUTOR = 'tutor-1';
+  const STAFF = 'staff-1';
+  const T0 = new Date('2026-11-17T15:00:00Z');
+
+  function service() {
+    return new PickupService(new QrTokenService());
+  }
+
+  it('tutor com 2 filhos em portões diferentes é conflito, com os portões e alunos', () => {
+    const svc = service();
+    svc.join({ schoolId: SCHOOL, studentId: 'a', tutorId: TUTOR, gate: 'Portão A' }, T0);
+    svc.join({ schoolId: SCHOOL, studentId: 'b', tutorId: TUTOR, gate: 'Fundos' }, T0);
+    expect(svc.listSiblingGateConflicts(SCHOOL)).toEqual([
+      {
+        tutorId: TUTOR,
+        studentIds: ['a', 'b'],
+        gates: [
+          { gate: 'Fundos', studentIds: ['b'] },
+          { gate: 'Portão A', studentIds: ['a'] },
+        ],
+      },
+    ]);
+  });
+
+  it('mesmo portão não é conflito; tutores diferentes no mesmo par de portões não é conflito', () => {
+    const svc = service();
+    svc.join({ schoolId: SCHOOL, studentId: 'a', tutorId: TUTOR, gate: 'Portão A' }, T0);
+    svc.join({ schoolId: SCHOOL, studentId: 'b', tutorId: TUTOR, gate: 'Portão A' }, T0);
+    svc.join({ schoolId: SCHOOL, studentId: 'c', tutorId: 'tutor-2', gate: 'Fundos' }, T0);
+    expect(svc.listSiblingGateConflicts(SCHOOL)).toEqual([]);
+  });
+
+  it('um filho na fila única e outro num portão nomeado também é divisão', () => {
+    const svc = service();
+    svc.join({ schoolId: SCHOOL, studentId: 'a', tutorId: TUTOR }, T0);
+    svc.join({ schoolId: SCHOOL, studentId: 'b', tutorId: TUTOR, gate: 'Portão A' }, T0);
+    const conflicts = svc.listSiblingGateConflicts(SCHOOL);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].gates).toEqual([
+      { gate: null, studentIds: ['a'] },
+      { gate: 'Portão A', studentIds: ['b'] },
+    ]);
+  });
+
+  it('entrada cancelada não conta; conflito some quando só resta 1 portão ativo', () => {
+    const svc = service();
+    svc.join({ schoolId: SCHOOL, studentId: 'a', tutorId: TUTOR, gate: 'Portão A' }, T0);
+    const b = svc.join({ schoolId: SCHOOL, studentId: 'b', tutorId: TUTOR, gate: 'Fundos' }, T0);
+    expect(svc.listSiblingGateConflicts(SCHOOL)).toHaveLength(1);
+    svc.cancel(b.id, STAFF, T0);
+    expect(svc.listSiblingGateConflicts(SCHOOL)).toEqual([]);
+  });
+
+  it('outra escola não contamina; conflitos ordenados por tutorId', () => {
+    const svc = service();
+    svc.join({ schoolId: SCHOOL, studentId: 'a', tutorId: 'tutor-2', gate: 'Portão A' }, T0);
+    svc.join({ schoolId: SCHOOL, studentId: 'b', tutorId: 'tutor-2', gate: 'Fundos' }, T0);
+    svc.join({ schoolId: SCHOOL, studentId: 'c', tutorId: 'tutor-1', gate: 'Portão A' }, T0);
+    svc.join({ schoolId: SCHOOL, studentId: 'd', tutorId: 'tutor-1', gate: 'Fundos' }, T0);
+    svc.join({ schoolId: 'school-2', studentId: 'e', tutorId: 'tutor-1', gate: 'Portão A' }, T0);
+    const conflicts = svc.listSiblingGateConflicts(SCHOOL);
+    expect(conflicts.map((c) => c.tutorId)).toEqual(['tutor-1', 'tutor-2']);
+  });
+});

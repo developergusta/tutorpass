@@ -1,3 +1,177 @@
+## 2026-11-17 11:59–12:08 — Kit de deploy em VPS pronto (fio de deploy)
+
+**Contexto**: usuário escolheu o caminho VPS (Hostinger KVM 1) em vez do
+grátis (Render/Neon/Upstash/Vercel). Preparado tudo p/ o deploy ser um
+único `docker compose up` quando o VPS existir.
+
+**O que foi feito**
+- `docker-compose.prod.yml`: postgres + redis (só rede interna, com
+  senha) + api + web + **caddy** como única porta pública (80/443),
+  roteando `/api/*` e `/socket.io/*` p/ a API (ver `Caddyfile`).
+- `apps/web/Dockerfile` (novo) + `output: 'standalone'` no
+  `next.config.mjs`; `NEXT_PUBLIC_API_URL` entra como build ARG (a
+  origem pública é embutida no bundle).
+- `.env.production.example` (4 segredos + SITE_ADDRESS/PUBLIC_ORIGIN;
+  IP puro no 1º boot, domínio liga o HTTPS automático do Caddy) e
+  `.env.production` adicionado ao `.gitignore`.
+- `docs/05-deploy-vps.md`: runbook completo (instalar Docker, clonar,
+  subir, criar a 1ª escola pelo registro — o seed demo recusa
+  NODE_ENV=production —, domínio/HTTPS, backup e segurança mínima).
+
+**Verificação**: `next build` OK com standalone gerado
+(`.next/standalone/server.js`); YAML dos dois compose válido. Sem Docker
+neste sandbox — o build das imagens só se prova no VPS.
+
+**Pendente**: enviar este lote + o ciclo 25 ao GitHub (aguardar o fim do
+ciclo 26 p/ não capturar arquivo em edição); deploy em si aguarda o
+usuário contratar o VPS e passar o acesso.
+
+---
+
+## 2026-11-17 11:55–12:15 — Checklist de implantação em 1 dia + escola demo que zera
+
+**Pesquisa do ciclo (frente e — segurança/LGPD: direitos do titular, art. 18/19)**
+- Dois prazos, não um (art. 19, fontes nov/2026): confirmação da existência
+  do tratamento + acesso em formato simplificado são IMEDIATOS; a
+  declaração completa (origem, critérios, finalidade) tem até 15 dias. O
+  pedido é gratuito (art. 18, §5º).
+- Pedido de acesso é vetor de ataque: as fontes repetem que a empresa pode
+  (e deve) confirmar a identidade do requerente antes de entregar — um
+  pedido atendido sem verificação vira vazamento com protocolo.
+- Eliminação nem sempre é possível (art. 16): dado guardado por obrigação
+  legal não se apaga — e o nosso PickupLog/auditoria com hash encadeado é
+  exatamente esse caso; a resposta precisa dizer O QUE foi apagado e O QUE
+  foi mantido, com o fundamento.
+- Escola é controladora, TutorPass é operadora (art. 5º, VI e VII): o
+  padrão das plataformas escolares (NedEducação, 30/10/2026) é o titular
+  exercer o direito com a escola OU com a plataforma, que encaminha à
+  escola — o TutorPass nunca decide sozinho sobre dado de aluno.
+- Achados registrados em `docs/product/IDEAS.md` (seção frente e, ciclo
+  26); promovido ao BACKLOG: **exercício de direitos do titular (art. 18)
+  pelo painel do admin** (Impacto 4, Esforço 3). A ideia implementada foi
+  a do BACKLOG: **checklist de implantação em 1 dia + escola demo que
+  zera** (promovida no ciclo 25).
+
+**O que foi feito**
+- `OnboardingService` + `OnboardingModule` (`apps/api/src/modules/onboarding/`):
+  4 passos na ordem do runbook — conta (3 min) → roster CSV (15 min) →
+  convite do staff (5 min) → primeira saída (30 min), total 53 min;
+  `getChecklist` devolve progresso %, próximo passo (primeiro aberto, na
+  ordem), minutos restantes e `isComplete`; marcar é idempotente (re-marcar
+  não duplica o evento), reabrir é explícito e fica registrado; cada ação
+  guarda quem fez (`actorId` = `user.sub`) e quando; `listEvents` é o
+  rastro só com ids, sem dado pessoal.
+- Escola demo que zera: `markAsDemo` + `resetDemo` — o reset recusa
+  qualquer escola que não esteja marcada como demo (400), p/ nunca apagar
+  o progresso real de implantação de um cliente; o job diário das 06:00
+  (Step 2) chama o reset na demo.
+- `OnboardingController` (`onboarding/schools/:schoolId/*`, 5 rotas) com
+  JwtAuthGuard + TenantGuard + @Roles: `GET checklist` (gestão + portaria
+  + sala), `POST steps/:step/complete` e `reopen` (ADMIN/COORDINATOR),
+  `POST demo/mark` e `demo/reset` (só ADMIN); passo desconhecido vira 400
+  com a lista de passos válidos.
+- `docs/product/ONBOARDING-1-DIA.md` (novo): runbook do dia 1 hora a hora,
+  o que pode dar errado (CSV, duplicata, 2FA, saída manual), a demo (seed)
+  como antídoto da tela em branco e o que NÃO está no dia 1 (SIS, billing,
+  app mobile).
+- `BACKLOG.md` (checklist concluído; art. 18 promovido como próxima
+  candidata); `IDEAS.md` (seção frente e, ciclo 26).
+
+**Arquivos alterados**
+- `apps/api/src/modules/onboarding/onboarding.service.ts` (novo)
+- `apps/api/src/modules/onboarding/onboarding.service.spec.ts` (novo, 10 testes)
+- `apps/api/src/modules/onboarding/onboarding.module.ts` (novo)
+- `apps/api/src/modules/onboarding/onboarding.controller.ts` (novo)
+- `apps/api/src/modules/onboarding/onboarding.controller.spec.ts` (novo, 5 testes)
+- `apps/api/src/modules/onboarding/README.md` (novo)
+- `apps/api/src/app.module.ts` (+ OnboardingModule)
+- `apps/api/src/app.module.spec.ts` (+ resolve OnboardingService)
+- `docs/product/ONBOARDING-1-DIA.md` (novo)
+- `docs/product/IDEAS.md` (seção frente e, ciclo 26), `BACKLOG.md`
+
+**Verificação**
+- `node node_modules/jest/bin/jest.js --config jest.config.js` na API:
+  **32 suítes, 418/418 testes passando** (403 anteriores + 15 novos:
+  checklist 0/4 e 53 min, 4/4 = 100% sem próximo passo, marcar fora de
+  ordem, idempotência sem duplicar evento, passo desconhecido → 400,
+  reabrir, reset recusado em não-demo, demo marca/completa/zera mantendo
+  isDemo, eventos isolados por escola; controller: checklist, complete com
+  actorId do token, 400 propagado, reopen, demo/reset). Sem regressão.
+- `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit`:
+  **exit 0, sem erros**.
+
+**Próximo item sugerido**: **login de tutor por SMS** (Impacto 4, Esforço 3
+— tutores entram por código no celular, sem senha; falta o provedor de
+SMS no Step 2) ou **tag/cartão impresso p/ delegado sem smartphone**
+(Impacto 3, Esforço 2 — com código de 6 dígitos + QR) ou **EventLog em
+Redis Streams + connection state recovery** (Impacto 4, Esforço 3) ou
+**exercício de direitos do titular (art. 18)** (Impacto 4, Esforço 3 —
+promovido neste ciclo).
+
+## 2026-11-17 11:25–11:45 — Irmãos em portões diferentes sinalizados na fila
+
+**Pesquisa do ciclo (frente d — modelo de negócio/preço/onboarding de SaaS escolar)**
+- DismissPro (2026): começar em 4 passos — cadastro em ~1 min, subir a
+  planilha (template CSV), compartilhar School ID + senha do staff, abrir
+  no navegador sem instalar nada; demo pública que zera toda manhã.
+- YESS (2026): "Abra sua escola em 24 horas" em 5 passos testados com
+  escolas reais — cadastro em 3 min com o tenant já todo ligado, staff com
+  credencial impressa, alunos por formulário/admissão (com busca de irmãos)
+  e o painel mostrando os módulos ligados antes de qualquer dado; admite o
+  que falta ("o importador em massa ainda não foi construído").
+- Beanstack (2026): implantação guiada — a equipe importa o roster
+  (Clever/ClassLink/Google ou CSV) e um gerente de sucesso acompanha do dia
+  1; escola pequena não tem TI p/ SIS — o CSV bem feito É a integração dela.
+- Attendzy (05/11/2026): "guided setup that gets out of the way" — checklist
+  de 4 itens (nomear turma, importar roster, escolher check-in, convidar
+  alunos) que some quando acaba; SchoolDay: Onboarding Wizard como padrão.
+- Foundation Roster (20/10/2026): "a pior parte do software novo são os
+  primeiros 5 minutos" — tela em branco mata a adoção; checklist "Getting
+  Started" sempre visível + "nós movemos por você, grátis".
+- Achados registrados em `docs/product/IDEAS.md` (seção frente d, ciclo
+  25); promovido ao BACKLOG: **checklist de implantação em 1 dia + escola
+  demo que zera** (Impacto 4, Esforço 2). A ideia implementada foi a do
+  BACKLOG: **sinalizar irmãos em portões diferentes** (promovida no ciclo 24).
+
+**O que foi feito**
+- `PickupService.listSiblingGateConflicts(schoolId)`: agrupa as entradas
+  ativas por tutor e devolve os tutores com filhos em 2+ portões distintos
+  — `{ tutorId, studentIds, gates: [{ gate, studentIds }] }`, ordenado por
+  tutorId. A fila única (`gate: null`) conta como um portão: um filho sem
+  portão e outro no "Portão A" também é divisão — senão o filho da fila
+  única esperaria sem ninguém saber. Cancelado/liberado/bloqueado não
+  conta; 2 filhos no mesmo portão não é conflito; outra escola não contamina.
+- `GET /pickup/schools/:schoolId/sibling-gate-conflicts` (13ª rota do
+  controller; GATE_AGENT/COORDINATOR/ADMIN/TEACHER — a sala também precisa
+  saber p/ qual portão mandar cada irmão); `README.md` do módulo com a rota.
+
+**Arquivos alterados**
+- `apps/api/src/modules/pickup/pickup.service.ts` (+ `SiblingGateConflict`, `listSiblingGateConflicts`)
+- `apps/api/src/modules/pickup/pickup.service.spec.ts` (+ 5 testes)
+- `apps/api/src/modules/pickup/pickup.controller.ts` (+ rota, 13ª)
+- `apps/api/src/modules/pickup/pickup.controller.spec.ts` (+ 1 teste)
+- `apps/api/src/modules/pickup/README.md` (tabela de endpoints)
+- `docs/product/IDEAS.md` (seção frente d, ciclo 25), `BACKLOG.md`
+
+**Verificação**
+- `node node_modules/jest/bin/jest.js --config jest.config.js` na API:
+  **30 suítes, 403/403 testes passando** (397 anteriores + 6 novos:
+  conflito com 2 portões, mesmo portão/outro tutor sem conflito, fila
+  única + portão nomeado, cancelado some o conflito, outra escola fora +
+  ordem por tutorId; controller: rota devolve o conflito). Sem regressão.
+  1ª rodada: 2 suítes falharam por erro de sintaxe no spec (uma edição
+  tinha engolido o teste de `listGates` e o fecho do describe) — testes
+  restaurados, nada mascarado.
+- `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit`:
+  **exit 0, sem erros**.
+
+**Próximo item sugerido**: **checklist de implantação em 1 dia + escola
+demo que zera** (Impacto 4, Esforço 2 — promovido neste ciclo) ou
+**login de tutor por SMS** (Impacto 4, Esforço 3) ou **tag/cartão
+impresso p/ delegado sem smartphone** (Impacto 3, Esforço 2 — com código
+de 6 dígitos + QR) ou **EventLog em Redis Streams + connection state
+recovery** (Impacto 4, Esforço 3).
+
 ## 2026-11-17 11:04–11:16 — Preço por faixas CONFIRMADO + bug isUnder12 (fio de deploy)
 
 **Decisão do usuário (17/11/2026)**: o PRO deixa de ser por aluno

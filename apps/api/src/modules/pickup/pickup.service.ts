@@ -114,6 +114,19 @@ export interface GateCount {
   count: number;
 }
 
+/** Tutor com filhos ativos em portões diferentes — o painel da portaria
+ * sinaliza o conflito p/ o tutor não deixar um filho esperando no portão
+ * errado (AuthExit sinaliza "irmãos divididos entre faixas", IDEAS.md
+ * frente c ciclo 24). `gate: null` é a fila única — conta como um "portão"
+ * distinto: um filho na fila única e outro no "Portão A" também é divisão.
+ * Só entradas ativas (QUEUED/CALLED/VALIDATED); cancelado/liberado não
+ * conta. Um tutor com 2 filhos no MESMO portão não é conflito. */
+export interface SiblingGateConflict {
+  tutorId: string;
+  studentIds: string[];
+  gates: { gate: string | null; studentIds: string[] }[];
+}
+
 const MAX_GATE_LENGTH = 40;
 
 function sameDay(a: Date, b: Date): boolean {
@@ -404,6 +417,42 @@ export class PickupService {
     return [...counts.entries()]
       .map(([gate, count]) => ({ gate, count }))
       .sort((a, b) => b.count - a.count || a.gate.localeCompare(b.gate));
+  }
+
+  /** Irmãos em portões diferentes: tutores com entradas ativas em 2+
+   * portões distintos (a fila única conta como um portão). O painel usa
+   * isso p/ avisar o tutor antes de chamar — sem o alerta, um filho
+   * espera no portão errado enquanto o outro já foi liberado. Ordenado
+   * por tutorId p/ a resposta ser determinística. */
+  listSiblingGateConflicts(schoolId: string): SiblingGateConflict[] {
+    const byTutor = new Map<string, PickupQueueEntry[]>();
+    for (const e of this.entries.values()) {
+      if (e.schoolId === schoolId && ACTIVE_STATUSES.includes(e.status)) {
+        const list = byTutor.get(e.tutorId) ?? [];
+        list.push(e);
+        byTutor.set(e.tutorId, list);
+      }
+    }
+    const conflicts: SiblingGateConflict[] = [];
+    for (const [tutorId, entries] of [...byTutor.entries()].sort((a, b) =>
+      a[0].localeCompare(b[0]),
+    )) {
+      const byGate = new Map<string | null, string[]>();
+      for (const e of entries) {
+        const list = byGate.get(e.gate) ?? [];
+        list.push(e.studentId);
+        byGate.set(e.gate, list);
+      }
+      if (byGate.size < 2) continue;
+      conflicts.push({
+        tutorId,
+        studentIds: entries.map((e) => e.studentId).sort(),
+        gates: [...byGate.entries()]
+          .sort((a, b) => (a[0] ?? '').localeCompare(b[0] ?? ''))
+          .map(([gate, studentIds]) => ({ gate, studentIds: studentIds.sort() })),
+      });
+    }
+    return conflicts;
   }
 
   listForStudent(schoolId: string, studentId: string): PickupQueueEntry[] {

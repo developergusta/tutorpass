@@ -1069,6 +1069,103 @@ Platform" (2026).
   no telão/painel quando o tutor entra na zona de chegada. Impacto 2,
   Esforço 1 — fase 2 (web: badge ARRIVED pulsante no painel/telão).
 
+## Semeado em 17/11/2026 — modelo de negócio/preço/onboarding (frente d, ciclo 25)
+Fontes: dismisspro.app/help.html (Getting started, 2026); yes-sys.com/docs
+/getting-started ("Open your school in 24 hours", YESS handbook, 2026);
+beanstack.com/faq-resources/ease-of-implementation (2026); help.schoolday.com
+(Onboarding Wizard); instagram.com/p/DfX9BQrGCGU e facebook.com/attendzy
+("Guided setup that gets out of the way", 05/11/2026); instagram.com/reel
+/Deswo4Thhax (Foundation Roster, 20/10/2026).
+
+- **DismissPro (2026) — começar em 4 passos, sem instalar nada**: cadastro
+  em ~1 min, subir a planilha de alunos (template CSV p/ baixar), compartilhar
+  o School ID + senha do staff e abrir no navegador (nada p/ instalar); demo
+  pública que zera toda manhã p/ experimentar sem medo. A lição é a ordem:
+  conta → roster → convite → primeira saída — e a demo descartável tira o
+  medo de "estragar" o sistema. Nosso CSV + seed já existem; falta o
+  checklist que guia a escola nessa ordem e a demo que zera sozinha.
+  Impacto 4, Esforço 2 — PROMOVIDO ao BACKLOG (checklist de implantação em
+  1 dia + escola demo que zera).
+- **YESS (2026) — "Abra sua escola em 24 horas", em 5 passos testados com
+  escolas reais**: cadastro em 3 min (o tenant já nasce com tudo ligado —
+  papéis, ano letivo, trial de 30 dias), primeiro staff com credencial
+  impressa p/ entregar em mãos, alunos pelo formulário ou por admissão (com
+  busca de irmãos no caminho) e o painel já mostra os módulos ligados antes
+  de ter dado nenhum — "os próximos passos só despejam os dados". E a nota
+  de honestidade: o importador em massa "ainda não foi construído" — eles
+  admitem o que falta em vez de prometer. Nosso CSV já é o importador que
+  eles não têm; o que falta é o runbook de 1 dia com os passos e o tempo
+  de cada um. Impacto 4, Esforço 1 — parte do item promovido (runbook de
+  implantação em 1 dia, docs).
+- **Beanstack (2026) — implantação guiada, não faça-você-mesmo**: a equipe
+  de implantação importa o roster (Clever/ClassLink/Google ou CSV), um
+  gerente de sucesso acompanha do dia 1 e as mudanças de roster
+  sincronizam sozinhas em 24–48 h. O contraste valida o nosso caminho:
+  escola pequena não tem TI p/ integração com SIS — o CSV bem feito + o
+  re-import que atualiza (nosso RosterService) É a integração dela.
+  Impacto — (validação da tese, sem ação de código).
+- **Attendzy (05/11/2026) — "guided setup that gets out of the way"**:
+  checklist de 4 itens com check verde — nomear a turma, importar o roster,
+  escolher o check-in, convidar os alunos — e nada mais na tela. A
+  simplicidade é o produto: o setup não é uma tela de configurações, é uma
+  lista que some quando acaba. É o formato do nosso checklist de 1 dia.
+  Impacto — (formato do item promovido).
+- **Foundation Roster (20/10/2026) — "a pior parte do software novo são
+  os primeiros 5 minutos"**: tela em branco no primeiro login é o que mata
+  a adoção; a resposta é um checklist "Getting Started" sempre visível e
+  a oferta "nós movemos por você, grátis" (a equipe importa alunos, leads
+  e histórico). P/ o TutorPass: a escola demo com dados (seed) é o
+  antídoto da tela em branco — e o piloto pode oferecer a importação do
+  CSV feita por nós como serviço de implantação. Impacto 3, Esforço 1 —
+  fase 2 (seed como demo permanente + oferta de importação assistida no
+  piloto).
+- **SchoolDay (2026) — Onboarding Wizard**: checklist que guia importação
+  de dados, segurança e IdP na primeira entrada — o padrão de "wizard" é
+  consenso no SaaS escolar; ninguém deixa a escola descobrir sozinha o que
+  falta. Impacto — (validação do item promovido).
+
+## Semeado em 17/11/2026 — direitos do titular (art. 18/19 LGPD) (frente e, ciclo 26)
+Fontes: nedueducacao.com.br "Política de Privacidade" (atual. 30/10/2026);
+realeza.pr.gov.br "Privacidade e Proteção de Dados" (2026); secti.es.gov.br
+"Direitos do titular" (2026); viadireito.com.br "Direitos garantidos pela
+LGPD" (atual. 15/11/2026); infotela.com "LGPD no dia a dia" (11/11/2026);
+LGPD arts. 18, 19 e 16.
+
+- **Pedido de acesso é também vetor de ataque — verificar a identidade
+  antes de entregar**: as fontes 2026 repetem o mesmo ponto — antes de
+  atender o pedido, a empresa pode (e deve) confirmar a identidade do
+  requerente, p/ evitar que outra pessoa acesse os dados. Um pedido de
+  acesso atendido sem verificação vira vazamento com protocolo. No
+  TutorPass, o pedido de um tutor/aluno só pode ser aberto por quem está
+  autenticado como aquele titular (ou pelo responsável legal do menor) —
+  e o atendimento fica registrado em auditoria. Impacto 4, Esforço 1 —
+  detalhe p/ a ideia "exercício de direitos do titular" abaixo.
+- **Dois prazos, não um (art. 19)**: confirmação da existência do
+  tratamento + acesso em formato simplificado são IMEDIATOS; a declaração
+  completa (origem dos dados, critérios, finalidade) tem até 15 dias. O
+  pedido é gratuito (art. 18, §5º). O painel do admin precisa distinguir
+  os dois — um pedido "completo" que some na fila estoura o prazo sem
+  ninguém ver. Impacto 4, Esforço 1 — parte da ideia abaixo.
+- **Eliminação nem sempre é possível (art. 16)**: dado guardado por
+  obrigação legal não se apaga — e o nosso PickupLog/auditoria com hash
+  encadeado é exatamente esse caso: apagar um evento quebra a cadeia e
+  apaga a prova da saída. O atendimento do pedido precisa dizer O QUE foi
+  apagado e O QUE foi mantido por obrigação legal, com o fundamento — não
+  um "não" seco. Impacto 4, Esforço 1 — parte da ideia abaixo.
+- **Escola é controladora, TutorPass é operadora (art. 5º, VI e VII)**:
+  o padrão das plataformas escolares (NedEducação, 30/10/2026) é o
+  titular exercer o direito direto com a escola OU com a plataforma, que
+  encaminha à escola. O pedido nasce no painel do admin da escola, o DPO
+  decide, o sistema executa e registra — o TutorPass nunca decide sozinho
+  sobre dado de aluno. Impacto 3, Esforço 1 — parte da ideia abaixo.
+- **Exercício de direitos do titular (art. 18) pelo painel do admin**:
+  abrir o pedido (acesso, correção, anonimização/bloqueio/eliminação,
+  portabilidade), com prazo de 15 dias p/ a declaração completa, verificação
+  de identidade do requerente, registro em auditoria e as exceções do
+  art. 16 (logs de auditoria nunca apagados) explícitas na resposta.
+  Impacto 4, Esforço 3 — PROMOVIDO ao BACKLOG (próxima candidata após
+  login por SMS / tag impressa / Streams).
+
 ## Diferencial TutorPass (tese)
 Concorrente BR forte é suite ampla (comunicação/ERP/facial). TutorPass vence sendo **o melhor só em saída**:
 mais rápido de implantar, QR dinâmico anti-fraude (eles usam QR estático), auditoria imutável com hash

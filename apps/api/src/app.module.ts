@@ -21,5 +21,6 @@ import { ReportsModule } from './modules/reports/reports.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { RosterModule } from './modules/roster/roster.module';
 import { ComplianceModule } from './modules/compliance/compliance.module';
-@Module({ imports: [RedisModule, PrismaModule, RealtimeModule, GeofencingModule, QrModule, PickupModule, ConsentModule, RetentionModule, PlanModule, DelegationsModule, EarlyPickupModule, DismissalPlansModule, NotificationsModule, IncidentsModule, EtaModule, DisplayBoardModule, VanRoutesModule, ReportsModule, AuthModule, RosterModule, ComplianceModule], controllers: [HealthController] })
+import { OnboardingModule } from './modules/onboarding/onboarding.module';
+@Module({ imports: [RedisModule, PrismaModule, RealtimeModule, GeofencingModule, QrModule, PickupModule, ConsentModule, RetentionModule, PlanModule, DelegationsModule, EarlyPickupModule, DismissalPlansModule, NotificationsModule, IncidentsModule, EtaModule, DisplayBoardModule, VanRoutesModule, ReportsModule, AuthModule, RosterModule, ComplianceModule, OnboardingModule], controllers: [HealthController] })
 export class AppModule {}

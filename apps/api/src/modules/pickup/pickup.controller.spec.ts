@@ -166,4 +166,21 @@ describe('PickupController (/api/pickup/schools/:schoolId/*)', () => {
       { gate: 'Portão A', count: 1 },
     ]);
   });
+
+  it('sibling-gate-conflicts sinaliza o tutor com filhos em portões diferentes', () => {
+    const { ctrl } = controller();
+    ctrl.join(SCHOOL, { studentId: 'aluno-a', tutorId: TUTOR, gate: 'Portão A' });
+    ctrl.join(SCHOOL, { studentId: 'aluno-b', tutorId: TUTOR, gate: 'Fundos' });
+    ctrl.join(SCHOOL, { studentId: 'aluno-c', tutorId: 'tutor-2', gate: 'Portão A' });
+    expect(ctrl.siblingGateConflicts(SCHOOL)).toEqual([
+      {
+        tutorId: TUTOR,
+        studentIds: ['aluno-a', 'aluno-b'],
+        gates: [
+          { gate: 'Fundos', studentIds: ['aluno-b'] },
+          { gate: 'Portão A', studentIds: ['aluno-a'] },
+        ],
+      },
+    ]);
+  });
 });

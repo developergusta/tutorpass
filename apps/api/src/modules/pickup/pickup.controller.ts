@@ -33,6 +33,8 @@ import type { AccessTokenPayload } from '../auth/auth.service';
 // - queue (fila ativa): staff da portaria + TEACHER (a sala vê a fila);
 //   aceita ?gate= p/ filtrar a fila de UM portão. gates: portões com fila
 //   ativa + contagem, p/ o painel montar as colunas por portão.
+//   sibling-gate-conflicts: tutores com filhos ativos em portões
+//   diferentes — o painel sinaliza o conflito (AuthExit, IDEAS.md c/24).
 // - logs/verify-chain/block/unblock: ADMIN/COORDINATOR (auditoria é da
 //   gestão; o bloqueio é decisão da secretaria).
 // Pendência Step 2 (anotada aqui e no README do módulo): o vínculo
@@ -112,6 +114,15 @@ export class PickupController {
   @Get('gates')
   gates(@Param('schoolId') schoolId: string) {
     return this.pickup.listGates(schoolId);
+  }
+
+  // Tutores com filhos ativos em portões diferentes — o painel sinaliza
+  // o conflito p/ ninguém esperar no portão errado (o tutor vê o alerta
+  // e a portaria decide p/ qual portão mandar os dois).
+  @Roles('GATE_AGENT', 'COORDINATOR', 'ADMIN', 'TEACHER')
+  @Get('sibling-gate-conflicts')
+  siblingGateConflicts(@Param('schoolId') schoolId: string) {
+    return this.pickup.listSiblingGateConflicts(schoolId);
   }
 
   @Roles('TUTOR', 'GATE_AGENT', 'COORDINATOR', 'ADMIN', 'TEACHER')

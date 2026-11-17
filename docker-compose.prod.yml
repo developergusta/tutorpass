@@ -1,0 +1,68 @@
+# Produção no VPS (Hostinger KVM) — ver docs/05-deploy-vps.md.
+# Uso: cp .env.production.example .env.production (preencher os segredos)
+#      docker compose -f docker-compose.prod.yml up -d --build
+# Só o Caddy publica portas (80/443). Postgres, Redis, API e web vivem na
+# rede interna do compose — nada de banco exposto na internet.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: tutorpass
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env.production}"
+      POSTGRES_DB: tutorpass
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tutorpass"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?defina REDIS_PASSWORD no .env.production}"]
+    volumes: [redisdata:/data]
+    restart: unless-stopped
+
+  api:
+    build: { context: ./apps/api, dockerfile: Dockerfile }
+    environment:
+      NODE_ENV: production
+      PORT: "3333"
+      DATABASE_URL: "postgresql://tutorpass:${POSTGRES_PASSWORD}@postgres:5432/tutorpass?schema=public"
+      REDIS_URL: "redis://:${REDIS_PASSWORD}@redis:6379"
+      JWT_ACCESS_SECRET: "${JWT_ACCESS_SECRET:?defina JWT_ACCESS_SECRET no .env.production}"
+      JWT_ACCESS_TTL: "15m"
+      JWT_REFRESH_TTL_DAYS: "30"
+      QR_TOKEN_SECRET: "${QR_TOKEN_SECRET:?defina QR_TOKEN_SECRET no .env.production}"
+      QR_WINDOW_SECONDS: "30"
+      CORS_ORIGINS: "${PUBLIC_ORIGIN:?defina PUBLIC_ORIGIN no .env.production}"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_started }
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: "${PUBLIC_ORIGIN:?defina PUBLIC_ORIGIN no .env.production}"
+    environment:
+      NODE_ENV: production
+    depends_on: [api]
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    environment:
+      SITE_ADDRESS: "${SITE_ADDRESS:?defina SITE_ADDRESS no .env.production}"
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [web, api]
+    restart: unless-stopped
+
+volumes: { pgdata: {}, redisdata: {}, caddy_data: {}, caddy_config: {} }
