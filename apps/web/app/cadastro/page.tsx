@@ -125,8 +125,8 @@ export default function CadastroPage() {
           {phase.session.twoFactorSetupRequired ? (
             <p className="alert warn">
               Seu perfil de administrador exige verificação em duas etapas (2FA)
-              — a configuração entra numa próxima versão do web. Guarde bem seu
-              e-mail e sua senha.
+              — <Link href="/seguranca">configure na tela de Segurança</Link>.
+              Guarde bem seu e-mail e sua senha.
             </p>
           ) : null}
           <p className="muted">

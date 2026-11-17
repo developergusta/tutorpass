@@ -146,8 +146,8 @@ export default function LoginPage() {
           {phase.session.twoFactorSetupRequired ? (
             <p className="alert warn">
               Seu perfil exige verificação em duas etapas (2FA) e ela ainda não
-              foi configurada. A configuração é feita na tela de Segurança —
-              que entra numa próxima versão do web.
+              foi configurada.{' '}
+              <Link href="/seguranca">Configure o 2FA na tela de Segurança</Link>.
             </p>
           ) : null}
           <div className="auth-actions">

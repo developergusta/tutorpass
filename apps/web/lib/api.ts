@@ -274,6 +274,96 @@ export function addSchoolMember(email: string, role: SchoolRole): Promise<School
   });
 }
 
+// ------------------------------------------------------------ segurança
+// Segurança da conta — 2FA TOTP, troca de senha e sessões ativas.
+// As rotas /api/auth/2fa/*, /auth/change-password, /auth/sessions e
+// /auth/revoke-all-sessions já existiam na API (TwoFactorService +
+// AuthService); o web não tinha a tela. Tudo passa por authedJson
+// (Bearer + refresh em 401) — o segredo do 2FA nunca sai do navegador
+// para um serviço de terceiros: o QR é gerado localmente do otpauthUrl.
+
+export interface TwoFactorStatus {
+  enabled: boolean;
+  hasPendingSetup: boolean;
+  recoveryCodesRemaining: number;
+  lastUsedAt: string | null;
+  lockedUntil: string | null;
+}
+
+export function getTwoFactorStatus(): Promise<TwoFactorStatus> {
+  return authedJson<TwoFactorStatus>('/auth/2fa/status');
+}
+
+/** Inicia o cadastro: devolve o segredo e o otpauthUrl p/ o QR. */
+export function setupTwoFactor(): Promise<{ secret: string; otpauthUrl: string }> {
+  return authedJson<{ secret: string; otpauthUrl: string }>('/auth/2fa/setup', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+/**
+ * Confirma o cadastro com um código do app autenticador. Só então o 2FA
+ * passa a valer — e a resposta traz os códigos de recuperação em texto
+ * claro UMA vez: a tela precisa exibi-los e avisar que não voltam.
+ */
+export function confirmTwoFactor(code: string): Promise<{ recoveryCodes: string[] }> {
+  return authedJson<{ recoveryCodes: string[] }>('/auth/2fa/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
+}
+
+/** Desativa o 2FA com um código válido (a API recusa p/ quem é obrigado). */
+export function disableTwoFactor(code: string): Promise<{ ok: boolean }> {
+  return authedJson<{ ok: boolean }>('/auth/2fa/disable', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
+}
+
+/** Gera um lote novo de códigos (invalida o anterior). Exige código 2FA. */
+export function regenerateRecoveryCodes(code: string): Promise<{ recoveryCodes: string[] }> {
+  return authedJson<{ recoveryCodes: string[] }>('/auth/2fa/recovery-codes', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
+}
+
+export interface AuthSession {
+  jti: string;
+  familyId: string;
+  createdAt: string;
+  expiresAt: string;
+  familyExpiresAt: string;
+}
+
+/**
+ * Sessões ativas (refresh tokens válidos). A API não registra aparelho
+ * nem IP — a tela diz isso, em vez de inventar um "dispositivo".
+ */
+export function listSessions(): Promise<AuthSession[]> {
+  return authedJson<AuthSession[]>('/auth/sessions');
+}
+
+export function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<{ ok: boolean }> {
+  return authedJson<{ ok: boolean }>('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}
+
+/** Encerra TODAS as sessões, inclusive a atual (a API limpa o cookie). */
+export function revokeAllSessions(): Promise<{ ok: boolean }> {
+  return authedJson<{ ok: boolean }>('/auth/revoke-all-sessions', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
 // ------------------------------------------------------------ roster
 // Cadastro da escola (turmas, alunos, tutores) — /api/roster/*, com o
 // schoolId indo na sessão (o servidor nunca aceita escola pelo body).

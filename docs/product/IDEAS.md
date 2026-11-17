@@ -1663,6 +1663,46 @@ Fontes: tvpilot.app "Digital Signage Color Contrast: What Works on a Real TV" e 
   sem rota de remoção, a tela não inventa o botão. Impacto 3, Esforço 2 —
   **registrado no BACKLOG (Equipe, fase 2)**.
 
+## Semeado em 17/11/2026 — segurança da conta: cadastro de 2FA, códigos de recuperação, senha e sessões (frente b/c, ciclo UI 11)
+- **Cadastro em etapas, com verificação obrigatória antes de ativar**
+  (saasui.design, 2026; nodefunc, 2026): escolher o método → escanear o
+  QR → digitar um código atual p/ provar que funciona → só então o 2FA
+  vale. Ativar no instante em que o QR aparece, sem confirmar, é como se
+  tranca a pessoa p/ fora no primeiro logout. Impacto 5, Esforço 2 —
+  **implementado neste ciclo** (3 passos numerados na /seguranca:
+  escanear, confirmar com o código, guardar os códigos; o confirm da API
+  só devolve os códigos depois do código válido).
+- **Códigos de recuperação aparecem uma vez e a tela cobra que guardem**
+  (saasui.design, 2026; blog.michaelsam94, 2026): o desastre previsível
+  do 2FA é o celular perdido — os códigos são a única volta, e enterrar
+  atrás de um link opcional é o mesmo que não ter. O padrão forte gera
+  automaticamente e pede confirmação de que foram guardados. Impacto 5,
+  Esforço 1 — **implementado neste ciclo** (lista em grade monoespaciada
+  + "Copiar todos" + checkbox "Guardei meus códigos" que destrava o
+  "Concluir"; regenerar invalida o lote anterior e também pede o código
+  atual).
+- **O segredo nunca vai p/ um serviço de QR de terceiros**
+  (turbostarter, 2026): renderizar o QR localmente a partir do otpauthUrl.
+  Impacto 4, Esforço 1 — **implementado neste ciclo** (`qrcode` 1.5.4,
+  `toDataURL` no navegador; chave manual em texto monoespaciado com
+  "Copiar" p/ quem não consegue escanear).
+- **Desativar e regenerar pedem o código atual — e quem é obrigado não
+  desativa** (nodefunc, 2026): reentrar a senha/código antes de mexer no
+  fator. Impacto 3, Esforço 1 — **implementado neste ciclo** (formulário
+  inline pedindo o código de 6 dígitos; a API recusa com 403 p/ ADMIN —
+  a tela mostra a mensagem da API em pt-BR).
+- **Sessões sem dado inventado** (saasui.design, 2026): a lista mostra
+  quando começou e até quando vale; sem aparelho/IP na API, a tela diz
+  que ainda não registra o aparelho, em vez de inventar um "dispositivo".
+  Impacto 2, Esforço 1 — **implementado neste ciclo** (lista de
+  GET /auth/sessions + "Encerrar todas as sessões" em dois toques, que
+  revoga tudo e volta ao login — inclusive a sessão atual).
+- **O que falta p/ o padrão completo (não neste ciclo)**: nomear
+  aparelhos p/ facilitar a revogação e mostrar IP/último acesso por
+  sessão — hoje a API só devolve jti/familyId/createdAt/expiresAt; sem
+  esses campos, a tela não inventa. Impacto 2, Esforço 3 — **registrado
+  no BACKLOG (Segurança, fase 2)**.
+
 ## Diferencial TutorPass (tese)
 Concorrente BR forte é suite ampla (comunicação/ERP/facial). TutorPass vence sendo **o melhor só em saída**:
 mais rápido de implantar, QR dinâmico anti-fraude (eles usam QR estático), auditoria imutável com hash

@@ -799,6 +799,13 @@ input:focus {
   background: #07382a;
   color: #eafaf2;
   padding: 64px 0 56px;
+  /* Open Sans em TODO o texto da hero (pedido do usuário, 17/11/2026):
+     título, subtítulo, botões, provas e o painel da saída herdam daqui;
+     o que tem fonte própria (h1 e .hb-title) é reafirmado logo abaixo. */
+  font-family: var(--font-open-sans), "Open Sans", var(--font-inter), system-ui, sans-serif;
+}
+.hero h1, .hero .hb-title {
+  font-family: var(--font-open-sans), "Open Sans", var(--font-inter), system-ui, sans-serif;
 }
 .hero-grid { display: grid; gap: 36px; }
 @media (min-width: 960px) {
@@ -1156,6 +1163,77 @@ input:focus {
 .auth-success p { margin: 0 0 16px; }
 .auth-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 .auth-actions .btn { flex: 1 1 160px; }
+
+/* Segurança — 2FA, senha e sessões (ciclo UI 11). Seções em cartões
+   largos (a página não é um formulário centrado como o login), com o
+   QR e os códigos de recuperação como o único momento rico da tela. */
+.security-card { margin-bottom: 20px; }
+.security-card h2 { margin-top: 0; }
+.security-head { display: flex; gap: 14px; align-items: flex-start; }
+.security-head h2 { margin-bottom: 4px; }
+.security-head p { margin: 0; }
+.security-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--brand-tint);
+  color: var(--brand-text);
+}
+.security-icon svg { width: 24px; height: 24px; }
+.security-meta { margin-left: 10px; color: var(--muted); font-size: 0.95rem; }
+.security-step { margin: 0 0 16px; }
+.security-qr {
+  display: block;
+  width: 240px;
+  height: 240px;
+  max-width: 100%;
+  margin: 0 auto 16px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.security-secret {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+.recovery-codes {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px 24px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+@media (min-width: 560px) {
+  .recovery-codes { grid-template-columns: 1fr 1fr; }
+}
+.recovery-codes code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.security-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+}
+.security-check input { width: 20px; height: 20px; accent-color: var(--brand); }
+.security-inline-form { margin-top: 16px; }
+.security-card .row-actions { margin-top: 16px; }
 
 /* Portaria — hierarquia da fila p/ uso em tablet/celular (ciclo UI 3).
    Resumo em 3 números no topo (o operador vê o estado num olhar),

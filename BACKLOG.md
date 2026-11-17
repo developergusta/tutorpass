@@ -20,11 +20,17 @@ mesmo do login: **o motor existe e é testado; falta a camada de uso**.
   a conta (só outro admin ou acesso ao banco resolve). Precisa: fluxo
   de reset com token de uso único (e-mail quando houver provedor; por
   ora, geração por admin/log + tela de redefinição).
-- [ ] **IMPORTANTE — 2FA sem tela de configuração.** A API tem
+- [x] **IMPORTANTE — 2FA sem tela de configuração.** A API tem
   setup/confirm/status, o web não tem tela de Segurança: quem é
   obrigado a usar 2FA (ADMIN) cai no aviso da tela de login apontando
-  p/ uma tela que não existe. Precisa: página de Segurança (2FA +
-  trocar senha + sessões ativas — as 3 APIs já existem).
+  p/ uma tela que não existe. FEITO no ciclo UI 11, 17/11/2026: página
+  /seguranca (2FA em 3 passos — QR gerado no navegador + confirmação
+  com código + códigos de recuperação exibidos uma vez com confirmação
+  de guarda; desativar/regenerar pedem o código atual; trocar senha;
+  sessões ativas com encerrar-todas; link na topbar quando logado;
+  avisos do login/cadastro agora apontam p/ /seguranca). Fase 2
+  (falta na API): nomear aparelhos e mostrar IP/último acesso por
+  sessão p/ facilitar a revogação.
 - [x] **IMPORTANTE — Equipe sem tela no web.** A API ganhou
   GET/POST /schools/members em 17/11/2026 (admin vincula conta
   existente a um papel; lista a equipe), mas a /escola ainda não
@@ -75,6 +81,22 @@ mesmo do login: **o motor existe e é testado; falta a camada de uso**.
 - [ ] Observabilidade: logs estruturados, métricas de fila, alerta de fila > N
 
 ## Fila UI/UX (rotina de 30 min — ordem: login → portaria → telão → planos → estados vazios/erro → mobile)
+- [x] **Segurança/2FA (ciclo UI 11, 17/11/2026): página /seguranca** —
+  2FA em 3 passos (QR gerado no navegador do otpauthUrl + chave manual
+  copiável, confirmação com código de 6 dígitos, códigos de recuperação
+  exibidos uma única vez em grade monoespaciada com "Copiar todos" e
+  checkbox de guarda que destrava o "Concluir"); quando ativo, selo
+  "Ativa" + último uso + códigos restantes, "Gerar novos códigos" e
+  "Desativar" pedindo o código atual (a API recusa p/ quem é obrigado);
+  trocar senha (mostrar/ocultar, mínimo 8) e sessões ativas (início e
+  validade; "Encerrar todas" em dois toques, volta ao login); link
+  "Segurança" na topbar quando logado; avisos de 2FA do login/cadastro
+  agora levam a /seguranca em vez de apontar p/ uma tela inexistente.
+  `qrcode` 1.5.4 via pnpm (package.json + pnpm-lock.yaml; ver nota do
+  ciclo no CHANGELOG sobre o EPERM do `pnpm install` neste sandbox).
+  `next build` OK (16 rotas, /seguranca 16,2 kB). Fase 2 (falta na API):
+  nomear aparelhos e mostrar IP/último acesso por sessão. Ver
+  docs/product/IDEAS.md, frente b/c, ciclo UI 11.
 - [x] **Equipe (ciclo UI 10, 17/11/2026): aba Equipe na /escola** — lista
   da equipe (avatar com inicial + nome + e-mail + selo do papel em verde
   da marca, `Inativo` em `.badge.off`) e formulário de vínculo em um passo

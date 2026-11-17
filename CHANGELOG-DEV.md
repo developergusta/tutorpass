@@ -1,3 +1,120 @@
+## 2026-11-17 19:25–22:43 — Ciclo UI 11: tela de Segurança/2FA (a tela que o login prometia e não existia)
+
+**Pesquisa do ciclo (frente b/c — cadastro de 2FA e telas de segurança em SaaS)**
+- **Cadastro em etapas, com verificação obrigatória antes de ativar**
+  (saasui.design, 2026; nodefunc, 2026): escolher o método → escanear o
+  QR → digitar um código atual p/ provar que funciona → só então o 2FA
+  vale; ativar no instante em que o QR aparece é como se tranca a pessoa
+  p/ fora no primeiro logout.
+- **Códigos de recuperação aparecem uma vez e a tela cobra que guardem**
+  (saasui.design, 2026; blog.michaelsam94, 2026): o celular perdido é o
+  desastre previsível do 2FA — os códigos são a única volta, e enterrar
+  atrás de um link opcional é o mesmo que não ter.
+- **QR renderizado localmente, sem serviço de terceiros** (turbostarter,
+  2026): o segredo nunca sai do navegador p/ gerar o QR.
+- **Desativar/regenerar pedem o código atual** (nodefunc, 2026); e quem é
+  obrigado por política não desativa.
+- Achados registrados em `docs/product/IDEAS.md` (frente b/c, ciclo UI
+  11); o item implementado era o da fila UI: **tela de Segurança/2FA**
+  (BACKLOG, IMPORTANTE — a API tinha setup/confirm/status/disable/
+  recovery-codes, change-password e sessions; o web não tinha a tela).
+
+**Direção (unslop)** — Produto: a fechadura da conta — quem é obrigado a
+usar 2FA (ADMIN) caía num aviso do login apontando p/ uma tela que não
+existia. Caráter: calmo, exato. Momento: um só — o QR e os códigos de
+recuperação, apresentados como uma lista impressa, não como decoração.
+Assinatura: os passos numerados em editorial (1 escanear, 2 confirmar,
+3 guardar), sem grade de cartões clones.
+
+**O que foi feito**
+- **Página /seguranca** (`seguranca/page.tsx`, guardada por `RequireAuth`):
+  três seções em cartões largos, no padrão `.card` do sistema.
+- **2FA em 3 passos**: (1) "Ativar" chama POST /auth/2fa/setup e mostra
+  o QR gerado NO NAVEGADOR a partir do otpauthUrl (`qrcode.toDataURL`,
+  240 px sobre fundo branco) + a chave manual em mono com "Copiar a
+  chave"; (2) o código de 6 dígitos (`.code-input`, mesmo do login)
+  confirma — só então o 2FA vale; (3) os códigos de recuperação aparecem
+  uma única vez em grade monoespaciada (2 colunas no desktop) com
+  "Copiar todos" e o checkbox "Guardei meus códigos num lugar seguro"
+  que destrava o "Concluir a ativação".
+- **Quando ativo**: selo "Ativa", último uso, códigos restantes, aviso de
+  bloqueio por tentativas; "Gerar novos códigos" e "Desativar" abrem um
+  formulário inline que pede o código atual do app (a API recusa a
+  desativação p/ quem é obrigado — a mensagem em pt-BR é mostrada);
+  regenerar invalida o lote anterior e volta p/ a tela de códigos.
+- **Trocar senha**: senha atual + nova (mín. 8, diferente da atual, com
+  mostrar/ocultar no padrão do login); sucesso explica que as outras
+  sessões continuam valendo.
+- **Sessões ativas**: GET /auth/sessions — início e validade de cada
+  sessão; a API não devolve aparelho/IP, e a tela diz isso em vez de
+  inventar um "dispositivo". "Encerrar todas as sessões" em dois toques
+  (o 2º confirma que sai inclusive deste aparelho) revoga tudo na API,
+  limpa a sessão local e volta ao login.
+- **Navegação e avisos corrigidos**: link "Segurança" na topbar quando
+  logado (`AuthNav`); os alertas de `twoFactorSetupRequired` do login e
+  do cadastro agora levam a /seguranca — antes diziam que a tela "entra
+  numa próxima versão do web".
+- `lib/api.ts`: `TwoFactorStatus` + `get/setup/confirm/disable/
+  regenerateRecoveryCodes`, `AuthSession` + `listSessions`,
+  `changePassword`, `revokeAllSessions` — tudo por `authedJson` (Bearer +
+  refresh em 401). Nenhuma regra de negócio, preço ou API tocada.
+- `globals.css`: `.security-*` (cartão, cabeça com ícone escudo em tint,
+  QR, grade de códigos, checkbox de guarda) — reutiliza `.card`, `.badge`,
+  `.field`, `.code-input`, `.state`, `.roster-list` e `.alert` existentes.
+
+**Dependência nova — `qrcode` 1.5.4 (+ `@types/qrcode` 1.5.6, dev)**
+- Justificada: o QR do cadastro precisa ser renderizado localmente, sem
+  mandar o segredo p/ um serviço de terceiros; não há lib de QR no web.
+- Instalação pelo caminho certo (pnpm): `pnpm --filter @tutorpass/web
+  add qrcode` + `--lockfile-only` numa cópia em /tmp e cópia de volta de
+  `apps/web/package.json` + `pnpm-lock.yaml` (+35 linhas) — ver "Incidente
+  de infra" abaixo. Nenhum artefato npm commitado (sem package-lock.json).
+
+**Arquivos alterados**
+- `apps/web/app/seguranca/page.tsx` (novo)
+- `apps/web/lib/api.ts` (+ seção segurança)
+- `apps/web/app/globals.css` (+ `.security-*`)
+- `apps/web/components/AuthNav.tsx` (link Segurança)
+- `apps/web/app/login/page.tsx`, `apps/web/app/cadastro/page.tsx` (avisos → /seguranca)
+- `apps/web/package.json`, `pnpm-lock.yaml` (`qrcode` + `@types/qrcode`)
+- `docs/product/IDEAS.md` (frente b/c, ciclo UI 11), `BACKLOG.md` (2FA feito; fase 2 registrada)
+
+**Verificação** — `next build` em apps/web: **OK** (tipos válidos, 16
+rotas; `/seguranca` com 16,2 kB). Limitação: sem navegador neste sandbox
+p/ percorrer o cadastro com a conta de teste — a prova ao vivo (escanear
+o QR de verdade + confirmar + códigos) fica p/ a verificação ao vivo; o
+usuário tem as contas de visão (senha Visao#2026).
+
+**Incidente de infra no meio do ciclo (registrado, sem dano ao repo)**
+- 1ª tentativa com `npm install qrcode` em apps/web (errado — o workspace
+  é pnpm; o próprio CHANGELOG já proíbe npm aqui): criou
+  `package-lock.json` e `apps/web/node_modules` npm. Removidos; o
+  package.json foi revertido e refeito por pnpm.
+- `pnpm add` DENTRO do workspace falha com `EPERM chown` no lockfile
+  temporário; `pnpm install` falha no mesmo ponto, no bin do jscodeshift.
+  Causa medida: o mount do workspace só permite `chown` p/ uid:gid 0:0 —
+  chown p/ 1000 ou p/ 0:65534 (gid dos arquivos do store) dá EPERM, e o
+  pnpm tenta chownar os bins p/ o gid do store (65534). Numa cópia do
+  projeto em /tmp o `pnpm add --lockfile-only` funciona; o lockfile
+  gerado lá é byte-idêntico ao copiado de volta.
+- Efeito colateral: as 2 tentativas de `pnpm install` abortadas deixaram
+  o `node_modules` local desfalcado (raiz com só 4 entradas, `.bin`
+  vazio; `.pnpm` intacto com 959M). O build de verificação rodou com um
+  `npm install` local em apps/web (só p/ verificar; `node_modules` é
+  gitignored e o `package-lock.json` foi apagado antes do commit). O VPS
+  NÃO é afetado: lá o `pnpm install` roda num fs normal. Próximo ciclo:
+  se precisar reinstalar, usar a cópia em /tmp ou aceitar o
+  `node_modules` local como está — nunca commitar artefato npm.
+- **Ciclo paralelo no mesmo checkout**: durante este ciclo apareceu uma
+  modificação não commitada em `apps/web/app/layout.tsx` (fonte Open Sans
+  p/ a Hero da home — pedido do usuário) feita por outro ciclo. NÃO foi
+  incluída neste commit (commit explícito só dos arquivos deste ciclo);
+  fica p/ o outro ciclo commitar.
+
+**Próximo (fila UI)** — app do tutor (quando existir o esqueleto mobile);
+candidatas: Segurança fase 2 (nomear aparelhos/IP por sessão — falta na
+API) e Equipe fase 2 (mudar papel/remover membro — falta rota na API).
+
 ## 2026-11-17 18:55–19:05 — Ciclo UI 10: aba Equipe na /escola (vincular por e-mail + papel)
 
 **Pesquisa do ciclo (frente a — gestão de equipe em SaaS)**

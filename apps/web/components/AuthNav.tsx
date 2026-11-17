@@ -131,6 +131,7 @@ export default function AuthNav() {
         {session ? (
           <>
             <Link href="/escola">Escola</Link>
+            <Link href="/seguranca">Segurança</Link>
             <span className="nav-user" title={`Logado como ${session.user.email}`}>
               <span className="nav-avatar" aria-hidden="true">
                 {displayName.charAt(0).toUpperCase()}
