@@ -19,10 +19,20 @@ import { EventLogService } from './event-log.service';
   async entryCreated(schoolId: string, classroomId: string, e: unknown) {
     await this.emit(`school:${schoolId}:gate`, 'queue.entry.created', e);
     await this.emit(`school:${schoolId}:classroom:${classroomId}`, 'student.called', e);
+    await this.emitTutor(e, 'queue.entry.created');
   }
   async entryStatus(schoolId: string, classroomId: string, e: unknown) {
     await this.emit(`school:${schoolId}:gate`, 'queue.entry.status_changed', e);
     await this.emit(`school:${schoolId}:classroom:${classroomId}`, 'queue.entry.status_changed', e);
     await this.emit(`school:${schoolId}:admin`, 'queue.entry.status_changed', e);
+    await this.emitTutor(e, 'queue.entry.status_changed');
+  }
+  /** O responsável acompanha a PRÓPRIA fila na room tutor:{id} — sem
+   * ela, a área do responsável nunca saberia que foi chamado. */
+  private async emitTutor(e: unknown, event: string) {
+    const tutorId = (e as { tutorId?: unknown } | null)?.tutorId;
+    if (typeof tutorId === 'string' && tutorId) {
+      await this.emit(`tutor:${tutorId}`, event, e);
+    }
   }
 }

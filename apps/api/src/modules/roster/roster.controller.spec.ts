@@ -1,5 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import type { AccessTokenPayload } from '../auth/auth.service';
+import type { AccessTokenPayload, AuthService } from '../auth/auth.service';
 import { RosterController } from './roster.controller';
 import { RosterService } from './roster.service';
 
@@ -8,7 +8,12 @@ import { RosterService } from './roster.service';
 // tenant nos :id e delegação correta ao serviço.
 describe('RosterController', () => {
   const roster = new RosterService();
-  const controller = new RosterController(roster);
+  // Stub mínimo do AuthService: só o findUserByEmail do vínculo de conta.
+  const auth = {
+    findUserByEmail: (email: string) =>
+      email === 'rita@escola.com' ? ({ id: 'user-rita' } as never) : null,
+  } as unknown as AuthService;
+  const controller = new RosterController(roster, auth);
   const schoolA = roster.createSchool({ name: 'Escola A' });
   const schoolB = roster.createSchool({ name: 'Escola B' });
 
@@ -88,5 +93,33 @@ describe('RosterController', () => {
     expect(report.created).toBe(2);
     expect(controller.listStudents(adminB)).toHaveLength(2);
     expect(controller.listClassrooms(adminB)).toHaveLength(1);
+  });
+
+  it('link-user vincula a conta ao responsável; e-mail sem conta → 404; unlink desfaz', () => {
+    const tutor = controller.createTutor(adminA, {
+      name: 'Rita Vínculo',
+      phone: '11977776666',
+    });
+    const linked = controller.linkTutorUser(adminA, tutor.id, {
+      email: 'rita@escola.com',
+    });
+    expect(linked.userId).toBe('user-rita');
+    expect(roster.getTutorByUserId(schoolA.id, 'user-rita')?.id).toBe(tutor.id);
+    expect(() =>
+      controller.linkTutorUser(adminA, tutor.id, { email: 'ninguem@escola.com' }),
+    ).toThrow(NotFoundException);
+    const unlinked = controller.unlinkTutorUser(adminA, tutor.id);
+    expect(unlinked.userId).toBeUndefined();
+    expect(roster.getTutorByUserId(schoolA.id, 'user-rita')).toBeNull();
+  });
+
+  it('professor (TEACHER) lê turmas e alunos', () => {
+    const teacher = {
+      ...adminA,
+      sub: 'prof-1',
+      roles: ['TEACHER'],
+    } as unknown as AccessTokenPayload;
+    expect(controller.listClassrooms(teacher).length).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(controller.listStudents(teacher))).toBe(true);
   });
 });

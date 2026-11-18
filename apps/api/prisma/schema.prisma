@@ -254,6 +254,7 @@ model Classroom {
   grade        String?
   academicYear Int
   roomLocation String?
+  isActive     Boolean        @default(true)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   school       School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -297,16 +298,23 @@ model Student {
 model Tutor {
   id              String                  @id @default(uuid()) @db.Uuid
   schoolId        String                  @db.Uuid
-  userId          String                  @unique @db.Uuid
+  // Vínculo com a conta de login: OPCIONAL — a maioria dos responsáveis
+  // do cadastro não tem login; quem tem é vinculado pela secretaria
+  // (RosterService.setTutorUserId). Sem vínculo, o tutor é só cadastro.
+  userId          String?                 @unique @db.Uuid
+  // Nome/telefone vivem no cadastro (TutorRecord); quando há conta,
+  // o User tem os seus — o do cadastro é o que a portaria usa.
+  name            String?
+  phone           String?
   document        String? // CPF (armazenar hash/criptografado em prod)
   photoUrl        String?
-  qrSecret        String // segredo p/ QR dinâmico, rotacionável
+  qrSecret        String? // segredo p/ QR dinâmico, rotacionável
   isBlocked       Boolean                 @default(false)
   blockReason     String?
   createdAt       DateTime                @default(now())
   updatedAt       DateTime                @updatedAt
   school          School                  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User?                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   studentLinks    TutorStudent[]
   vehicles        Vehicle[]
   queueEntries    PickupQueueEntry[]

@@ -83,6 +83,11 @@ export interface TutorRecord {
   name: string;
   phone: string; // só dígitos, DDD incluído, sem +55
   document?: string;
+  /** Conta de login vinculada (User.id) — a maioria dos responsáveis
+   * NÃO tem; o vínculo é feito pela secretaria (setTutorUserId) e é
+   * ele que destrava a área do responsável (fila/QR pela própria
+   * conta). Sem ele, o tutor é só cadastro. */
+  userId?: string;
   isBlocked: boolean;
   blockReason?: string;
   createdAt: Date;
@@ -287,11 +292,12 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
   private links: TutorLink[] = [];
   private studentLimits = new Map<string, number>();
 
-  // Persistência (Step 2, parcial): com o PrismaService presente, as ESCOLAS
-  // são hidratadas do Postgres no boot e gravadas em write-through — a escola
-  // sobrevive a restart/deploy. Turmas, alunos e tutores seguem em memória
-  // até o próximo passo do Step 2. Nos testes (new RosterService()) o
-  // parâmetro fica undefined e nada muda.
+  // Persistência (Step 2): com o PrismaService presente, o cadastro
+  // INTEIRO (escolas, turmas, alunos, tutores e vínculos) é hidratado
+  // do Postgres no boot e gravado em write-through — o cadastro
+  // sobrevive a restart/deploy (antes só a escola sobrevivia e cada
+  // deploy apagava turmas/alunos/tutores). Nos testes
+  // (new RosterService()) o parâmetro fica undefined e nada muda.
   constructor(
     @Optional() @Inject(PrismaService) private readonly prisma?: PrismaService,
   ) {}
@@ -309,8 +315,62 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
       createdAt: s.createdAt,
       updatedAt: s.updatedAt,
     }));
+    const [classroomRows, studentRows, tutorRows, linkRows] = await Promise.all([
+      this.prisma.classroom.findMany(),
+      this.prisma.student.findMany(),
+      this.prisma.tutor.findMany(),
+      this.prisma.tutorStudent.findMany(),
+    ]);
+    this.classrooms = classroomRows.map((c) => ({
+      id: c.id,
+      schoolId: c.schoolId,
+      name: c.name,
+      grade: c.grade ?? undefined,
+      academicYear: c.academicYear,
+      roomLocation: c.roomLocation ?? undefined,
+      isActive: c.isActive,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+    }));
+    this.students = studentRows.map((s) => ({
+      id: s.id,
+      schoolId: s.schoolId,
+      classroomId: s.classroomId,
+      name: s.name,
+      enrollmentCode: s.enrollmentCode ?? undefined,
+      // @db.Date volta como Date em UTC meia-noite — o cadastro usa a
+      // string YYYY-MM-DD.
+      birthDate: s.birthDate ? s.birthDate.toISOString().slice(0, 10) : undefined,
+      status: s.status,
+      pickupBlocked: s.pickupBlocked,
+      blockReason: s.blockReason ?? undefined,
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
+    }));
+    this.tutors = tutorRows.map((t) => ({
+      id: t.id,
+      schoolId: t.schoolId,
+      name: t.name ?? '',
+      phone: t.phone ?? '',
+      document: t.document ?? undefined,
+      userId: t.userId ?? undefined,
+      isBlocked: t.isBlocked,
+      blockReason: t.blockReason ?? undefined,
+      createdAt: t.createdAt,
+      updatedAt: t.updatedAt,
+    }));
+    this.links = linkRows.map((l) => ({
+      tutorId: l.tutorId,
+      studentId: l.studentId,
+      relationship: l.relationship,
+      isPrimary: l.isPrimary,
+      canPickup: l.canPickup,
+      createdAt: l.createdAt,
+    }));
     // eslint-disable-next-line no-console
-    console.log(`[RosterService] hidratação: ${rows.length} escola(s) do Postgres`);
+    console.log(
+      `[RosterService] hidratação: ${rows.length} escola(s), ${this.classrooms.length} turma(s), ${this.students.length} aluno(s), ${this.tutors.length} tutor(es) do Postgres`,
+    );
   }
 
   async onModuleDestroy(): Promise<void> {
@@ -321,6 +381,84 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
     const prisma = this.prisma;
     if (!prisma) return;
     prisma.enqueueWrite(() => op(prisma));
+  }
+
+  // Write-through do cadastro: cada mutação grava o estado COMPLETO da
+  // entidade via upsert (a fila de writes é serial, então create e
+  // updates chegam ao Postgres na ordem em que aconteceram).
+  private persistClassroom(c: ClassroomRecord): void {
+    const data = {
+      schoolId: c.schoolId,
+      name: c.name,
+      grade: c.grade ?? null,
+      academicYear: c.academicYear,
+      roomLocation: c.roomLocation ?? null,
+      isActive: c.isActive,
+      updatedAt: c.updatedAt,
+    };
+    this.persist((prisma) =>
+      prisma.classroom.upsert({
+        where: { id: c.id },
+        create: { id: c.id, ...data, createdAt: c.createdAt },
+        update: data,
+      }),
+    );
+  }
+
+  private persistStudent(s: StudentRecord): void {
+    const data = {
+      schoolId: s.schoolId,
+      classroomId: s.classroomId,
+      name: s.name,
+      enrollmentCode: s.enrollmentCode ?? null,
+      birthDate: s.birthDate ? new Date(`${s.birthDate}T00:00:00.000Z`) : null,
+      status: s.status,
+      pickupBlocked: s.pickupBlocked,
+      blockReason: s.blockReason ?? null,
+      updatedAt: s.updatedAt,
+    };
+    this.persist((prisma) =>
+      prisma.student.upsert({
+        where: { id: s.id },
+        create: { id: s.id, ...data, createdAt: s.createdAt },
+        update: data,
+      }),
+    );
+  }
+
+  private persistTutor(t: TutorRecord): void {
+    const data = {
+      schoolId: t.schoolId,
+      name: t.name,
+      phone: t.phone,
+      document: t.document ?? null,
+      userId: t.userId ?? null,
+      isBlocked: t.isBlocked,
+      blockReason: t.blockReason ?? null,
+      updatedAt: t.updatedAt,
+    };
+    this.persist((prisma) =>
+      prisma.tutor.upsert({
+        where: { id: t.id },
+        create: { id: t.id, ...data, createdAt: t.createdAt },
+        update: data,
+      }),
+    );
+  }
+
+  private persistLink(l: TutorLink): void {
+    const data = {
+      relationship: l.relationship,
+      isPrimary: l.isPrimary,
+      canPickup: l.canPickup,
+    };
+    this.persist((prisma) =>
+      prisma.tutorStudent.upsert({
+        where: { tutorId_studentId: { tutorId: l.tutorId, studentId: l.studentId } },
+        create: { tutorId: l.tutorId, studentId: l.studentId, ...data, createdAt: l.createdAt },
+        update: data,
+      }),
+    );
   }
 
   // ---------------------------------------------------------------- escolas
@@ -484,7 +622,8 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
       );
     }
     const classroom: ClassroomRecord = {
-      id: newId('classroom'),
+      // UUID: a turma é persistida no Postgres (Classroom.id é uuid).
+      id: randomUUID(),
       schoolId,
       name,
       grade: input.grade?.trim() || undefined,
@@ -495,6 +634,7 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
       updatedAt: now,
     };
     this.classrooms.push(classroom);
+    this.persistClassroom(classroom);
     return { ...classroom };
   }
 
@@ -519,6 +659,7 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
     }
     classroom.name = trimmed;
     classroom.updatedAt = now;
+    this.persistClassroom(classroom);
     return { ...classroom };
   }
 
@@ -526,6 +667,7 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
     const classroom = this.requireClassroom(classroomId);
     classroom.isActive = false;
     classroom.updatedAt = now;
+    this.persistClassroom(classroom);
     return { ...classroom };
   }
 
@@ -610,7 +752,8 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
       );
     }
     const student: StudentRecord = {
-      id: newId('student'),
+      // UUID: o aluno é persistido no Postgres (Student.id é uuid).
+      id: randomUUID(),
       schoolId,
       classroomId: input.classroomId,
       name,
@@ -622,6 +765,7 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
       updatedAt: now,
     };
     this.students.push(student);
+    this.persistStudent(student);
     return { ...student };
   }
 
@@ -659,6 +803,7 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
         : undefined;
     }
     student.updatedAt = now;
+    this.persistStudent(student);
     return { ...student };
   }
 
@@ -677,6 +822,7 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
     }
     student.classroomId = classroomId;
     student.updatedAt = now;
+    this.persistStudent(student);
     return { ...student };
   }
 
@@ -688,6 +834,7 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
     const student = this.requireStudent(studentId);
     student.status = status;
     student.updatedAt = now;
+    this.persistStudent(student);
     return { ...student };
   }
 
@@ -704,6 +851,7 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
     student.pickupBlocked = true;
     student.blockReason = reason.trim();
     student.updatedAt = now;
+    this.persistStudent(student);
     return { ...student };
   }
 
@@ -712,6 +860,7 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
     student.pickupBlocked = false;
     student.blockReason = undefined;
     student.updatedAt = now;
+    this.persistStudent(student);
     return { ...student };
   }
 
@@ -766,7 +915,8 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
       throw new BadRequestException('Documento inválido — esperado CPF (11) ou CNPJ (14)');
     }
     const tutor: TutorRecord = {
-      id: newId('tutor'),
+      // UUID: o tutor é persistido no Postgres (Tutor.id é uuid).
+      id: randomUUID(),
       schoolId,
       name,
       phone,
@@ -776,7 +926,44 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
       updatedAt: now,
     };
     this.tutors.push(tutor);
+    this.persistTutor(tutor);
     return { ...tutor };
+  }
+
+  /**
+   * Vínculo conta ↔ cadastro: a secretaria liga o responsável do
+   * cadastro à conta de login dele (User.id) — é esse vínculo que
+   * resolve "quem sou eu" na área do responsável, sem o tutor passar
+   * id de outro no body. Uma conta só pode estar vinculada a UM
+   * responsável (a coluna é única no banco; a checagem aqui dá o
+   * erro legível antes do banco reclamar).
+   */
+  setTutorUserId(
+    tutorId: string,
+    userId: string | null,
+    now: Date = new Date(),
+  ): TutorRecord {
+    const tutor = this.requireTutor(tutorId);
+    if (userId) {
+      const clash = this.tutors.find((t) => t.id !== tutorId && t.userId === userId);
+      if (clash) {
+        throw new BadRequestException(
+          'Esta conta já está vinculada a outro responsável.',
+        );
+      }
+    }
+    tutor.userId = userId ?? undefined;
+    tutor.updatedAt = now;
+    this.persistTutor(tutor);
+    return { ...tutor };
+  }
+
+  /** O responsável por trás de uma conta, dentro de uma escola. */
+  getTutorByUserId(schoolId: string, userId: string): TutorRecord | null {
+    const tutor = this.tutors.find(
+      (t) => t.schoolId === schoolId && t.userId === userId,
+    );
+    return tutor ? { ...tutor } : null;
   }
 
   blockTutor(tutorId: string, reason: string, now: Date = new Date()): TutorRecord {
@@ -787,6 +974,7 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
     tutor.isBlocked = true;
     tutor.blockReason = reason.trim();
     tutor.updatedAt = now;
+    this.persistTutor(tutor);
     return { ...tutor };
   }
 
@@ -795,6 +983,7 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
     tutor.isBlocked = false;
     tutor.blockReason = undefined;
     tutor.updatedAt = now;
+    this.persistTutor(tutor);
     return { ...tutor };
   }
 
@@ -842,7 +1031,10 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
     const isPrimary = options.isPrimary ?? false;
     if (isPrimary) {
       for (const link of this.links) {
-        if (link.studentId === studentId) link.isPrimary = false;
+        if (link.studentId === studentId && link.isPrimary) {
+          link.isPrimary = false;
+          this.persistLink(link);
+        }
       }
     }
     const link: TutorLink = {
@@ -854,6 +1046,7 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
       createdAt: now,
     };
     this.links.push(link);
+    this.persistLink(link);
     return { ...link };
   }
 
@@ -863,6 +1056,11 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
     );
     if (idx === -1) return false;
     this.links.splice(idx, 1);
+    this.persist((prisma) =>
+      prisma.tutorStudent.delete({
+        where: { tutorId_studentId: { tutorId, studentId } },
+      }),
+    );
     return true;
   }
 

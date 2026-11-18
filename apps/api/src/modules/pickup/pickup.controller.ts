@@ -1,13 +1,16 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
+  NotFoundException,
   Param,
   Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
 import { PickupService } from './pickup.service';
+import { RosterService } from '../roster/roster.service';
 import { JoinQueueDto } from './dto/join-queue.dto';
 import { ValidateQrDto } from './dto/validate-qr.dto';
 import { BlockStudentDto } from './dto/block-student.dto';
@@ -37,27 +40,52 @@ import type { AccessTokenPayload } from '../auth/auth.service';
 //   diferentes — o painel sinaliza o conflito (AuthExit, IDEAS.md c/24).
 // - logs/verify-chain/block/unblock: ADMIN/COORDINATOR (auditoria é da
 //   gestão; o bloqueio é decisão da secretaria).
-// Pendência Step 2 (anotada aqui e no README do módulo): o vínculo
-// usuário <-> entidade Tutor ainda não existe no AuthService — o TUTOR
-// hoje passa o tutorId no body do join/cancel e o guard só confere o
-// papel. Quando a persistência entrar, o controller deve resolver o
-// tutorId a partir de `user.sub` e recusar tutorId alheio (um tutor não
-// pode entrar na fila por outro tutor nem cancelar a retirada de outro).
+// Vínculo usuário <-> Tutor (fechado em 17/11/2026): quem entra com
+// papel TUTOR tem o tutorId RESOLVIDO da sessão (vínculo feito pela
+// secretaria, RosterService.setTutorUserId) — o tutorId do body é
+// ignorado p/ esse papel, então um tutor não entra na fila por outro
+// nem cancela a retirada de outro. A equipe da portaria segue
+// informando o tutorId (é ela que lança a entrada manual). A
+// superfície própria do responsável é o TutorMeController (/me).
 @Controller('pickup/schools/:schoolId')
 @UseGuards(JwtAuthGuard, TenantGuard, RolesGuard)
 export class PickupController {
-  constructor(private readonly pickup: PickupService) {}
+  constructor(
+    private readonly pickup: PickupService,
+    private readonly roster: RosterService,
+  ) {}
+
+  private isTutorOnly(user: AccessTokenPayload): boolean {
+    return (
+      user.roles.includes('TUTOR') &&
+      !user.roles.some((r) => r === 'GATE_AGENT' || r === 'COORDINATOR' || r === 'ADMIN')
+    );
+  }
+
+  private ownTutorId(schoolId: string, user: AccessTokenPayload): string {
+    const tutor = this.roster.getTutorByUserId(schoolId, user.sub);
+    if (!tutor) {
+      throw new ForbiddenException(
+        'Sua conta ainda não foi vinculada a um responsável desta escola. Peça à secretaria para vincular o seu e-mail na área da escola.',
+      );
+    }
+    return tutor.id;
+  }
 
   @Roles('TUTOR', 'GATE_AGENT', 'COORDINATOR', 'ADMIN')
   @Post('queue/join')
   join(
     @Param('schoolId') schoolId: string,
     @Body() dto: JoinQueueDto,
+    @CurrentUser() user: AccessTokenPayload,
   ) {
+    const tutorId = this.isTutorOnly(user)
+      ? this.ownTutorId(schoolId, user)
+      : dto.tutorId;
     return this.pickup.join({
       schoolId,
       studentId: dto.studentId,
-      tutorId: dto.tutorId,
+      tutorId,
       authorizationId: dto.authorizationId,
       source: dto.source,
       gate: dto.gate,
@@ -95,9 +123,20 @@ export class PickupController {
   @Roles('TUTOR', 'GATE_AGENT', 'COORDINATOR', 'ADMIN')
   @Post('queue/:entryId/cancel')
   cancel(
+    @Param('schoolId') schoolId: string,
     @Param('entryId') entryId: string,
     @CurrentUser() user: AccessTokenPayload,
   ) {
+    if (this.isTutorOnly(user)) {
+      const entry = this.pickup.getEntry(entryId);
+      if (
+        !entry ||
+        entry.schoolId !== schoolId ||
+        entry.tutorId !== this.ownTutorId(schoolId, user)
+      ) {
+        throw new NotFoundException('Entrada da fila não encontrada.');
+      }
+    }
     return this.pickup.cancel(entryId, user.sub);
   }
 

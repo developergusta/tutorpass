@@ -103,6 +103,15 @@ export class LinkTutorDto {
   canPickup?: boolean;
 }
 
+export class LinkTutorUserDto {
+  // E-mail da CONTA de login do responsável (a conta precisa existir —
+  // é ela que a secretaria criou na aba Equipe). O vínculo liga a
+  // conta ao cadastro do responsável e destrava a área dele.
+  @IsString()
+  @MinLength(3)
+  email!: string;
+}
+
 export class ImportStudentsDto {
   // O CSV inteiro como texto (a interface cola ou lê o arquivo e manda
   // o conteúdo; o RosterService faz parse, valida e relata por linha).

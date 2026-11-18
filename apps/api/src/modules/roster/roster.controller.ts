@@ -11,7 +11,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import type { AccessTokenPayload } from '../auth/auth.service';
+import { AuthService, type AccessTokenPayload } from '../auth/auth.service';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -22,6 +22,7 @@ import {
   CreateTutorDto,
   ImportStudentsDto,
   LinkTutorDto,
+  LinkTutorUserDto,
   RenameClassroomDto,
   SetStudentStatusDto,
   UpdateStudentDto,
@@ -39,7 +40,10 @@ import { RosterService } from './roster.service';
 @Controller('roster')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class RosterController {
-  constructor(private readonly roster: RosterService) {}
+  constructor(
+    private readonly roster: RosterService,
+    private readonly auth: AuthService,
+  ) {}
 
   private schoolId(user: AccessTokenPayload): string {
     if (!user.schoolId) {
@@ -78,7 +82,7 @@ export class RosterController {
   // ------------------------------------------------------------ turmas
 
   @Get('classrooms')
-  @Roles('ADMIN', 'COORDINATOR', 'GATE_AGENT')
+  @Roles('ADMIN', 'COORDINATOR', 'GATE_AGENT', 'TEACHER')
   listClassrooms(
     @CurrentUser() user: AccessTokenPayload,
     @Query('academicYear') academicYear?: string,
@@ -117,7 +121,7 @@ export class RosterController {
   // ------------------------------------------------------------ alunos
 
   @Get('students')
-  @Roles('ADMIN', 'COORDINATOR', 'GATE_AGENT')
+  @Roles('ADMIN', 'COORDINATOR', 'GATE_AGENT', 'TEACHER')
   listStudents(
     @CurrentUser() user: AccessTokenPayload,
     @Query('classroomId') classroomId?: string,
@@ -209,5 +213,34 @@ export class RosterController {
     this.ownTutor(user, id);
     this.ownStudent(user, studentId);
     return { removed: this.roster.unlinkTutor(id, studentId) };
+  }
+
+  // ------------------------------------------------- vínculo com a conta
+
+  // A secretaria vincula o responsável do cadastro à conta de login
+  // dele (criada na aba Equipe). É este vínculo que destrava a área
+  // do responsável: sem ele, a conta TUTOR entra e não vê nada.
+  @Post('tutors/:id/link-user')
+  @Roles('ADMIN', 'COORDINATOR')
+  linkTutorUser(
+    @CurrentUser() user: AccessTokenPayload,
+    @Param('id') id: string,
+    @Body() dto: LinkTutorUserDto,
+  ) {
+    this.ownTutor(user, id);
+    const account = this.auth.findUserByEmail(dto.email);
+    if (!account) {
+      throw new NotFoundException(
+        'Nenhuma conta com este e-mail. Crie a conta primeiro (aba Equipe) e tente de novo.',
+      );
+    }
+    return this.roster.setTutorUserId(id, account.id);
+  }
+
+  @Post('tutors/:id/unlink-user')
+  @Roles('ADMIN', 'COORDINATOR')
+  unlinkTutorUser(@CurrentUser() user: AccessTokenPayload, @Param('id') id: string) {
+    this.ownTutor(user, id);
+    return this.roster.setTutorUserId(id, null);
   }
 }

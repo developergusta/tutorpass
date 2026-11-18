@@ -1,5 +1,7 @@
 import { PickupService } from './pickup.service';
 import { QrTokenService } from '../qr/qr-token.service';
+import { RosterService } from '../roster/roster.service';
+import type { RealtimeService } from '../../realtime/realtime.service';
 
 describe('PickupService.chainHash', () => {
   it('é determinístico para o mesmo hash anterior e payload', () => {
@@ -393,5 +395,68 @@ describe('PickupService — irmãos em portões diferentes', () => {
     svc.join({ schoolId: 'school-2', studentId: 'e', tutorId: 'tutor-1', gate: 'Portão A' }, T0);
     const conflicts = svc.listSiblingGateConflicts(SCHOOL);
     expect(conflicts.map((c) => c.tutorId)).toEqual(['tutor-1', 'tutor-2']);
+  });
+});
+
+describe('PickupService — tempo real (emissão de eventos)', () => {
+  const T0 = new Date('2026-11-17T15:00:00Z');
+
+  function setup() {
+    const calls: { kind: string; schoolId: string; classroomId: string; payload: any }[] = [];
+    const realtime = {
+      entryCreated: async (schoolId: string, classroomId: string, payload: any) => {
+        calls.push({ kind: 'created', schoolId, classroomId, payload });
+      },
+      entryStatus: async (schoolId: string, classroomId: string, payload: any) => {
+        calls.push({ kind: 'status', schoolId, classroomId, payload });
+      },
+    };
+    const roster = new RosterService();
+    const school = roster.createSchool({ name: 'Escola Tempo Real' });
+    const turma = roster.createClassroom(school.id, { name: '3º B', academicYear: 2026 });
+    const aluno = roster.createStudent(school.id, { name: 'Alice Tempo Real', classroomId: turma.id });
+    const qr = new QrTokenService();
+    const svc = new PickupService(
+      qr,
+      undefined,
+      realtime as unknown as RealtimeService,
+      roster,
+    );
+    return { calls, svc, qr, school, turma, aluno };
+  }
+
+  it('join emite entryCreated com nome e turma do aluno no payload', () => {
+    const { calls, svc, school, turma, aluno } = setup();
+    svc.join({ schoolId: school.id, studentId: aluno.id, tutorId: 'tutor-1' }, T0);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].kind).toBe('created');
+    expect(calls[0].classroomId).toBe(turma.id);
+    expect(calls[0].payload.studentName).toBe('Alice Tempo Real');
+    expect(calls[0].payload.classroomName).toBe('3º B');
+    expect(calls[0].payload.status).toBe('QUEUED');
+  });
+
+  it('call/validate/release/cancel emitem entryStatus com o status novo', async () => {
+    const { calls, svc, qr, school, aluno } = setup();
+    const entry = svc.join({ schoolId: school.id, studentId: aluno.id, tutorId: 'tutor-1' }, T0);
+    svc.call(entry.id, 'staff-1', T0);
+    const token = qr.issue(school.id, 'tutor-1').token;
+    await svc.validateQr(entry.id, token, 'staff-1', T0);
+    svc.release(entry.id, 'staff-1', T0);
+    const statuses = calls.filter((c) => c.kind === 'status').map((c) => c.payload.status);
+    expect(statuses).toEqual(['CALLED', 'VALIDATED', 'RELEASED']);
+
+    const e2 = svc.join({ schoolId: school.id, studentId: aluno.id, tutorId: 'tutor-1' }, T0);
+    svc.cancel(e2.id, 'staff-1', T0);
+    const last = calls[calls.length - 1];
+    expect(last.kind).toBe('status');
+    expect(last.payload.status).toBe('CANCELLED');
+  });
+
+  it('sem RealtimeService injetado, a fila funciona igual (testes legados)', () => {
+    const svc = new PickupService(new QrTokenService());
+    const entry = svc.join({ schoolId: 's', studentId: 'a', tutorId: 't' }, T0);
+    expect(entry.status).toBe('QUEUED');
+    expect(svc.call(entry.id, 'staff', T0).status).toBe('CALLED');
   });
 });

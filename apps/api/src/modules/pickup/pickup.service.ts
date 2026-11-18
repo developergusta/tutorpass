@@ -9,6 +9,8 @@ import {
 import { createHash } from 'crypto';
 import { GateAlertService } from '../gate-alerts/gate-alert.service';
 import { QrTokenService } from '../qr/qr-token.service';
+import { RealtimeService } from '../../realtime/realtime.service';
+import { RosterService } from '../roster/roster.service';
 
 // Núcleo do Step 2 — fila de retirada da portaria (REST pickup):
 // join manual/geofence, call, validate-qr, release, cancel + PickupLog com
@@ -174,10 +176,59 @@ export class PickupService {
   // sem ele, validateQr recusa com erro claro em vez de quebrar. O alerta da
   // portaria (ntfy) é igualmente opcional: sem ele (ou desligado), o join
   // segue só com a fila/realtime.
+  // O realtime e o roster também são opcionais pelo mesmo motivo — MAS em
+  // produção eles são o que faz a fila existir nas telas: até 17/11/2026 o
+  // RealtimeService não tinha NENHUM chamador (o PickupModule nem o
+  // importava), então o socket conectava e nenhuma entrada chegava —
+  // portaria/telão só viam a fila ao recarregar. O roster enriquece o
+  // payload com nome/turma do aluno (a entrada crua só tem ids).
   constructor(
     @Optional() @Inject(QrTokenService) private readonly qr?: QrTokenService,
     @Optional() @Inject(GateAlertService) private readonly gateAlerts?: GateAlertService,
+    @Optional() @Inject(RealtimeService) private readonly realtime?: RealtimeService,
+    @Optional() @Inject(RosterService) private readonly roster?: RosterService,
   ) {}
+
+  /** Payload que vai pras telas: a entrada + nome/turma do aluno. */
+  private entryPayload(entry: PickupQueueEntry) {
+    const student = this.roster?.getStudent(entry.studentId) ?? null;
+    const classroom =
+      student != null
+        ? (this.roster
+            ?.listClassrooms(student.schoolId)
+            .find((c) => c.id === student.classroomId) ?? null)
+        : null;
+    return {
+      ...entry,
+      studentName: student?.name ?? null,
+      classroomId: student?.classroomId ?? null,
+      classroomName: classroom?.name ?? null,
+    };
+  }
+
+  // Fire-and-forget como o alerta ntfy: a emissão nunca pode derrubar
+  // nem atrasar a operação da fila.
+  private emitCreated(entry: PickupQueueEntry): void {
+    if (!this.realtime) return;
+    const payload = this.entryPayload(entry);
+    void this.realtime
+      .entryCreated(entry.schoolId, payload.classroomId ?? '', payload)
+      .catch(() => {});
+  }
+
+  private emitStatus(entry: PickupQueueEntry): void {
+    if (!this.realtime) return;
+    const payload = this.entryPayload(entry);
+    void this.realtime
+      .entryStatus(entry.schoolId, payload.classroomId ?? '', payload)
+      .catch(() => {});
+  }
+
+  /** Uma entrada pelo id (ou null) — o cancelamento do responsável
+   * confere a posse por aqui antes de agir. */
+  getEntry(id: string): PickupQueueEntry | null {
+    return this.entries.get(id) ?? null;
+  }
 
   /** Entrada na fila — manual (portaria) ou automática (geofence / QR do portão). */
   join(input: JoinPickupInput, now: Date = new Date()): PickupQueueEntry {
@@ -229,6 +280,7 @@ export class PickupService {
     // Apita o celular da portaria (ntfy) — fire-and-forget: o serviço nunca
     // lança e a fila não espera a rede p/ responder ao tutor.
     void this.gateAlerts?.tutorJoinedQueue(entry.schoolId, entry.gate);
+    this.emitCreated(entry);
     return entry;
   }
 
@@ -245,6 +297,7 @@ export class PickupService {
     this.appendLog(entry, 'QUEUE_CALLED', staffId, entry.tutorId, {
       calledAt: entry.calledAt.toISOString(),
     });
+    this.emitStatus(entry);
     return entry;
   }
 
@@ -293,6 +346,7 @@ export class PickupService {
       validatedAt: entry.validatedAt.toISOString(),
       nonce: payload.nonce,
     });
+    this.emitStatus(entry);
     return entry;
   }
 
@@ -315,6 +369,7 @@ export class PickupService {
       validatedAt: entry.validatedAt?.toISOString() ?? null,
       waitSeconds: entry.waitSeconds,
     });
+    this.emitStatus(entry);
     return entry;
   }
 
@@ -328,6 +383,7 @@ export class PickupService {
     }
     entry.status = 'CANCELLED';
     this.appendLog(entry, 'CANCELLED', staffId, entry.tutorId, {});
+    this.emitStatus(entry);
     return entry;
   }
 
@@ -358,6 +414,7 @@ export class PickupService {
         this.appendLog(entry, 'BLOCKED', staffId, entry.tutorId, {
           reason: trimmed,
         });
+        this.emitStatus(entry);
       }
     }
   }
@@ -385,6 +442,7 @@ export class PickupService {
         this.appendLog(entry, 'EXPIRED', null, entry.tutorId, {
           joinedAt: entry.joinedAt.toISOString(),
         });
+        this.emitStatus(entry);
         expired++;
       }
     }
