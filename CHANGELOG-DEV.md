@@ -1,3 +1,91 @@
+## 2026-11-17 21:54–22:05 — Ciclo UI 16: a fila fala (teclado + leitor de tela na operação)
+
+**Pesquisa do ciclo (frente c — acessibilidade e mobile)**
+- **Link de salto é o primeiro padrão de teclado** (accessiblelab.net,
+  2026): sem ele, o teclado atravessa toda a navegação a cada página —
+  WCAG 2.4.1 (Bypass Blocks), nível A; o padrão é o link oculto como
+  primeiro foco, visível ao receber foco, apontando p/ o conteúdo.
+- **Mudança sem anúncio não existe p/ o leitor de tela**
+  (accessiblelab.net; blog.a11yfix.dev, 2026): WCAG 4.1.3 (Status
+  Messages), nível AA — `aria-live="polite"` anuncia sem interromper, e
+  a região precisa existir no DOM ANTES da mudança.
+- **Stream em tempo real sem controle vira fila de anúncios**
+  (accessible-data-interfaces.com, 2026): `polite`, nunca roubar o foco
+  e `aria-atomic` p/ ler a mensagem inteira como unidade (SC 4.1.3 +
+  2.1.1).
+- **Abas WAI-ARIA: setas andam, Home/End saltam, roving tabindex**
+  (coder000.com, 2026 — o mesmo passe que pede skip link + live regions
+  no painel ao vivo).
+- Achados registrados em `docs/product/IDEAS.md` (frente c, ciclo UI
+  16); o item implementado era o da fila UI: **a operação por teclado
+  e leitor de tela** — a próxima tela da fila (sala do professor)
+  segue bloqueada na API (TEACHER 403 no roster, confirmado no
+  controller), então o ciclo pegou a frente de acessibilidade, que é
+  só web.
+
+**Direção (unslop)** — Produto: a portaria na hora da saída, operada
+por quem não usa o mouse, e a secretaria navegando as abas do cadastro
+só de teclado. Caráter: calmo, exato. Momento: nenhum novo — o link de
+salto é invisível até ser preciso e o anúncio é ouvido, não visto; a
+tela não muda de lugar. Assinatura: nenhuma — acessibilidade boa é
+invisível quando funciona.
+
+**O que foi feito**
+- **Link de salto** (`layout.tsx` + `.skip-link` em `globals.css`):
+  "Pular para o conteúdo", primeiro na ordem de Tab de toda página,
+  fora da tela (`top: -64px`) até o foco chegar (`top: 12px`), verde da
+  marca com texto branco, 44 px de altura mínima, nos tokens
+  `--space-*`. O alvo é o `<main id="conteudo" tabIndex={-1}>` — o
+  `tabIndex={-1}` move o foco junto no salto (sem ele, só rola) e o
+  `#conteudo:focus { outline: none }` tira o anel do foco programático.
+  O id foi para os 12 `<main>` do web (home, login e cadastro têm 2
+  ramos cada, mutuamente exclusivos — nunca duplicado no DOM).
+- **Resumo da portaria como região viva** (`portaria/page.tsx`):
+  `aria-live="polite"` + `aria-atomic="true"` no
+  `.queue-summary` — quando um tutor entra na fila, o leitor anuncia
+  o resumo inteiro ("3 na fila agora · 1 pronto · 2 a caminho"), não
+  só o dígito que mudou, e sem interromper o que estava sendo lido. A
+  região existe desde a montagem, então o anúncio dispara a cada
+  mudança. As listas da fila NÃO são live de propósito — quem opera
+  navega até elas, em vez de ouvir cada linha entrar. O selo de
+  conexão já tinha `role="status"`.
+- **Abas da /escola com teclado** (`escola/page.tsx`): as abas já tinham
+  `role="tab"` + `aria-selected`, mas só o mouse andava entre elas.
+  Agora setas (←/→/↑/↓) andam, Home/End saltam aos extremos, roving
+  tabindex (só a aba ativa é parada de Tab) e o painel da aba ativa
+  ganhou `role="tabpanel"` com `aria-labelledby` apontando p/ a aba.
+  Sem `aria-controls` nas abas: os painéis inativos não estão no DOM
+  e a referência ficaria pendurada. O foco acompanha a aba (o handler
+  dá `focus()` + `click()` no botão seguinte).
+- **Telão fora de propósito**: painel público, assistido, não operado —
+  anúncio de leitor de tela ali seria ruído; segue sem live region.
+- **Auditoria unslop do ciclo**: nenhum sinal novo — 1 gradiente
+  (painel "Pode retirar agora") e 1 caixa alta ("AGORA"), ambos
+  intencionais desde os ciclos 7/8; zero emoji no web.
+- Nenhuma regra de negócio, preço ou API tocada. Só web.
+
+**Arquivos alterados**
+- `apps/web/app/layout.tsx` (link de salto, primeiro filho do body)
+- `apps/web/app/globals.css` (+ `.skip-link`, `#conteudo:focus`)
+- `apps/web/app/portaria/page.tsx` (resumo com `aria-live`)
+- `apps/web/app/escola/page.tsx` (teclado nas abas + `tabpanel`)
+- `apps/web/app/{page,login,cadastro,escola,portaria,telao,planos,seguranca,esqueci-senha,redefinir-senha}/page.tsx` + `not-found.tsx` (`id="conteudo" tabIndex={-1}` nos 12 `<main>`)
+- `docs/product/IDEAS.md` (frente c, ciclo UI 16), `BACKLOG.md` (fila UI/UX)
+
+**Verificação** — `next build` em apps/web: **OK** (tipos válidos, 16
+rotas; `/escola` 9,4 → 9,72 kB, `/portaria` 2,44 → 2,47 kB — o resto
+inalterado). Conferência por grep: 1 `linear-gradient`, 1
+`text-transform: uppercase`, 0 emoji no web. Limitação: sem leitor de
+tela neste sandbox — a prova ao vivo (NVDA/VoiceOver na portaria com
+fila real, ouvindo se o resumo anuncia no ritmo certo sem falar
+demais) fica p/ a verificação ao vivo.
+
+**Próximo (fila UI)** — tela de sala p/ o professor (quem foi chamado
++ p/ qual portão mandar), bloqueada na API (TEACHER precisa ler o
+roster); app do tutor segue bloqueado na API (rota p/ emitir o QR +
+vínculo usuário ↔ Tutor); candidatas com falta na API: join em grupo
+e Segurança/Equipe fase 2.
+
 ## 2026-11-17 21:24–21:45 — Ciclo UI 15: a implantação em 1 dia ganha tela (aba na /escola)
 
 **Pesquisa do ciclo (frente d — design systems / espaçamento em tokens)**

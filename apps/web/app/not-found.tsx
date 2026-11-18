@@ -7,7 +7,7 @@ import Link from 'next/link';
 // (passada anti-genérica/unslop).
 export default function NotFound() {
   return (
-    <main className="container not-found">
+    <main id="conteudo" tabIndex={-1} className="container not-found">
       <div className="state">
         <span className="state-icon" aria-hidden="true">
           <svg

@@ -112,7 +112,7 @@ export default function CadastroPage() {
 
   if (phase.kind === 'done') {
     return (
-      <main className="auth-wrap">
+      <main id="conteudo" tabIndex={-1} className="auth-wrap">
         <section className="card auth-card auth-success">
           <span className="auth-success-icon" aria-hidden="true">
             <CheckIcon />
@@ -147,7 +147,7 @@ export default function CadastroPage() {
   }
 
   return (
-    <main className="auth-wrap">
+    <main id="conteudo" tabIndex={-1} className="auth-wrap">
       <section className="card auth-card">
         <div className="auth-brand">
           <span className="logo-mark" aria-hidden="true">

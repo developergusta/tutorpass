@@ -27,7 +27,7 @@ const FEATURES_FREE = FEATURES_PRO.slice(0, 3);
 
 export default function PlanosPage() {
   return (
-    <main className="container">
+    <main id="conteudo" tabIndex={-1} className="container">
       <section className="card">
         <h1>Planos e preços — sem “sob consulta”</h1>
         <p>

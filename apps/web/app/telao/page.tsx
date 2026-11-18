@@ -115,7 +115,7 @@ function TelaoPanel() {
         : { kind: 'wait', label: 'Conectando…' };
 
   return (
-    <main className="telao">
+    <main id="conteudo" tabIndex={-1} className="telao">
       <header className="telao-top">
         <div className="telao-brand">
           <span className="telao-mark" aria-hidden="true">

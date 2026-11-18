@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
 import RequireAuth from '../../components/RequireAuth';
 import {
   addSchoolMember,
@@ -139,8 +139,35 @@ function EscolaPanel() {
     setError(null);
   }
 
+  // Teclado nas abas (padrão WAI-ARIA tabs, ciclo UI 16): as abas já
+  // tinham role="tab" + aria-selected, mas só o mouse andava entre elas
+  // — setas andam, Home/End vão aos extremos e o foco acompanha a aba
+  // ativa (roving tabindex: só a ativa é parada de Tab). O clique no
+  // botão move o foco e dispara o onClick, que troca a aba.
+  function onTabKeyDown(e: KeyboardEvent<HTMLButtonElement>) {
+    if (
+      !['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)
+    ) {
+      return;
+    }
+    e.preventDefault();
+    const tabs = Array.from(
+      e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]') ??
+        [],
+    );
+    const i = tabs.indexOf(e.currentTarget);
+    if (i < 0 || tabs.length === 0) return;
+    let next = i;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (i + 1) % tabs.length;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (i - 1 + tabs.length) % tabs.length;
+    if (e.key === 'Home') next = 0;
+    if (e.key === 'End') next = tabs.length - 1;
+    tabs[next]?.focus();
+    tabs[next]?.click();
+  }
+
   return (
-    <main className="container section">
+    <main id="conteudo" tabIndex={-1} className="container section">
       <h1 className="section-title">Área da escola</h1>
       <p className="muted">
         Cadastro de turmas, alunos e responsáveis — é daqui que a fila da portaria nasce.
@@ -170,15 +197,22 @@ function EscolaPanel() {
             key={value}
             type="button"
             role="tab"
+            id={`aba-${value}`}
             aria-selected={tab === value}
+            tabIndex={tab === value ? 0 : -1}
             className={`admin-tab${tab === value ? ' is-active' : ''}`}
             onClick={() => setTab(value)}
+            onKeyDown={onTabKeyDown}
           >
             {label}
           </button>
         ))}
       </div>
 
+      {/* O painel da aba ativa (ciclo UI 16): role="tabpanel" ligado à
+          aba pelo id — sem aria-controls nas abas, porque os painéis
+          inativos não estão no DOM e a referência ficaria pendurada. */}
+      <div role="tabpanel" id={`painel-${tab}`} aria-labelledby={`aba-${tab}`}>
       {tab === 'turmas' ? (
         <TurmasTab classrooms={classrooms} onChanged={reloadBase} onError={setError} onNotice={flash} />
       ) : null}
@@ -198,6 +232,7 @@ function EscolaPanel() {
       {tab === 'implantacao' ? (
         <ImplantacaoTab onError={setError} onNotice={flash} onGoTab={setTab} />
       ) : null}
+      </div>
     </main>
   );
 }

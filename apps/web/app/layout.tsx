@@ -67,6 +67,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       suppressHydrationWarning
     >
       <body>
+        {/* Link de salto (WCAG 2.4.1, ciclo UI 16): primeiro na ordem de
+            Tab, invisível até o teclado chegar nele — pula a topbar e cai
+            direto no <main id="conteudo">. */}
+        <a className="skip-link" href="#conteudo">
+          Pular para o conteúdo
+        </a>
         {/* Tema claro/escuro: aplica o tema ANTES da primeira pintura
             (escolha salva em localStorage; sem escolha, o aparelho
             decide via prefers-color-scheme) — sem isso, quem usa o

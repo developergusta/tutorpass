@@ -244,7 +244,7 @@ function PortariaPanel() {
           : { tone: 'wait', label: 'API no ar · tempo real conectando…' };
 
   return (
-    <main className="container">
+    <main id="conteudo" tabIndex={-1} className="container">
       <h1>Painel da portaria</h1>
       <p>
         <span className={`conn-pill is-${conn.tone}`} role="status">
@@ -255,7 +255,19 @@ function PortariaPanel() {
 
       <SiblingGateAlert items={items} />
 
-      <div className="queue-summary" role="group" aria-label="Resumo da fila">
+      {/* Resumo da fila como região viva (WCAG 4.1.3, ciclo UI 16): a
+          portaria muda sozinha quando um tutor entra na fila — sem o
+          anúncio, quem usa leitor de tela não sabe que o número mudou.
+          `polite` (não interrompe) + `atomic` (lê o resumo inteiro, não
+          só o dígito que mudou). A região já existe no DOM desde a
+          montagem, então o anúncio dispara a cada mudança. */}
+      <div
+        className="queue-summary"
+        role="group"
+        aria-label="Resumo da fila"
+        aria-live="polite"
+        aria-atomic="true"
+      >
         <div className="queue-stat">
           <strong>{loading ? '–' : items.length}</strong>
           <span>na fila agora</span>

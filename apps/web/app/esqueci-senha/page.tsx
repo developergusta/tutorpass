@@ -29,7 +29,7 @@ export default function EsqueciSenhaPage() {
   }
 
   return (
-    <main className="auth-wrap">
+    <main id="conteudo" tabIndex={-1} className="auth-wrap">
       <section className="card auth-card">
         <div className="auth-brand">
           <h1>Esqueci minha senha</h1>

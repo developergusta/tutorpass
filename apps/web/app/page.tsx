@@ -132,7 +132,7 @@ const steps = [
 
 export default function HomePage() {
   return (
-    <main>
+    <main id="conteudo" tabIndex={-1}>
       <section className="hero">
         <div className="container hero-grid">
           <div>

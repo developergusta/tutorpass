@@ -436,6 +436,32 @@ select {
   outline: 3px solid rgba(11, 110, 79, 0.35);
   outline-offset: 2px;
 }
+
+/* Link de salto (WCAG 2.4.1, ciclo UI 16): fora da tela até o teclado
+   chegar nele; o alvo (#conteudo, no <main>) recebe o foco sem anel —
+   o foco é programático, não de teclado. */
+.skip-link {
+  position: absolute;
+  left: var(--space-4);
+  top: -64px;
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: 10px;
+  background: var(--brand);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+.skip-link:focus-visible {
+  top: var(--space-3);
+}
+#conteudo:focus {
+  outline: none;
+}
 .btn:disabled { opacity: 0.6; cursor: wait; }
 .btn.secondary {
   background: var(--card);

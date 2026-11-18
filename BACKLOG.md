@@ -116,6 +116,32 @@ mesmo do login: **o motor existe e é testado; falta a camada de uso**.
 - [ ] Observabilidade: logs estruturados, métricas de fila, alerta de fila > N
 
 ## Fila UI/UX (rotina de 30 min — ordem: login → portaria → telão → planos → estados vazios/erro → mobile)
+- [x] **Teclado + leitor de tela na operação (ciclo UI 16, 17/11/2026)** —
+  a portaria mudava sozinha e o leitor de tela não sabia; as abas da
+  /escola só andavam de mouse; e não havia como pular a topbar de
+  teclado. Agora: (1) link de salto "Pular para o conteúdo" como
+  primeiro foco de toda página (WCAG 2.4.1, nível A — invisível até o
+  teclado chegar, cai no `<main id="conteudo">` de todas as 12 telas,
+  com `tabIndex={-1}` p/ o foco ir junto); (2) o resumo da portaria
+  ("N na fila · N prontos · N a caminho") é região viva
+  `aria-live="polite"` + `aria-atomic="true"` (WCAG 4.1.3 — anuncia o
+  resumo inteiro quando a fila muda, sem interromper; as listas não
+  são live, quem opera navega até elas); (3) abas da /escola no padrão
+  WAI-ARIA tabs — setas andam, Home/End saltam, roving tabindex (só a
+  ativa é parada de Tab) e `role="tabpanel"` com `aria-labelledby` (sem
+  `aria-controls`, porque os painéis inativos não estão no DOM). O
+  telão fica fora das live regions de propósito (painel público,
+  assistido, não operado). `next build` OK (16 rotas; /escola 9,72 kB,
+  /portaria 2,47 kB). Auditoria unslop do ciclo: sem sinal novo — 1
+  gradiente (painel "Pode retirar agora") e 1 caixa alta ("AGORA"),
+  ambos intencionais; zero emoji. Falta: teste com leitor de tela real
+  (NVDA/VoiceOver) na portaria com fila ao vivo.
+  Próximo da fila UI: **tela de sala p/ o professor**, bloqueada na API
+  (TEACHER recebe 403 no roster — confirmado no controller: GET
+  students/classrooms é só ADMIN/COORDINATOR/GATE_AGENT); **app do
+  tutor** segue bloqueado na API (sem rota p/ emitir o QR dinâmico nem
+  vínculo usuário ↔ Tutor). Ver docs/product/IDEAS.md, frente c,
+  ciclo UI 16.
 - [x] **Implantação em 1 dia (ciclo UI 15, 17/11/2026)** — a home promete
   "Implantação em 1 dia" e o web não tinha nenhuma tela p/ acompanhar: a
   API já tinha GET /onboarding/schools/:schoolId/checklist e POST

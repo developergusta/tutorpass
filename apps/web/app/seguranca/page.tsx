@@ -285,7 +285,7 @@ function SegurancaPanel() {
   const enabled = status?.enabled ?? false;
 
   return (
-    <main className="container section">
+    <main id="conteudo" tabIndex={-1} className="container section">
       <h1>Segurança</h1>
       <p className="muted">
         A proteção da sua conta: verificação em duas etapas, senha e as
