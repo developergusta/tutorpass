@@ -1,3 +1,16 @@
+## 2026-11-18 20:36–20:43 — Ciclo UI 23: Arquitetura Visual Dribbble Product Showcase & Bento de Telemetria (`frontend-design` + `anti-slop-ui`)
+
+**Inspiração em Product Showcases de estúdio no Dribbble (Bento Grid 12 colunas + Cockpit com Radar SVG + Cartão de Passe Tátil)**
+- **Cockpit com Radar SVG de Baias (`HeroBoard.tsx`)**: o palco principal da home agora traz um **Esquemático SVG ao vivo da Zona de Embarque** (`BAIA DE EMBARQUE 0–20m`, `ZONA GEOFENCE 2X 150m`, `EM ROTA 300m+`) onde os pinos de cada aluno (`Alice`, `Pedro`, `Lucas`, `Sofia`) se movem fisicamente pelo mapa conforme o visitante avança o estado da retirada.
+- **Cartão de Credencial Tátil (`.drb-pass-card`)**: na coluna direita do cockpit, o aluno selecionado é exibido como um passe físico/digital de alta precisão com medidor de TTL do QR de 30s (`.drb-ttl-ring`), trilha visual das 4 etapas da máquina de estados (`1. Geofence 2x` → `2. Chamado` → `3. QR 30s OK` → `4. SHA-256`), células técnicas de hash e botão para testar ataque de print clonado (`401 QR_REJECTED`).
+- **Fita de Telemetria acoplada (`.drb-telemetry-strip`)**: base do cockpit integrada em 4 células técnicas (`30 s`, `< 40 ms`, `2 leituras`, `53 min`).
+- **Mosaico Bento Assimétrico de 12 Colunas (`.drb-bento-grid`)**: cada célula Bento contém uma interface visual própria (e não apenas ícone + texto):
+  - **Célula 1 (`span-8`, fundo verde profundo `#07291e`)**: comparador lado a lado entre a 1ª leitura (`200 · LIBERADO`) e o print encaminhado (`401 · QR_REJECTED`).
+  - **Célula 2 (`span-4`)**: mini-radar de conflito de irmãos em portões diferentes (`Portão Principal` vs `Portão Infantil`).
+  - **Célula 3 (`span-4`)**: diagrama de anéis concêntricos da cerca virtual (`300m · 1ª leitura` → `150m · 2ª leitura ✓` → `FILA ATIVA`).
+  - **Célula 4 (`span-8`)**: visualizador de blocos encadeados (`BLOCO #0483` → `BLOCO #0484` com assinatura `sha256`).
+- **Dock de 5 Terminais (`.drb-terminal-dock`) e Matriz Comercial de 5 Colunas (`.drb-pricing-board`)**: navegação direta em 5 cartões verticais de terminal e faixa horizontal contínua com todas as 5 faixas de preço publicadas.
+
 ## 2026-11-18 20:30–20:38 — Ciclo UI 22: Reforma estrutural da Tela Inicial — Bancada de Despacho em 5 Lentes & Dossiê Assimétrico (`frontend-design`)
 
 **Fim do esqueleto de landing page de SaaS**

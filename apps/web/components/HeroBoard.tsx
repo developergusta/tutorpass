@@ -9,8 +9,11 @@ type StudentEntry = {
   classroom: string;
   tutorName: string;
   relation: string;
+  vehicle: string;
+  bay: string;
   status: 'EN_ROUTE' | 'CALLED' | 'VALIDATED' | 'RELEASED';
   eta: number;
+  distanceMeters: number;
   nonce: string;
   hash: string;
   prevHash: string;
@@ -36,8 +39,11 @@ const INITIAL_ENTRIES: Record<string, StudentEntry[]> = {
       classroom: 'Sala 14 · Bloco A',
       tutorName: 'Mariana Martins',
       relation: 'Mãe',
+      vehicle: 'Baia 01 · Portão Norte',
+      bay: 'B-01',
       status: 'CALLED',
       eta: 0,
+      distanceMeters: 12,
       nonce: '84A2-91F',
       hash: '9f3a8c12e81c',
       prevHash: '4c127b09ab10',
@@ -50,8 +56,11 @@ const INITIAL_ENTRIES: Record<string, StudentEntry[]> = {
       classroom: 'Sala 22 · Bloco B',
       tutorName: 'Ricardo Santos',
       relation: 'Pai',
+      vehicle: 'Baia 02 · Portão Norte',
+      bay: 'B-02',
       status: 'VALIDATED',
       eta: 0,
+      distanceMeters: 4,
       nonce: '31C9-04D',
       hash: '4c127b09ab10',
       prevHash: '7d8814f2c301',
@@ -64,8 +73,11 @@ const INITIAL_ENTRIES: Record<string, StudentEntry[]> = {
       classroom: 'Sala 18 · Bloco A',
       tutorName: 'Cláudia Almeida',
       relation: 'Mãe',
+      vehicle: 'Zona 150m · 2ª leitura OK',
+      bay: 'Z-150',
       status: 'EN_ROUTE',
       eta: 2,
+      distanceMeters: 145,
       nonce: '77E1-52A',
       hash: '3e71c40d9a22',
       prevHash: '9f3a8c12e81c',
@@ -78,8 +90,11 @@ const INITIAL_ENTRIES: Record<string, StudentEntry[]> = {
       classroom: 'Sala 03 · Térreo',
       tutorName: 'Helena Ribeiro',
       relation: 'Avó autorizada',
+      vehicle: 'Tag impressa · #604918',
+      bay: 'Z-300',
       status: 'EN_ROUTE',
       eta: 4,
+      distanceMeters: 280,
       nonce: '19B4-88C',
       hash: '8a05f92b11e4',
       prevHash: '3e71c40d9a22',
@@ -94,8 +109,11 @@ const INITIAL_ENTRIES: Record<string, StudentEntry[]> = {
       classroom: 'Sala Girassol · Térreo',
       tutorName: 'Teresa Souza',
       relation: 'Avó autorizada',
+      vehicle: 'Recepção Infantil · Baia A',
+      bay: 'INF-A',
       status: 'CALLED',
       eta: 0,
+      distanceMeters: 8,
       nonce: '63D0-19E',
       hash: '7d8814f2c301',
       prevHash: '2c6391b408fa',
@@ -108,8 +126,11 @@ const INITIAL_ENTRIES: Record<string, StudentEntry[]> = {
       classroom: 'Sala Ipê · Térreo',
       tutorName: 'Felipe Oliveira',
       relation: 'Pai',
+      vehicle: 'Zona 150m · 2ª leitura OK',
+      bay: 'Z-150',
       status: 'EN_ROUTE',
       eta: 3,
+      distanceMeters: 160,
       nonce: '50F8-33B',
       hash: '2c6391b408fa',
       prevHash: '5f49d08a77c1',
@@ -149,7 +170,6 @@ const INITIAL_AUDIT: AuditRecord[] = [
 ];
 
 const GATES = ['Portão Principal', 'Educação Infantil'] as const;
-
 type RoleTab = 'portaria' | 'sala' | 'familia' | 'telao' | 'custodia';
 
 export default function HeroBoard() {
@@ -225,6 +245,12 @@ export default function HeroBoard() {
               ...item,
               status: updatedStatus,
               eta: updatedStatus === 'EN_ROUTE' ? 3 : 0,
+              distanceMeters:
+                updatedStatus === 'EN_ROUTE'
+                  ? 180
+                  : updatedStatus === 'CALLED'
+                    ? 15
+                    : 2,
               prevHash: item.hash,
               hash: newHash,
             }
@@ -238,7 +264,7 @@ export default function HeroBoard() {
   function simulateReplayAttack() {
     if (!activeStudent) return;
     setReplayBlocked(
-      `401 QR_REJECTED — Nonce #${activeStudent.nonce} já consumido ou expirado. Tentativa gravada no livro SHA-256.`,
+      `401 QR_REJECTED — Nonce #${activeStudent.nonce} já consumido. Print bloqueado e registrado no livro SHA-256.`,
     );
     pushAudit('REPLAY_ATTEMPT_BLOCKED', activeStudent, 'err401blocked');
   }
@@ -254,67 +280,75 @@ export default function HeroBoard() {
     (i) => i.status === 'CALLED' || i.status === 'VALIDATED',
   );
   const routeList = currentList.filter((i) => i.status === 'EN_ROUTE');
-  const releasedList = currentList.filter((i) => i.status === 'RELEASED');
 
   const statusBadge = (status: StudentEntry['status']) => {
     switch (status) {
       case 'EN_ROUTE':
-        return { label: 'A caminho', cls: 'st-route' };
+        return { label: 'A caminho', cls: 'st-route', stepIndex: 1 };
       case 'CALLED':
-        return { label: 'Chamado à baia', cls: 'st-called' };
+        return { label: 'Na baia', cls: 'st-called', stepIndex: 2 };
       case 'VALIDATED':
-        return { label: 'QR validado', cls: 'st-validated' };
+        return { label: 'QR validado', cls: 'st-validated', stepIndex: 3 };
       case 'RELEASED':
-        return { label: 'Entregue', cls: 'st-released' };
+        return { label: 'Entregue', cls: 'st-released', stepIndex: 4 };
     }
   };
 
   const actionButtonLabel = (status: StudentEntry['status']) => {
     switch (status) {
       case 'EN_ROUTE':
-        return '1. Chamar aluno para o portão';
+        return 'Acionar chamada silenciosa na sala';
       case 'CALLED':
-        return '2. Validar QR dinâmico do responsável';
+        return 'Validar QR de 30s do responsável';
       case 'VALIDATED':
-        return '3. Confirmar entrega e assinar SHA-256';
+        return 'Assinar entrega na cadeia SHA-256';
       case 'RELEASED':
-        return 'Simular nova chegada deste aluno';
+        return 'Reiniciar ciclo deste aluno';
     }
   };
 
+  const progressRatio = (qrSeconds / 30) * 100;
+
   return (
-    <section
-      className="wb-shell"
-      aria-label="Mesa de despacho interativa em tempo real"
+    <div
+      className="drb-cockpit"
+      aria-label="Console interativo de saída escolar"
     >
-      {/* Barra superior técnica da bancada */}
-      <div className="wb-topbar">
-        <div className="wb-gates" role="group" aria-label="Selecionar portão">
-          {GATES.map((g) => (
-            <button
-              key={g}
-              type="button"
-              className={`wb-gate-btn${gate === g ? ' is-active' : ''}`}
-              onClick={() => {
-                setGate(g);
-                const first = INITIAL_ENTRIES[g]?.[0];
-                if (first) setSelectedId(first.id);
-                setReplayBlocked(null);
-              }}
-            >
-              {g}
-            </button>
-          ))}
+      {/* Topo da janela com moldura de hardware, seletor de portão e lentes */}
+      <div className="drb-chrome">
+        <div className="drb-chrome-left">
+          <div className="drb-lights" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+          <div className="drb-gate-switch" role="group" aria-label="Portão ativo">
+            {GATES.map((g) => (
+              <button
+                key={g}
+                type="button"
+                className={`drb-gate-pill${gate === g ? ' is-active' : ''}`}
+                onClick={() => {
+                  setGate(g);
+                  const first = INITIAL_ENTRIES[g]?.[0];
+                  if (first) setSelectedId(first.id);
+                  setReplayBlocked(null);
+                }}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="wb-views" role="tablist" aria-label="Alternar lente operacional">
+        <div className="drb-lens-bar" role="tablist" aria-label="Superfície operacional">
           {(
             [
-              ['portaria', '1. Visão Portaria'],
-              ['sala', '2. Visão Sala de Aula'],
-              ['familia', '3. Celular da Família'],
-              ['telao', '4. Telão do Pátio'],
-              ['custodia', '5. Livro SHA-256'],
+              ['portaria', 'Portaria'],
+              ['sala', 'Sala de Aula'],
+              ['familia', 'App Família'],
+              ['telao', 'Telão TV'],
+              ['custodia', 'Cadeia SHA-256'],
             ] as [RoleTab, string][]
           ).map(([id, label]) => (
             <button
@@ -322,7 +356,7 @@ export default function HeroBoard() {
               type="button"
               role="tab"
               aria-selected={roleTab === id}
-              className={`wb-view-tab${roleTab === id ? ' is-active' : ''}`}
+              className={`drb-lens-tab${roleTab === id ? ' is-active' : ''}`}
               onClick={() => setRoleTab(id)}
             >
               {label}
@@ -330,32 +364,123 @@ export default function HeroBoard() {
           ))}
         </div>
 
-        <div className="wb-telemetry">
-          <span className="wb-live-dot" aria-hidden="true" />
-          <span>Simulador interativo</span>
+        <div className="drb-chrome-right">
+          <span className="drb-live-badge">
+            <span className="drb-pulse-dot" aria-hidden="true" />
+            INTERATIVO
+          </span>
           <button
             type="button"
-            className="wb-reset-btn"
+            className="drb-reset"
             onClick={resetDemo}
-            title="Restaurar fila inicial"
+            title="Restaurar simulação"
           >
-            Reiniciar
+            Resetar
           </button>
         </div>
       </div>
 
-      {/* Corpo principal da bancada: 2 colunas operacionais */}
-      <div className="wb-body">
-        {/* Coluna 1: Fila do portão */}
-        <div className="wb-queue-col">
-          <div className="wb-col-head">
-            <span>Fila ativa · {gate}</span>
+      {/* Palco principal do cockpit */}
+      <div className="drb-stage">
+        {/* Coluna esquerda: Radar de baias + lista de fila */}
+        <div className="drb-radar-col">
+          <div className="drb-col-header">
+            <span>RADAR DE BAIAS · {gate.toUpperCase()}</span>
             <span className="wb-mono">
-              {readyList.length} na baia · {routeList.length} a caminho
+              {readyList.length} PRONTOS / {routeList.length} A CAMINHO
             </span>
           </div>
 
-          <ul className="wb-student-list" aria-label="Alunos na fila de saída">
+          {/* Esquemático visual SVG da zona de embarque (Dribbble telemetry signature) */}
+          <div className="drb-zone-map" aria-hidden="true">
+            <svg viewBox="0 0 380 86" className="drb-zone-svg">
+              {/* Anéis de aproximação */}
+              <rect
+                x="4"
+                y="8"
+                width="372"
+                height="70"
+                rx="10"
+                fill="rgba(255,255,255,0.02)"
+                stroke="rgba(255,255,255,0.08)"
+              />
+              <line
+                x1="130"
+                y1="8"
+                x2="130"
+                y2="78"
+                stroke="rgba(52, 211, 153, 0.25)"
+                strokeDasharray="3 3"
+              />
+              <line
+                x1="255"
+                y1="8"
+                x2="255"
+                y2="78"
+                stroke="rgba(255,255,255,0.12)"
+                strokeDasharray="3 3"
+              />
+              <text x="14" y="24" fill="#7fe0ae" fontSize="9" fontWeight="700" fontFamily="monospace">
+                BAIA DE EMBARQUE (0-20m)
+              </text>
+              <text x="140" y="24" fill="#9fc9b4" fontSize="9" fontFamily="monospace">
+                ZONA GEOFENCE 2X (150m)
+              </text>
+              <text x="265" y="24" fill="#7c9c8c" fontSize="9" fontFamily="monospace">
+                EM ROTA (300m+)
+              </text>
+
+              {/* Pinos dinâmicos dos alunos no mapa */}
+              {currentList.map((st, idx) => {
+                const isSel = activeStudent?.id === st.id;
+                const xPos =
+                  st.status === 'VALIDATED'
+                    ? 36
+                    : st.status === 'CALLED'
+                      ? 84
+                      : st.status === 'RELEASED'
+                        ? 20
+                        : st.eta <= 2
+                          ? 185
+                          : 305;
+                const yPos = 44 + (idx % 2) * 18;
+                const fill =
+                  st.status === 'CALLED' || st.status === 'VALIDATED'
+                    ? '#34d399'
+                    : st.status === 'RELEASED'
+                      ? '#6b8a7a'
+                      : '#f5c56b';
+                return (
+                  <g key={st.id}>
+                    {isSel ? (
+                      <circle
+                        cx={xPos}
+                        cy={yPos}
+                        r="11"
+                        fill="none"
+                        stroke={fill}
+                        strokeWidth="1.5"
+                        opacity="0.65"
+                      />
+                    ) : null}
+                    <circle cx={xPos} cy={yPos} r="5.5" fill={fill} />
+                    <text
+                      x={xPos + 9}
+                      y={yPos + 3}
+                      fill={isSel ? '#ffffff' : '#b7dcc8'}
+                      fontSize="9.5"
+                      fontWeight={isSel ? '700' : '500'}
+                      fontFamily="sans-serif"
+                    >
+                      {st.name.split(' ')[0]} ({st.bay})
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+
+          <ul className="drb-queue-cards" aria-label="Fila de alunos">
             {currentList.map((item) => {
               const badge = statusBadge(item.status);
               const isSelected = activeStudent?.id === item.id;
@@ -363,28 +488,26 @@ export default function HeroBoard() {
                 <li key={item.id}>
                   <button
                     type="button"
-                    className={`wb-student-row${isSelected ? ' is-selected' : ''} is-${item.status.toLowerCase()}`}
+                    className={`drb-q-card${isSelected ? ' is-selected' : ''}`}
                     onClick={() => {
                       setSelectedId(item.id);
                       setReplayBlocked(null);
                     }}
                   >
-                    <div className="wb-student-main">
-                      <span className="wb-student-name">{item.name}</span>
-                      <span className="wb-student-meta">
-                        <span className="wb-grade-tag">{item.grade}</span>
-                        <span>
-                          {item.tutorName} ({item.relation})
-                        </span>
+                    <span className="drb-q-bay">{item.bay}</span>
+                    <div className="drb-q-info">
+                      <span className="drb-q-name">{item.name}</span>
+                      <span className="drb-q-sub">
+                        {item.grade} · {item.tutorName} ({item.relation})
                       </span>
                     </div>
-                    <div className="wb-student-right">
+                    <div className="drb-q-meta">
                       <span className={`wb-status-chip ${badge.cls}`}>
                         {badge.label}
                       </span>
-                      <span className="wb-eta-code">
+                      <span className="wb-mono drb-q-dist">
                         {item.status === 'EN_ROUTE'
-                          ? `~${item.eta} min`
+                          ? `${item.distanceMeters}m · ~${item.eta}m`
                           : `#${item.nonce.slice(0, 4)}`}
                       </span>
                     </div>
@@ -393,207 +516,226 @@ export default function HeroBoard() {
               );
             })}
           </ul>
-          <p className="wb-helper-note">
-            Clique em um aluno acima ou avance o passo ao lado para testar cada
-            terminal.
-          </p>
         </div>
 
-        {/* Coluna 2: Inspetor contextual que muda conforme a lente escolhida */}
-        <div className="wb-inspector-col">
+        {/* Coluna direita: Cartão de Custódia Tátil & Lente Ativa */}
+        <div className="drb-focus-col">
           {activeStudent ? (
             <>
               {roleTab === 'portaria' && (
-                <div className="wb-pane">
-                  <div className="wb-col-head">
-                    <span>Inspetor do Agente de Portão</span>
-                    <span className="wb-mono">NONCE #{activeStudent.nonce}</span>
+                <div className="drb-pass-card">
+                  <div className="drb-pass-header">
+                    <div>
+                      <span className="drb-pass-kicker">
+                        CREDENCIAL DE LIBERAÇÃO · {activeStudent.bay}
+                      </span>
+                      <h3 className="drb-pass-title">{activeStudent.name}</h3>
+                      <p className="drb-pass-room">
+                        {activeStudent.grade} · {activeStudent.classroom}
+                      </p>
+                    </div>
+                    <div className="drb-ttl-ring">
+                      <span className="wb-mono drb-ttl-num">
+                        {String(qrSeconds).padStart(2, '0')}s
+                      </span>
+                      <span className="drb-ttl-label">TTL QR</span>
+                      <div className="drb-ttl-bar">
+                        <span style={{ width: `${progressRatio}%` }} />
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="wb-dossier">
-                    <div className="wb-dossier-top">
-                      <div>
-                        <span className="wb-dossier-label">Aluno selecionado</span>
-                        <h3 className="wb-dossier-name">{activeStudent.name}</h3>
-                        <p className="wb-dossier-sub">
-                          {activeStudent.grade} · {activeStudent.classroom}
-                        </p>
-                      </div>
-                      <span
-                        className={`wb-status-chip ${statusBadge(activeStudent.status).cls}`}
-                      >
-                        {statusBadge(activeStudent.status).label}
-                      </span>
+                  {/* Trilha visual das 4 etapas da máquina de estados */}
+                  <div className="drb-state-track" aria-label="Progresso da retirada">
+                    {[
+                      { step: 1, label: 'Geofence 2x' },
+                      { step: 2, label: 'Chamado' },
+                      { step: 3, label: 'QR 30s OK' },
+                      { step: 4, label: 'SHA-256' },
+                    ].map((s) => {
+                      const activeIdx = statusBadge(activeStudent.status).stepIndex;
+                      const done = s.step <= activeIdx;
+                      const current = s.step === activeIdx;
+                      return (
+                        <div
+                          key={s.step}
+                          className={`drb-st-node${done ? ' is-done' : ''}${current ? ' is-current' : ''}`}
+                        >
+                          <span className="drb-st-dot">{done ? '✓' : s.step}</span>
+                          <span className="drb-st-text">{s.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="drb-pass-specs">
+                    <div className="drb-spec-cell">
+                      <span>PORTADOR VERIFICADO</span>
+                      <strong>
+                        {activeStudent.tutorName} ({activeStudent.relation})
+                      </strong>
                     </div>
-
-                    <dl className="wb-dossier-grid">
-                      <div>
-                        <dt>Portador autorizado</dt>
-                        <dd>
-                          {activeStudent.tutorName} ({activeStudent.relation})
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Janela do QR dinâmico</dt>
-                        <dd className="wb-mono">
-                          Expira em {String(qrSeconds).padStart(2, '0')}s (uso único)
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Hash SHA-256 do evento</dt>
-                        <dd className="wb-mono">{activeStudent.hash}</dd>
-                      </div>
-                      <div>
-                        <dt>Encadeado ao evento anterior</dt>
-                        <dd className="wb-mono">{activeStudent.prevHash}</dd>
-                      </div>
-                    </dl>
-
-                    {replayBlocked ? (
-                      <div className="wb-alert-err" role="alert">
-                        {replayBlocked}
-                      </div>
-                    ) : null}
-
-                    <div className="wb-actions">
-                      <button
-                        type="button"
-                        className="wb-primary-action"
-                        onClick={() => advanceStudent(activeStudent)}
-                      >
-                        {actionButtonLabel(activeStudent.status)}
-                      </button>
-                      <button
-                        type="button"
-                        className="wb-secondary-action"
-                        onClick={simulateReplayAttack}
-                      >
-                        Testar print clonado (401)
-                      </button>
+                    <div className="drb-spec-cell">
+                      <span>TOKEN EFÊMERO REDIS</span>
+                      <strong className="wb-mono">
+                        NONCE #{activeStudent.nonce}
+                      </strong>
                     </div>
+                    <div className="drb-spec-cell">
+                      <span>ASSINATURA DO EVENTO</span>
+                      <strong className="wb-mono">
+                        sha256:{activeStudent.hash}
+                      </strong>
+                    </div>
+                    <div className="drb-spec-cell">
+                      <span>ELO ANTERIOR</span>
+                      <strong className="wb-mono">
+                        prev:{activeStudent.prevHash}
+                      </strong>
+                    </div>
+                  </div>
+
+                  {replayBlocked ? (
+                    <div className="wb-alert-err" role="alert">
+                      {replayBlocked}
+                    </div>
+                  ) : null}
+
+                  <div className="drb-pass-actions">
+                    <button
+                      type="button"
+                      className="drb-btn-advance"
+                      onClick={() => advanceStudent(activeStudent)}
+                    >
+                      {actionButtonLabel(activeStudent.status)}
+                    </button>
+                    <button
+                      type="button"
+                      className="drb-btn-attack"
+                      onClick={simulateReplayAttack}
+                    >
+                      Simular print clonado (401)
+                    </button>
                   </div>
                 </div>
               )}
 
               {roleTab === 'sala' && (
-                <div className="wb-pane">
-                  <div className="wb-col-head">
-                    <span>Terminal da Professora (/sala)</span>
+                <div className="drb-pass-card">
+                  <div className="drb-col-header">
+                    <span>TERMINAL SILENCIOSO DA TURMA (/SALA)</span>
                     <span className="wb-mono">{activeStudent.classroom}</span>
                   </div>
-                  <div className="wb-dossier">
-                    <p className="wb-pane-intro">
-                      Na sala de aula, nenhum microfone interrompe a turma. A
-                      professora enxerga apenas quem já teve presença confirmada no
-                      portão:
-                    </p>
-                    <div className="wb-classroom-board">
-                      <div className="wb-cb-group">
-                        <span className="wb-cb-title">
-                          Liberar agora para o {gate} ({readyList.length})
-                        </span>
-                        {readyList.length === 0 ? (
-                          <p className="wb-cb-empty">
-                            Nenhum aluno chamado no portão neste instante.
-                          </p>
-                        ) : (
-                          readyList.map((s) => (
-                            <div key={s.id} className="wb-cb-row is-urgent">
-                              <strong>
-                                {s.name} ({s.grade})
-                              </strong>
-                              <span className="wb-mono">
-                                Enviar ao {gate} · {s.tutorName} aguardando
-                              </span>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                      <div className="wb-cb-group">
-                        <span className="wb-cb-title">
-                          Prepare a mochila — responsável a caminho ({routeList.length})
-                        </span>
-                        {routeList.map((s) => (
-                          <div key={s.id} className="wb-cb-row">
-                            <span>
+                  <p className="wb-pane-intro">
+                    Zero microfone no pátio. A tela da professora destaca em verde
+                    somente quem já está com o responsável parado na baia:
+                  </p>
+                  <div className="wb-classroom-board">
+                    <div className="wb-cb-group">
+                      <span className="wb-cb-title">
+                        LIBERAR IMEDIATAMENTE PARA O PORTÃO ({readyList.length})
+                      </span>
+                      {readyList.length === 0 ? (
+                        <p className="wb-cb-empty">
+                          Nenhum aluno aguardando na baia agora.
+                        </p>
+                      ) : (
+                        readyList.map((s) => (
+                          <div key={s.id} className="wb-cb-row is-urgent">
+                            <strong>
                               {s.name} ({s.grade})
+                            </strong>
+                            <span className="wb-mono">
+                              {s.bay} · {s.tutorName}
                             </span>
-                            <span className="wb-mono">Chegada em ~{s.eta} min</span>
                           </div>
-                        ))}
-                      </div>
+                        ))
+                      )}
                     </div>
-                    <div className="wb-actions">
-                      <button
-                        type="button"
-                        className="wb-primary-action"
-                        onClick={() => advanceStudent(activeStudent)}
-                      >
-                        {actionButtonLabel(activeStudent.status)}
-                      </button>
+                    <div className="wb-cb-group">
+                      <span className="wb-cb-title">
+                        PREPARAR MOCHILA — EM APROXIMAÇÃO ({routeList.length})
+                      </span>
+                      {routeList.map((s) => (
+                        <div key={s.id} className="wb-cb-row">
+                          <span>
+                            {s.name} ({s.grade})
+                          </span>
+                          <span className="wb-mono">
+                            {s.distanceMeters}m · ~{s.eta} min
+                          </span>
+                        </div>
+                      ))}
                     </div>
+                  </div>
+                  <div className="drb-pass-actions">
+                    <button
+                      type="button"
+                      className="drb-btn-advance"
+                      onClick={() => advanceStudent(activeStudent)}
+                    >
+                      {actionButtonLabel(activeStudent.status)}
+                    </button>
                   </div>
                 </div>
               )}
 
               {roleTab === 'familia' && (
-                <div className="wb-pane">
-                  <div className="wb-col-head">
-                    <span>Tela do Responsável (/responsavel)</span>
+                <div className="drb-pass-card">
+                  <div className="drb-col-header">
+                    <span>CARTÃO DIGITAL DA FAMÍLIA (/RESPONSAVEL)</span>
                     <span className="wb-mono">{activeStudent.tutorName}</span>
                   </div>
-                  <div className="wb-dossier wb-family-view">
-                    <div className="wb-qr-sim">
-                      <svg
-                        viewBox="0 0 64 64"
-                        width="88"
-                        height="88"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="3.5"
-                        aria-hidden="true"
-                      >
-                        <rect x="6" y="6" width="18" height="18" />
-                        <rect x="40" y="6" width="18" height="18" />
-                        <rect x="6" y="40" width="18" height="18" />
-                        <path d="M13 13h4v4h-4zM47 13h4v4h-4zM13 47h4v4h-4zM32 10v14M32 32h14M40 44h16M32 48v10" />
-                      </svg>
-                      <div className="wb-qr-meta">
-                        <span className="wb-mono wb-qr-nonce">
-                          TOKEN #{activeStudent.nonce}
-                        </span>
-                        <span className="wb-qr-timer">
-                          Renova automaticamente em{' '}
-                          <strong>{String(qrSeconds).padStart(2, '0')}s</strong>
-                        </span>
-                        <span className="wb-qr-status">
-                          Status para {activeStudent.name}:{' '}
-                          <strong>{statusBadge(activeStudent.status).label}</strong>
-                        </span>
-                      </div>
+                  <div className="wb-qr-sim">
+                    <svg
+                      viewBox="0 0 64 64"
+                      width="92"
+                      height="92"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3.5"
+                      aria-hidden="true"
+                    >
+                      <rect x="6" y="6" width="18" height="18" />
+                      <rect x="40" y="6" width="18" height="18" />
+                      <rect x="6" y="40" width="18" height="18" />
+                      <path d="M13 13h4v4h-4zM47 13h4v4h-4zM13 47h4v4h-4zM32 10v14M32 32h14M40 44h16M32 48v10" />
+                    </svg>
+                    <div className="wb-qr-meta">
+                      <span className="wb-mono wb-qr-nonce">
+                        NONCE #{activeStudent.nonce} · {activeStudent.bay}
+                      </span>
+                      <span className="wb-qr-timer">
+                        Rotaciona em{' '}
+                        <strong>{String(qrSeconds).padStart(2, '0')}s</strong> (anti-print)
+                      </span>
+                      <span className="wb-qr-status">
+                        Aluno: <strong>{activeStudent.name}</strong> (
+                        {statusBadge(activeStudent.status).label})
+                      </span>
                     </div>
-                    <p className="wb-pane-intro">
-                      O código muda a cada 30 segundos no Redis. Se alguém tirar print e
-                      mandar por mensagem, o servidor recusa na portaria.
-                    </p>
-                    <div className="wb-actions">
-                      <button
-                        type="button"
-                        className="wb-primary-action"
-                        onClick={() => advanceStudent(activeStudent)}
-                      >
-                        {actionButtonLabel(activeStudent.status)}
-                      </button>
-                    </div>
+                  </div>
+                  <p className="wb-pane-intro">
+                    Com um toque em &ldquo;Estou chegando&rdquo;, o responsável entra na fila
+                    do portão certo e apresenta este QR dinâmico na janela do carro.
+                  </p>
+                  <div className="drb-pass-actions">
+                    <button
+                      type="button"
+                      className="drb-btn-advance"
+                      onClick={() => advanceStudent(activeStudent)}
+                    >
+                      {actionButtonLabel(activeStudent.status)}
+                    </button>
                   </div>
                 </div>
               )}
 
               {roleTab === 'telao' && (
-                <div className="wb-pane">
-                  <div className="wb-col-head">
-                    <span>Modo Telão de Pátio (/telao)</span>
-                    <span className="wb-mono">Leitura a 5+ metros</span>
+                <div className="drb-pass-card">
+                  <div className="drb-col-header">
+                    <span>PAINEL DE ALTO CONTRASTE (/TELAO)</span>
+                    <span className="wb-mono">TV DO PÁTIO · 5+ METROS</span>
                   </div>
                   <div className="wb-telao-mini">
                     <div className="wb-tm-col is-ready">
@@ -621,17 +763,12 @@ export default function HeroBoard() {
                           <span>~{s.eta} min</span>
                         </div>
                       ))}
-                      {releasedList.length > 0 && (
-                        <span className="wb-tm-empty">
-                          +{releasedList.length} já entregue(s) neste ciclo
-                        </span>
-                      )}
                     </div>
                   </div>
-                  <div className="wb-actions" style={{ marginTop: 12 }}>
+                  <div className="drb-pass-actions">
                     <button
                       type="button"
-                      className="wb-primary-action"
+                      className="drb-btn-advance"
                       onClick={() => advanceStudent(activeStudent)}
                     >
                       {actionButtonLabel(activeStudent.status)}
@@ -641,37 +778,35 @@ export default function HeroBoard() {
               )}
 
               {roleTab === 'custodia' && (
-                <div className="wb-pane">
-                  <div className="wb-col-head">
-                    <span>Livro de Custódia Criptográfica</span>
-                    <span className="wb-mono">SHA-256 Encadeado</span>
+                <div className="drb-pass-card">
+                  <div className="drb-col-header">
+                    <span>LIVRO DE CUSTÓDIA IMUTÁVEL</span>
+                    <span className="wb-mono">CADEIA SHA-256</span>
                   </div>
-                  <div className="wb-dossier">
-                    <ul className="wb-audit-list">
-                      {auditLog.map((log) => (
-                        <li key={log.seq} className="wb-audit-item">
-                          <span className="wb-mono wb-audit-seq">
-                            #{String(log.seq).padStart(4, '0')} · {log.time}
-                          </span>
-                          <strong className="wb-mono wb-audit-evt">
-                            {log.event}
-                          </strong>
-                          <span className="wb-audit-st">{log.student}</span>
-                          <span className="wb-mono wb-audit-hash">
-                            sha256:{log.hash} (prev:{log.prev})
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="wb-actions">
-                      <button
-                        type="button"
-                        className="wb-primary-action"
-                        onClick={() => advanceStudent(activeStudent)}
-                      >
-                        Gerar novo evento na cadeia SHA-256
-                      </button>
-                    </div>
+                  <ul className="wb-audit-list">
+                    {auditLog.map((log) => (
+                      <li key={log.seq} className="wb-audit-item">
+                        <span className="wb-mono wb-audit-seq">
+                          #{String(log.seq).padStart(4, '0')} · {log.time}
+                        </span>
+                        <strong className="wb-mono wb-audit-evt">
+                          {log.event}
+                        </strong>
+                        <span className="wb-audit-st">{log.student}</span>
+                        <span className="wb-mono wb-audit-hash">
+                          sha256:{log.hash} ⟵ {log.prev}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="drb-pass-actions">
+                    <button
+                      type="button"
+                      className="drb-btn-advance"
+                      onClick={() => advanceStudent(activeStudent)}
+                    >
+                      Registrar novo elo na cadeia SHA-256
+                    </button>
                   </div>
                 </div>
               )}
@@ -680,11 +815,11 @@ export default function HeroBoard() {
         </div>
       </div>
 
-      {/* Fita inferior do livro de auditoria ao vivo */}
+      {/* Fita inferior do livro criptográfico */}
       <div className="wb-audit-tape" aria-live="polite">
-        <span className="wb-tape-tag">ÚLTIMO REGISTRO IMUTÁVEL</span>
+        <span className="wb-tape-tag">LEDGER SHA-256 AO VIVO</span>
         <span className="wb-mono">
-          evt_#{String(auditLog[0]?.seq ?? 484).padStart(4, '0')} [{auditLog[0]?.time}]
+          evt_#{String(auditLog[0]?.seq ?? 484).padStart(4, '0')} · {auditLog[0]?.time}
         </span>
         <strong className="wb-mono">{auditLog[0]?.event}</strong>
         <span>{auditLog[0]?.student}</span>
@@ -692,6 +827,6 @@ export default function HeroBoard() {
           sha256:{auditLog[0]?.hash} ⟵ prev:{auditLog[0]?.prev}
         </span>
       </div>
-    </section>
+    </div>
   );
 }
