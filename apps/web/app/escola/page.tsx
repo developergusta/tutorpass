@@ -253,6 +253,30 @@ function TurmasTab({
   const [year, setYear] = useState('2026');
   const [room, setRoom] = useState('');
   const [busy, setBusy] = useState(false);
+  // Contagem de alunos ativos por turma (ciclo UI 17): uma só leitura do
+  // cadastro p/ a aba inteira; null = ainda não carregou ou falhou — aí a
+  // linha fica como antes, sem contagem, e a lista segue.
+  const [counts, setCounts] = useState<Record<string, number> | null>(null);
+
+  const reloadCounts = useCallback(async () => {
+    try {
+      const all = await listStudents();
+      const byClass: Record<string, number> = {};
+      for (const s of all) {
+        if (s.status !== 'ACTIVE') continue;
+        byClass[s.classroomId] = (byClass[s.classroomId] ?? 0) + 1;
+      }
+      setCounts(byClass);
+    } catch {
+      setCounts(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    void reloadCounts();
+  }, [reloadCounts]);
+
+  const totalStudents = counts ? Object.values(counts).reduce((a, b) => a + b, 0) : null;
 
   async function onCreate(e: FormEvent) {
     e.preventDefault();
@@ -269,6 +293,7 @@ function TurmasTab({
       setGrade('');
       setRoom('');
       await onChanged();
+      await reloadCounts();
       onNotice('Turma criada.');
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Não foi possível criar a turma.');
@@ -282,6 +307,7 @@ function TurmasTab({
     try {
       await deactivateClassroom(c.id);
       await onChanged();
+      await reloadCounts();
       onNotice(`Turma "${c.name}" desativada.`);
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Não foi possível desativar a turma.');
@@ -317,6 +343,16 @@ function TurmasTab({
         </p>
       </form>
 
+      {/* Resumo do cadastro (ciclo UI 17): a secretaria vê o tamanho da
+          escola num olhar — quantas turmas e quantos alunos ativos — sem
+          abrir a aba de alunos nem contar na mão. */}
+      {totalStudents !== null && classrooms.length > 0 ? (
+        <p className="muted" role="status">
+          {classrooms.length} {classrooms.length === 1 ? 'turma' : 'turmas'} ·{' '}
+          {totalStudents} {totalStudents === 1 ? 'aluno ativo' : 'alunos ativos'}
+        </p>
+      ) : null}
+
       <ul className="roster-list">
         {classrooms.length === 0 ? (
           <li className="muted">Nenhuma turma ainda — crie a primeira no formulário acima.</li>
@@ -328,6 +364,12 @@ function TurmasTab({
                 {c.grade ? <span className="muted"> · {c.grade}</span> : null}
                 <span className="muted"> · {c.academicYear}</span>
                 {c.roomLocation ? <span className="muted"> · {c.roomLocation}</span> : null}
+                {counts ? (
+                  <span className="muted">
+                    {' '}
+                    · {counts[c.id] ?? 0} {(counts[c.id] ?? 0) === 1 ? 'aluno' : 'alunos'}
+                  </span>
+                ) : null}
               </span>
               {c.isActive ? (
                 <button className="btn secondary small" type="button" onClick={() => void onDeactivate(c)}>

@@ -1,3 +1,84 @@
+## 2026-11-17 22:24–22:31 — Ciclo UI 17: a turma mostra o tamanho (contagem de alunos na /escola)
+
+**Pesquisa do ciclo (frente b — UX de fluxos escolares e de atendimento)**
+- **A lista de turmas mostra o total de alunos de cada uma**
+  (support.edgelearning.co.nz, 2026 — Class Summary): "A list of all
+  classes displays along with the total number of students in each" —
+  o resumo por turma é a referência rápida do cadastro; abrir cada
+  turma p/ contar é o retrabalho que o resumo elimina.
+- **A linha sob o título resume a conta inteira** (certclass.io, 2026):
+  "The line under the title sums up your whole account: how many
+  different people are on it" — e, no cadastro de uma turma, "shows
+  seats filled" é o número que a secretaria confere antes de
+  matricular.
+- **Contagem sem dado é ruído** (certclass.io, 2026): as visões rápidas
+  trazem a contagem junto e as vazias nem aparecem.
+- Achados registrados em `docs/product/IDEAS.md` (frente b, ciclo UI
+  17); o item implementado era um refinamento da /escola — a fila UI
+  segue com os itens bloqueados na API (sala do professor, app do
+  tutor, join em grupo, Segurança/Equipe fase 2).
+
+**Direção (unslop)** — Produto: a secretaria conferindo o cadastro
+antes de matricular — quantos alunos cabem em cada turma, sem abrir
+uma por uma. Caráter: calmo, exato. Momento: nenhum novo — a contagem
+é texto quieto na mesma linha que já existia, não um cartão novo nem
+um selo colorido; a tela não muda de lugar. Assinatura: nenhuma — o
+número certo no lugar certo é o conserto.
+
+**O que foi feito**
+- **Contagem por turma** (`escola/page.tsx`, `TurmasTab`): cada linha
+  da lista mostra "· N alunos" depois de série, ano e sala — só
+  alunos com status ACTIVE contam; a turma vazia lê "0 alunos", o que
+  também é informação (a secretaria vê onde cabe matricular). Uma só
+  leitura do cadastro (`listStudents()` sem filtro) p/ a aba inteira,
+  contada no navegador por `classroomId`.
+- **Resumo da escola** acima da lista, em texto quieto com
+  `role="status"`: "N turmas · M alunos ativos" (pluralização em
+  pt-BR: 1 turma / 1 aluno ativo). Só aparece quando há turmas e a
+  contagem carregou.
+- **Falha silenciosa de propósito**: se a leitura do cadastro falhar
+  (sem permissão ou API fora do ar), a contagem some e a linha volta
+  ao formato anterior — a lista de turmas segue, sem erro na tela. A
+  contagem recarrega ao criar/desativar uma turma e ao trocar de aba
+  (os painéis desmontam quando inativos, então voltar à aba Turmas
+  remonta e relê o cadastro — um aluno cadastrado na aba ao lado já
+  aparece na contagem sem recarregar a página).
+- **Auditoria unslop do ciclo**: nenhum sinal novo — 1 gradiente
+  (painel "Pode retirar agora") e 1 caixa alta ("AGORA"), ambos
+  intencionais desde os ciclos 7/8; zero emoji no web; nenhum pulso em
+  loop; nenhum `transition-all`; o hover que levanta `.plan`/`.step`
+  4 px é o clássico pedido pelo usuário na landing e fica.
+- Nenhuma regra de negócio, preço ou API tocada. Só web (1 arquivo).
+
+**Arquivos alterados**
+- `apps/web/app/escola/page.tsx` (`TurmasTab`: `counts` + `reloadCounts`
+  + resumo + contagem por linha)
+- `docs/product/IDEAS.md` (frente b, ciclo UI 17), `BACKLOG.md` (fila UI/UX)
+
+**Verificação** — `next build` em apps/web: **OK** (tipos válidos, 16
+rotas; `/escola` 9,72 → 9,92 kB, o resto inalterado). Limitação: sem
+navegador neste sandbox e sem escola de teste com turmas de tamanhos
+diferentes — a prova ao vivo (a contagem certa em cada linha + o
+resumo, e o "0 alunos" numa turma vazia) fica p/ a verificação ao
+vivo.
+
+**Ciclo paralelo no mesmo checkout (registrado, sem dano)**: durante
+este ciclo, outro ciclo (API) trabalha na persistência do roster —
+`apps/api/prisma/schema.prisma`, `apps/api/src/modules/roster/
+roster.service.ts` e a migration
+`20261117214500_roster_persistence/` estão modificados e NÃO foram
+incluídos neste commit (commit explícito só dos arquivos deste ciclo,
+como nos incidentes dos ciclos UI 5/11/12). O artefato
+`apps/web/tsconfig.tsbuildinfo` gerado pela verificação local foi
+removido antes do commit.
+
+**Próximo (fila UI)** — tela de sala p/ o professor (quem foi chamado
++ p/ qual portão mandar), bloqueada na API (TEACHER precisa ler o
+roster); app do tutor segue bloqueado na API (rota p/ emitir o QR +
+vínculo usuário ↔ Tutor); candidatas com falta na API: join em grupo
+e Segurança/Equipe fase 2. Candidatas só de web: a mesma contagem na
+aba Responsáveis e o sinal de "aluno sem responsável" na aba Alunos.
+
 ## 2026-11-17 21:54–22:05 — Ciclo UI 16: a fila fala (teclado + leitor de tela na operação)
 
 **Pesquisa do ciclo (frente c — acessibilidade e mobile)**

@@ -116,6 +116,23 @@ mesmo do login: **o motor existe e é testado; falta a camada de uso**.
 - [ ] Observabilidade: logs estruturados, métricas de fila, alerta de fila > N
 
 ## Fila UI/UX (rotina de 30 min — ordem: login → portaria → telão → planos → estados vazios/erro → mobile)
+- [x] **A turma mostra o tamanho (ciclo UI 17, 17/11/2026)** — a aba
+  Turmas da /escola listava nome, série, ano e sala, mas não quantos
+  alunos havia em cada uma — a secretaria abria turma por turma p/
+  conferir onde cabia matricular. Agora cada linha mostra "· N
+  alunos" (só ativos; a vazia lê "0 alunos") e um resumo quieto acima
+  da lista ("N turmas · M alunos ativos", com `role="status"`); uma só
+  leitura do cadastro p/ a aba inteira, recarregada ao criar/desativar
+  e ao trocar de aba. Se a leitura falhar, a contagem some em silêncio
+  e a lista segue. `next build` OK (16 rotas; /escola 9,92 kB).
+  Auditoria unslop do ciclo: sem sinal novo — 1 gradiente e 1 caixa
+  alta, ambos intencionais; zero emoji. Próximo da fila UI: **tela de
+  sala p/ o professor**, bloqueada na API (TEACHER recebe 403 no
+  roster); **app do tutor** segue bloqueado na API (sem rota p/ emitir
+  o QR dinâmico nem vínculo usuário ↔ Tutor). Candidatas só de web: a
+  mesma contagem na aba Responsáveis e o sinal de "aluno sem
+  responsável" na aba Alunos. Ver docs/product/IDEAS.md, frente b,
+  ciclo UI 17.
 - [x] **Teclado + leitor de tela na operação (ciclo UI 16, 17/11/2026)** —
   a portaria mudava sozinha e o leitor de tela não sabia; as abas da
   /escola só andavam de mouse; e não havia como pular a topbar de
