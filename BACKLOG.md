@@ -63,10 +63,28 @@ mesmo do login: **o motor existe e é testado; falta a camada de uso**.
   provou o fluxo com entradas reais — só o transporte. Correção é de
   API (fora do escopo da rotina UI): ligar as emissões no join/call/
   validate/release/cancel do PickupService (ou do controller) e cobrir
-  com teste de integração socket. Agravante: o payload da entrada não
-  traz nome do aluno nem turma — quando os eventos passarem a sair, as
-  linhas vão ler "Aluno" (fallback do hook) até a API enriquecer o
-  payload ou o web resolver o nome via roster.
+  com teste de integração socket. Agravante (mitigado no web no ciclo
+  UI 14, 17/11/2026): o payload da entrada não traz nome do aluno nem
+  turma — o hook da fila agora resolve nome + turma no roster da escola
+  (GET /roster/students + /roster/classrooms), então as linhas mostram
+  o nome real quando os eventos passarem a sair; sem o roster (TEACHER/
+  TUTOR recebem 403) o fallback "Aluno" continua.
+- [ ] **Falta na API — TEACHER não lê o roster (bloqueia a visão de
+  sala).** Descoberto no ciclo UI 14, 17/11/2026: GET /roster/students
+  e GET /roster/classrooms aceitam só ADMIN/COORDINATOR/GATE_AGENT —
+  o professor recebe 403. Sem ler o cadastro, a tela de sala (o
+  professor vê quem foi chamado e manda p/ o portão — padrão Cadence/
+  RapidDismiss) não tem como mostrar nomes. Correção é de API: liberar
+  a leitura do roster p/ TEACHER (só leitura, da própria escola).
+- [ ] **Falta na API — app do tutor sem porta de entrada.** Descoberto
+  no ciclo UI 14, 17/11/2026: `QrTokenService.issue` não tem controller
+  (nenhuma rota emite o QR dinâmico de 30 s p/ o tutor mostrar na
+  portaria) e não existe vínculo usuário ↔ entidade Tutor (o join pede
+  `tutorId` no body e o guard só confere o papel — um tutor pode entrar
+  na fila por outro). Sem essas duas rotas, nem o app Expo nem uma
+  tela web do tutor conseguem funcionar. Correção é de API: POST p/
+  emitir o QR do tutor da sessão + resolver o tutorId a partir do
+  `user.sub` no join/cancel.
 - [x] QR: assinatura truncada/adulterada virava 500 (`RangeError` no `timingSafeEqual`) em vez de 401 — corrigido em 16/11/2026, com teste de regressão.
 - [x] Geofencing: regra "ARRIVAL exige 2 pings" nunca valia — 1º ping já emitia `ENTER_ARRIVAL` — corrigido em 16/11/2026 com flag `confirmed`, com testes.
 - [x] Prisma: `schema.prisma` inteiro inválido (campos separados por `;` na mesma linha + enums de uma linha) — `prisma validate` dava 110 erros e `prisma generate` nunca tinha rodado. Corrigido em 16/11/2026 (reformatado + `prisma format`); schema válido e Prisma Client gerado.
@@ -98,6 +116,22 @@ mesmo do login: **o motor existe e é testado; falta a camada de uso**.
 - [ ] Observabilidade: logs estruturados, métricas de fila, alerta de fila > N
 
 ## Fila UI/UX (rotina de 30 min — ordem: login → portaria → telão → planos → estados vazios/erro → mobile)
+- [x] **Nomes da fila resolvidos no roster (ciclo UI 14, 17/11/2026)** —
+  o payload do evento não traz nome nem turma e as linhas liam "Aluno"
+  (agravante do bug crítico do realtime). Agora o hook da fila
+  (`lib/use-pickup-queue.ts`) carrega o cadastro da escola uma vez por
+  montagem (GET /roster/students + /roster/classrooms, já existentes) e
+  resolve nome + turma pelo studentId — na chegada do evento e, se o
+  cadastro chegar depois, nos itens já na fila; o "Tentar de novo"
+  recarrega o cadastro junto. Vale p/ portaria e telão (mesmo hook) e
+  o alerta de irmãos passa a mostrar os nomes quando resolve. Sem
+  permissão (TEACHER/TUTOR, 403) ou fora do ar, some em silêncio e a
+  fila segue com o que o evento trouxe. `next build` OK (16 rotas).
+  Próximo da fila UI: **tela de sala p/ o professor** (quem foi chamado
+  + p/ qual portão mandar — padrão Cadence/RapidDismiss), bloqueada na
+  API: TEACHER recebe 403 no roster; **app do tutor** segue bloqueado
+  na API (sem rota p/ emitir o QR dinâmico nem vínculo usuário ↔
+  Tutor). Ver docs/product/IDEAS.md, frente a, ciclo UI 14.
 - [x] **Irmãos em portões diferentes (ciclo UI 12, 17/11/2026): alerta na
   portaria** — a API já tinha GET sibling-gate-conflicts e o web não
   mostrava (fase 2 registrada no ciclo 24). Agora a portaria lê por REST

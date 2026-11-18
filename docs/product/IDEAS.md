@@ -1760,6 +1760,38 @@ Fontes: tvpilot.app "Digital Signage Color Contrast: What Works on a Real TV" e 
   rouba altura demais dos painéis quando a fila está cheia. Impacto 2,
   Esforço 1 — **registrado no BACKLOG (fila UI)**.
 
+## Semeado em 17/11/2026 — fila ao vivo resolve o nome no cadastro (frente a, ciclo UI 14)
+- **O evento traz o id; a tela resolve o nome no cadastro** (PickupRoster,
+  2026; Cadence, 2026; RapidDismiss, 2026): o quadro importa o roster uma
+  vez (CSV/SIS) e toda tela mostra o nome a partir dele — "students watch
+  for their name instead of listening for a radio call" (PickupRoster). O
+  padrão do setor é o evento leve + resolução local, não o payload gordo.
+  Impacto 4, Esforço 2 — **implementado neste ciclo** (o hook da fila
+  resolve nome + turma no roster da escola; o "Aluno" some da portaria e
+  do telão quando o cadastro casa com o studentId).
+- **A visão do professor é o nome aparecendo na fila dele** (Cadence,
+  2026): "The teacher sees the student's name appear in their queue,
+  confirms the pickup, and marks them as sent" — e o display de sala do
+  RapidDismiss mostra o nome de cada aluno chamado, com som. Impacto 4,
+  Esforço 2 — **bloqueado na API**: o professor (TEACHER) recebe 403 em
+  GET /roster/students e /roster/classrooms, então a tela de sala não tem
+  como resolver nomes; registrado no BACKLOG (falta na API) — a visão de
+  sala é o próximo item da fila UI quando a leitura do roster abrir p/
+  TEACHER.
+- **Uma só fila compartilhada, cada papel vê o que precisa** (DismissQ,
+  2026; pickup., 2026): "The person at the curb, the person in the
+  hallway, and the front office all need the same information at the same
+  time" — e "different staff members see what they need and nothing they
+  don't". Impacto 3, Esforço 1 — o hook é um só p/ portaria e telão, e a
+  resolução de nomes vale p/ as duas telas sem duplicar código; a
+  diferença segue sendo o que cada tela mostra (detalhe na portaria, só
+  nomes no telão), não a fonte do dado.
+- **O que falta p/ o padrão completo (não neste ciclo)**: o app do tutor
+  segue bloqueado na API — não existe rota p/ emitir o QR dinâmico
+  (QrTokenService.issue não tem controller) nem vínculo usuário ↔ Tutor
+  (o join pede tutorId no body); registrado no BACKLOG. Impacto 3,
+  Esforço 1 — **registrado no BACKLOG (fila UI)**.
+
 ## Diferencial TutorPass (tese)
 Concorrente BR forte é suite ampla (comunicação/ERP/facial). TutorPass vence sendo **o melhor só em saída**:
 mais rápido de implantar, QR dinâmico anti-fraude (eles usam QR estático), auditoria imutável com hash

@@ -1,3 +1,79 @@
+## 2026-11-17 20:55–21:10 — Ciclo UI 14: a fila mostra o nome de verdade (resolvido no roster)
+
+**Pesquisa do ciclo (frente a — painéis de saída / filas em tempo real)**
+- **O evento traz o id; a tela resolve o nome no cadastro**
+  (PickupRoster, 2026): o quadro importa o roster uma vez (CSV/SIS) e
+  toda tela mostra o nome a partir dele — "students watch for their
+  name instead of listening for a radio call". O padrão do setor é o
+  evento leve + resolução local, não o payload gordo.
+- **A visão do professor é o nome aparecendo na fila dele** (Cadence,
+  2026): "The teacher sees the student's name appear in their queue,
+  confirms the pickup, and marks them as sent"; o display de sala do
+  RapidDismiss mostra o nome de cada aluno chamado, com som.
+- **Uma só fila compartilhada, cada papel vê o que precisa**
+  (DismissQ, 2026; pickup., 2026): "The person at the curb, the person
+  in the hallway, and the front office all need the same information at
+  the same time" — e "different staff members see what they need and
+  nothing they don't".
+- Achados registrados em `docs/product/IDEAS.md` (frente a, ciclo UI
+  14); o item implementado era o agravante do bug crítico do realtime:
+  **o web resolver o nome via roster** (o próprio BACKLOG nomeava
+  essa saída p/ o "Aluno" das linhas).
+
+**Direção (unslop)** — Produto: a fila da portaria e o telão, que
+linham "Aluno" em toda entrada porque o evento não traz o nome.
+Caráter: calmo, exato. Momento: nenhum novo — o nome certo no lugar
+do placeholder é o conserto; nada muda de lugar na tela. Assinatura:
+nenhuma — a correção é invisível quando funciona (o nome que já
+devia estar lá).
+
+**O que foi feito**
+- **Resolução de nomes no hook da fila** (`lib/use-pickup-queue.ts`):
+  na montagem, o hook carrega o cadastro da escola (GET
+  `/roster/students` + `/roster/classrooms`, rotas que já existiam) e
+  monta o mapa studentId → nome + turma; `normalize()` usa o roster
+  quando o id casa (o nome do cadastro é a fonte de verdade — o
+  "Aluno" do evento some) e `enrichItem()` reaplica o roster nos itens
+  que já estavam na fila quando o cadastro chega depois do evento. O
+  botão "Tentar de novo" recarrega o cadastro junto (um aluno
+  cadastrado no meio do dia aparece sem recarregar a página).
+- **Vale p/ portaria e telão** (o mesmo hook alimenta as duas telas) e
+  o alerta de irmãos passa a mostrar os nomes quando resolve (ele já
+  lia `item.studentName` e ignorava o "Aluno").
+- **Falha silenciosa de propósito**: sem permissão (TEACHER e TUTOR
+  recebem 403 no roster) ou com a API fora do ar, a resolução some sem
+  erro na tela — a fila segue com o que o evento trouxe e o "Aluno"
+  continua sendo o fallback honesto. Nenhuma regra de negócio, preço
+  ou API tocada. Só web (1 arquivo).
+- **Dois bloqueios de API descobertos e registrados no BACKLOG** (fora
+  do escopo desta rotina): (1) TEACHER não lê o roster (403 em
+  students/classrooms) — sem isso a tela de sala do professor não tem
+  como mostrar nomes; (2) o app do tutor não tem porta de entrada —
+  `QrTokenService.issue` não tem controller (nenhuma rota emite o QR
+  dinâmico de 30 s) e não existe vínculo usuário ↔ Tutor (o join pede
+  tutorId no body). O incidente de tipo no meio do ciclo (`for...of`
+  em Map barrado pelo tsconfig) foi corrigido com `forEach`.
+
+**Arquivos alterados**
+- `apps/web/lib/use-pickup-queue.ts` (roster + `normalize`/`enrichItem`)
+- `docs/product/IDEAS.md` (frente a, ciclo UI 14), `BACKLOG.md` (nome
+  resolvido; TEACHER sem roster e app do tutor sem porta registrados)
+
+**Verificação** — `next build` em apps/web: **OK** (tipos válidos, 16
+rotas; `/portaria` 2,44 kB, `/telao` 1,52 kB — tamanhos iguais, só o
+hook mudou). Limitação: sem entradas ativas na escola de teste e com
+o socket sem eventos (bug crítico da API, fora do escopo), a
+resolução só aparece com fila real — a prova ao vivo (um aluno
+chamado mostrar o nome + a turma na portaria e no telão, e o alerta
+de irmãos com os nomes) fica p/ a verificação ao vivo, e depende da
+API emitir a fila.
+
+**Próximo (fila UI)** — tela de sala p/ o professor (quem foi chamado
++ p/ qual portão mandar), bloqueada na API (TEACHER precisa ler o
+roster); app do tutor segue bloqueado na API (rota p/ emitir o QR +
+vínculo usuário ↔ Tutor); candidatas com falta na API: join em grupo
+e Segurança/Equipe fase 2.
+
 ## 2026-11-17 20:24–20:35 — Ciclo UI 13: o alerta de irmãos chega ao telão (só a contagem)
 
 **Pesquisa do ciclo (frente c — acessibilidade de sinalização pública)**
