@@ -116,6 +116,15 @@ mesmo do login: **o motor existe e é testado; falta a camada de uso**.
 - [ ] Observabilidade: logs estruturados, métricas de fila, alerta de fila > N
 
 ## Fila UI/UX (rotina de 30 min — ordem: login → portaria → telão → planos → estados vazios/erro → mobile)
+- [ ] **Caixa de ferramentas anti-genérica — skills indicadas pelo usuário (17/11/2026)** — ele mandou uma tabela de skills "para não ficar com cara de IA" e pediu o registro aqui. Avaliar/instalar as que faltam e usar nas passadas anti-genéricas da rotina (hoje o método é a `unslop` + apoio da `frontend-design`, já instalada, e do checklist `anti-generic-ui`):
+  - **Impeccable** — mapeia 64 padrões de IA genérica e oferece 23 comandos (`/impeccable init`, `shape`, `polish`, `typeset`); audita e refina UIs existentes ou novas; compatível com Claude Code, Cursor, Codex e Copilot. *Candidata mais completa — avaliar primeiro.*
+  - **Hallmark** — aplica 50 temas distintos, usa fotografias reais e faz checagem visual do próprio resultado; bom p/ sair do branco/cinza padrão com estética editorial.
+  - **Taste Skill** — injeta direção de arte, imagens de referência e checagem em browser real; pacote complementar taste-skill-classics (brutalist, minimalist, soft).
+  - **UI/UX Pro Max** — banco pesquisável de estilos de UI, paletas, pares de fontes e tipos de gráficos; ajuda a escolher combinações coerentes por nicho (SaaS, dashboard etc.).
+  - **Oil UI** — checklist de subtração p/ remover excessos decorativos e cara de template; foco em limpeza visual e ativos de produção.
+  - **Design Slop** — audita visual, acessibilidade, responsividade e confiança da interface; ideal p/ revisar páginas prontas e eliminar defeitos de layout.
+  - **No Slop UI** — conjunto de regras que barra abuso de gradientes, glassmorphism e dashboards pouco usáveis; leve e direto p/ colocar nas regras do projeto.
+  - ~~frontend-design~~ — já instalada (oficial da Anthropic, planejamento de tokens e revisão em duas passadas).
 - [x] **A turma mostra o tamanho (ciclo UI 17, 17/11/2026)** — a aba
   Turmas da /escola listava nome, série, ano e sala, mas não quantos
   alunos havia em cada uma — a secretaria abria turma por turma p/
