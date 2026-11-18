@@ -1,3 +1,80 @@
+## 2026-11-17 22:54–23:00 — Ciclo UI 18: o aluno sem responsável aparece na lista
+
+**Pesquisa do ciclo (frente c — acessibilidade e mobile)**
+- **Cor nunca é o único canal do sentido** (WCAG 1.4.1, nível A —
+  jargon-buster.sivaram.dev; wsc.us.org; fivepennyweb.com;
+  accessibility.chat, 2026): "hue can never be the only carrier of
+  meaning" — ~1 em cada 12 homens tem daltonismo e a tela lavada de
+  sol apaga o matiz; o conserto é redundância, não repintura — ícone +
+  palavra junto da cor ("add a text label", técnica G14).
+- **Status de dado ausente se anuncia como texto** (accessibility.chat,
+  2026): o leitor de tela não percebe cor; se a informação vive só no
+  matiz, ela some p/ quem não enxerga e p/ quem imprime em cinza.
+- Achados registrados em `docs/product/IDEAS.md` (frente c, ciclo UI
+  18); o item implementado era o da fila UI: **o sinal de "aluno sem
+  responsável" na aba Alunos** (ciclo UI 17 deixou registrado — a
+  secretaria só descobria abrindo aluno por aluno).
+
+**Direção (unslop)** — Produto: a secretaria conferindo o cadastro
+antes da saída — quem não tem ninguém p/ retirar. Caráter: calmo,
+exato. Momento: nenhum novo — o selo é texto quieto na mesma linha
+que já existia, não um cartão novo nem um selo colorido; a tela não
+muda de lugar. Assinatura: nenhuma — o triângulo de aviso em traço
+2.2, o mesmo gesto dos estados de erro.
+
+**O que foi feito**
+- **Selo "Sem responsável" na linha do aluno** (`escola/page.tsx`,
+  `AlunosTab`): aparece quando o aluno tem 0 responsáveis vinculados
+  — triângulo de aviso SVG inline (o mesmo da `SiblingGateAlert`) +
+  texto, em `.badge.warn` (tom âmbar `--warn-*`, nos dois temas).
+  Nunca só a cor (WCAG 1.4.1): sem o matiz, o triângulo e a palavra
+  continuam dizendo o mesmo.
+- **Resumo quieto acima da lista**, em texto com `role="status"`: "N
+  alunos sem responsável vinculado — sem responsável, ninguém
+  retira." (pluralização em pt-BR). Só aparece quando a contagem de
+  todos os alunos listados já carregou — o número não cresce aos
+  poucos na tela.
+- **Leitura sem tempestade**: a API só devolve os vínculos aluno por
+  aluno (`GET /roster/students/:id/tutors`), então a leitura é uma
+  por aluno — em lotes de 8, só p/ os ids ainda desconhecidos
+  (`knownCounts` em ref). O cache sobrevive à troca de filtro/busca e
+  ao recarregar da lista: digitar na busca não dispara N leituras a
+  cada tecla. Vincular pelo painel atualiza o selo na hora (a lista
+  de vínculos recém-lida alimenta a contagem) e abrir o painel
+  "Responsáveis" também.
+- **Falha silenciosa de propósito**: sem permissão ou com a API fora
+  do ar, o selo some e a lista segue — nunca um selo errado. O selo
+  só existe quando a contagem é conhecida (`tutorCounts[s.id] === 0`);
+  enquanto carrega, a linha fica como antes.
+- **Auditoria unslop do ciclo**: nenhum sinal novo — 1 gradiente
+  (painel "Pode retirar agora") e 1 caixa alta ("AGORA"), ambos
+  intencionais desde os ciclos 7/8; zero emoji no web.
+- Nenhuma regra de negócio, preço ou API tocada. Só web (2 arquivos).
+- **Follow-up de API registrado no BACKLOG**: leitura em massa dos
+  vínculos — o `RosterService.listStudentsOfTutor` existe no serviço
+  mas não tem rota HTTP; uma rota de vínculos em massa (ou
+  `GET /roster/tutors/:id/students`) deixaria a contagem em 1 chamada
+  e destrava a mesma contagem na aba Responsáveis.
+
+**Arquivos alterados**
+- `apps/web/app/escola/page.tsx` (`AlunosTab`: `tutorCounts` +
+  `knownCounts` + selo + resumo; `onOpenTutors`/`onLink` alimentam a
+  contagem)
+- `apps/web/app/globals.css` (+ `.badge.warn`)
+- `docs/product/IDEAS.md` (frente c, ciclo UI 18), `BACKLOG.md` (fila UI/UX)
+
+**Verificação** — `next build` em apps/web: **OK** (tipos válidos, 18
+rotas; `/escola` 9,92 → 10,8 kB, o resto inalterado). Limitação: sem
+navegador neste sandbox e sem escola de teste com aluno sem
+responsável — a prova ao vivo (o selo na linha + o resumo, e o selo
+sumindo ao vincular) fica p/ a verificação ao vivo.
+
+**Próximo (fila UI)** — a mesma contagem na aba Responsáveis
+(quantos alunos cada responsável retira — hoje depende da mesma
+leitura N por N, aguardando a rota de leitura em massa); candidatas:
+passada anti-genérica (skill `unslop` — 3 maiores sinais), join em
+grupo e Segurança/Equipe fase 2 (ambas com falta na API).
+
 ## 2026-11-17 22:37–23:05 — Funcionamento completo dos 5 perfis (pedido do usuário: "faça o funcionamento completo")
 
 **O buraco** — os 5 logins de visão existiam, mas duas visões eram

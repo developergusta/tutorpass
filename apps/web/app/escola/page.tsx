@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import RequireAuth from '../../components/RequireAuth';
 import {
   addSchoolMember,
@@ -412,6 +412,41 @@ function AlunosTab({
   const [linkTutorId, setLinkTutorId] = useState('');
   const [linkRel, setLinkRel] = useState('MOTHER');
   const [linkPrimary, setLinkPrimary] = useState(true);
+  /** Quantos responsáveis cada aluno tem (0 = sem ninguém p/ retirar).
+   * A API só devolve os vínculos aluno por aluno, então a leitura é
+   * uma por aluno — em lotes de 8, só p/ os ids ainda desconhecidos
+   * (o `knownCounts` sobrevive à troca de filtro/busca e ao recarregar
+   * da lista, p/ a busca por nome não disparar N leituras a cada
+   * tecla). Sem permissão ou fora do ar, o selo some em silêncio e a
+   * lista segue — nunca um selo errado. */
+  const [tutorCounts, setTutorCounts] = useState<Record<string, number>>({});
+  const knownCounts = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const unknown = students.map((s) => s.id).filter((id) => !knownCounts.current.has(id));
+    if (unknown.length === 0) return;
+    let cancelled = false;
+    void (async () => {
+      for (let i = 0; i < unknown.length; i += 8) {
+        const batch = unknown.slice(i, i + 8);
+        const results = await Promise.allSettled(batch.map((id) => listStudentTutors(id)));
+        if (cancelled) return;
+        const next: Record<string, number> = {};
+        results.forEach((r, j) => {
+          if (r.status === 'fulfilled') {
+            next[batch[j]] = r.value.length;
+            knownCounts.current.add(batch[j]);
+          }
+        });
+        if (Object.keys(next).length > 0) setTutorCounts((prev) => ({ ...prev, ...next }));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [students]);
+
+  const noTutorCount = students.filter((s) => tutorCounts[s.id] === 0).length;
+  const countsReady = students.length > 0 && students.every((s) => knownCounts.current.has(s.id));
 
   const reload = useCallback(async () => {
     try {
@@ -473,7 +508,10 @@ function AlunosTab({
     setOpenStudent(s.id);
     setStudentTutors([]);
     try {
-      setStudentTutors(await listStudentTutors(s.id));
+      const links = await listStudentTutors(s.id);
+      setStudentTutors(links);
+      knownCounts.current.add(s.id);
+      setTutorCounts((prev) => ({ ...prev, [s.id]: links.length }));
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Não foi possível carregar os responsáveis.');
     }
@@ -492,7 +530,10 @@ function AlunosTab({
         isPrimary: linkPrimary,
         canPickup: true,
       });
-      setStudentTutors(await listStudentTutors(s.id));
+      const links = await listStudentTutors(s.id);
+      setStudentTutors(links);
+      knownCounts.current.add(s.id);
+      setTutorCounts((prev) => ({ ...prev, [s.id]: links.length }));
       onNotice('Responsável vinculado.');
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Não foi possível vincular.');
@@ -555,6 +596,14 @@ function AlunosTab({
         </div>
       </div>
 
+      {countsReady && noTutorCount > 0 ? (
+        <p className="muted" role="status">
+          {noTutorCount === 1
+            ? '1 aluno sem responsável vinculado'
+            : `${noTutorCount} alunos sem responsável vinculado`}{' '}
+          — sem responsável, ninguém retira.
+        </p>
+      ) : null}
       <ul className="roster-list">
         {students.length === 0 ? (
           <li className="muted">Nenhum aluno neste filtro.</li>
@@ -568,6 +617,16 @@ function AlunosTab({
                   {s.enrollmentCode ? <span className="muted"> · matr. {s.enrollmentCode}</span> : null}
                   {s.pickupBlocked ? <span className="badge danger">Retirada bloqueada</span> : null}
                   {s.status !== 'ACTIVE' ? <span className="badge off">Inativo</span> : null}
+                  {tutorCounts[s.id] === 0 ? (
+                    <span className="badge warn">
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M12 3.5L21 20H3L12 3.5z" />
+                        <path d="M12 10v4.5" />
+                        <path d="M12 17.6h.01" />
+                      </svg>
+                      Sem responsável
+                    </span>
+                  ) : null}
                 </span>
                 <span className="row-actions">
                   <button className="btn secondary small" type="button" onClick={() => void onOpenTutors(s)}>

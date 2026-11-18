@@ -363,6 +363,16 @@ a { color: var(--brand-text); }
 }
 .badge.off { background: var(--border); color: var(--muted); }
 .badge.danger { background: var(--error-bg); color: var(--error-text); }
+/* Selo de aviso (ex.: aluno sem responsável): o sentido nunca é só a
+ * cor — triângulo + texto (WCAG 1.4.1, nível A), nos dois temas. */
+.badge.warn {
+  background: var(--warn-bg);
+  color: var(--warn-text);
+  border: 1px solid var(--warn-border);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
 .student-tutors {
   padding: 4px 4px 16px;
 }
