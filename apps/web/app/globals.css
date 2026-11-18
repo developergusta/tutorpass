@@ -121,7 +121,7 @@ a { color: var(--brand-text); }
 .topbar .logo {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   font-weight: 800;
   font-size: 1.15rem;
   color: var(--ink);
@@ -708,7 +708,7 @@ input:focus {
   gap: 16px;
   flex-wrap: wrap;
 }
-.telao-brand { display: flex; align-items: center; gap: 16px; }
+.telao-brand { display: flex; align-items: center; gap: 14px; }
 .telao-mark {
   display: grid;
   place-items: center;
@@ -735,16 +735,13 @@ input:focus {
   font-size: clamp(0.8rem, 1.25vw, 1rem);
   font-weight: 700;
 }
-.telao-top-right { display: flex; align-items: center; gap: 24px; }
+.telao-top-right { display: flex; align-items: center; gap: 22px; }
 .telao-status {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  /* Raio por tamanho (unslop, ciclo UI 19): era pill 999px — o telão
-     tinha 3 pills (status, contagem, selo) e a portaria mais 3; nem todo
-     elemento é pill. Painel 22px → chips 10px (raio aninhado). */
-  border-radius: 10px;
+  gap: 9px;
+  padding: 8px 14px;
+  border-radius: 999px;
   border: 1px solid rgba(238, 247, 242, 0.16);
   background: rgba(238, 247, 242, 0.05);
   font-weight: 700;
@@ -814,8 +811,8 @@ input:focus {
   font-size: clamp(1.1rem, 2vw, 1.7rem);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
-  padding: 2px 12px;
-  border-radius: 10px;
+  padding: 2px 14px;
+  border-radius: 999px;
   background: rgba(238, 247, 242, 0.08);
   border: 1px solid rgba(238, 247, 242, 0.14);
 }
@@ -845,7 +842,7 @@ input:focus {
 .telao-tags { display: flex; gap: 8px; flex-shrink: 0; }
 .telao-tag {
   padding: 6px 12px;
-  border-radius: 10px;
+  border-radius: 999px;
   font-size: clamp(0.8rem, 1.2vw, 1rem);
   font-weight: 700;
   background: rgba(238, 247, 242, 0.09);
@@ -859,11 +856,7 @@ input:focus {
   color: #052e21;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  /* Sem pulso (unslop, ciclo UI 19): o selo AGORA pulsava em loop E o
-     ponto "Ao vivo" do topo também — dois sinais vivos p/ o mesmo
-     sentido. O pulso fica só no ponto de conexão (dado vivo de verdade);
-     o selo continua sólido #34d399 — já é o elemento mais claro do
-     painel, e sólido ele não compete com o nome que acabou de chegar. */
+  animation: telao-pulse 1.8s ease-in-out infinite;
 }
 .telao-tag.tag-eta { color: #bcd8ea; font-variant-numeric: tabular-nums; }
 .telao-empty { margin: auto 0; padding: 24px 6px; }
@@ -930,7 +923,7 @@ input:focus {
   50% { opacity: 0.45; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .telao-list li, .telao-dot { animation: none; }
+  .telao-list li, .telao-dot, .telao-tag.tag-now { animation: none; }
   .skeleton-pos, .skeleton-bar, .telao-skeleton span { animation: none; }
 }
 
@@ -1633,11 +1626,9 @@ input:focus {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 8px 14px;
   min-height: 44px;
-  /* Raio por tamanho (unslop, ciclo UI 19): era pill 999px, como os
-     chips da fila e o selo do telão — nem todo elemento é pill. */
-  border-radius: 10px;
+  border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--card);
   font-weight: 700;
@@ -1692,7 +1683,7 @@ input:focus {
   min-width: 32px;
   height: 32px;
   padding: 0 10px;
-  border-radius: 10px;
+  border-radius: 999px;
   background: var(--bg);
   border: 1px solid var(--border);
   font-weight: 800;
@@ -1724,9 +1715,7 @@ input:focus {
   display: inline-flex;
   align-items: center;
   padding: 3px 10px;
-  /* Raio por tamanho (unslop, ciclo UI 19): era pill 999px — o chip é
-     um rótulo quieto (turma/portão/ETA), não um selo. */
-  border-radius: 10px;
+  border-radius: 999px;
   background: var(--bg);
   border: 1px solid var(--border);
   color: var(--muted);

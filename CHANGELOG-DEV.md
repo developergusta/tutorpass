@@ -7,35 +7,6 @@
 - **As 5 visões conectadas (`.role-grid`)**: a seção de navegação rápida antes listava só 3 telas; agora apresenta os 5 papéis reais entregues no produto (`/portaria`, `/sala`, `/responsavel`, `/telao` e `/escola`).
 - **Preços em ledger escaneável (`Oil UI`)**: a faixa final (`.cta-split`) trocou o parágrafo de preços corridos por um quadro tabular `.cta-ledger` com as 4 faixas (`Grátis`, `R$ 89/mês`, `R$ 199/mês`, `R$ 349/mês`) ao lado do CTA.
 
-## 2026-11-17 23:24–23:35 — Ciclo UI 19: passada anti-genérica — nem todo elemento é pill
-
-**Pesquisa do ciclo (frente a — painéis de SaaS, filas em tempo real, telões/TV)**
-- **Telão: no máximo 6 linhas de dados, lidas em 3–5 s** (mail.ifactoryapp.com, 18/06/2026): caractere ≥ 24 px a 15 pés, títulos 36–48 px, uma só pergunta por tela, cor só p/ status.
-- **Wallboard é p/ relance, não p/ clique: 3–5 números por tela** (klipfolio.com, 29/08/2026; vitvue.com, 05/11/2026): leitura confiante em menos de 3 s; mostrar que o dado é fresco ("updated 2 minutes ago").
-- **Selo só quando muda o que a pessoa faz** (Baymard Institute, 23/09/2026): selo curto, concreto, raro — se quase tudo tem selo, nenhum se destaca.
-- Achados registrados em `docs/product/IDEAS.md` (frente a, ciclo UI 19); o item implementado era o da fila UI: **a passada anti-genérica** (skill `unslop` — 3 maiores sinais), porque a contagem na aba Responsáveis segue bloqueada na rota de vínculos em massa da API.
-
-**Direção (unslop)** — Produto: a saída da escola — a portaria chama, o telão mostra quem pode retirar, a família lê a metros de distância. Caráter: calmo, exato, um pouco quente. Mundo: o pátio da escola no fim da tarde — portão, fila, nomes grandes. Momentos: o painel "Pode retirar agora" (o único verde) e o selo AGORA sólido. Assinatura: o selo "AGORA" — uma palavra de ação, verde cheio, sem piscar; e os números tabulares.
-
-**Auditoria (slop leve — modo polimento)**
-- 1 gradiente (painel "Pode retirar agora", variação de tom no mesmo verde — permitido pela skill) e 1 caixa alta ("AGORA", palavra única de ação — exceção FHWA), ambos intencionais desde os ciclos 7/8; zero emoji no web; zero `transition-all`/pulso fora do lugar; copy sem hype nem exclamação.
-- 3 sinais restantes, todos corrigidos neste ciclo: (1) pills em tudo; (2) dois pulsos vivos p/ o mesmo sentido; (3) valores de espaçamento fora da grade de 4 px.
-
-**O que foi feito**
-- **Raio por tamanho** (`globals.css`): o telão tinha 3 pills (status, contagem, selo) e a portaria mais 3 (selo de conexão, contador da seção, chips) — nem todo elemento é pill. Painel 22px → elementos 10px (raio aninhado, controles 8–10 da skill): `.telao-status`, `.telao-count` e `.telao-tag` 999px → 10px; `.conn-pill`, `.count-badge` e `.chip` 999px → 10px. Ficam pill de propósito e documentados: as abas da /escola (`.admin-tab` — controle de navegação, aba ativa com fundo cheio) e o selo "Recomendado" dos planos (`.plan-badge` — marcador único); o disco de posição da fila (`.queue-pos`, círculo com o número) e o `.badge` genérico (já 6px) não mudam.
-- **Um só pulso vivo** (`globals.css`): o selo AGORA pulsava em loop E o ponto "Ao vivo" do topo também — dois sinais vivos p/ o mesmo sentido. O pulso saiu do `.telao-tag.tag-now`; o selo continua sólido #34d399 — já é o elemento mais claro do painel, e sólido ele não compete com o nome que acabou de chegar. O pulso fica só nos pontos de conexão (`.telao-dot` ao vivo/aguardando), que são dado vivo de verdade. A lista do `prefers-reduced-motion` foi limpa junto (o selo não anima mais).
-- **Ritmo na grade de 4 px** (`globals.css`): hero — h1 14→16, sub 26→24, prova 30→32 e gap 10/22→8/24; logo da topbar 9→8; topo do telão — marca 14→16, direita 22→24, status 9→8 e padding 8px 14px→8px 12px; contagem do telão 2px 14px→2px 12px. Botões (14px 22px) e abas (9px 16px) ficam — são respiro interno de controle, não ritmo de seção.
-- Nenhuma regra de negócio, preço ou API tocada. Só web (1 arquivo, só CSS).
-
-**Arquivos alterados**
-- `apps/web/app/globals.css` (raio 999px → 10px em 6 seletores; fim do pulso do `.telao-tag.tag-now`; espaçamento do hero e do topo do telão na grade de 4 px)
-- `docs/product/IDEAS.md` (frente a, ciclo UI 19), `BACKLOG.md` (fila UI/UX)
-
-**Verificação** — `next build` em apps/web: **OK** (tipos válidos, 18 rotas; tamanhos inalterados — só CSS). Conferência por grep: 2 `border-radius: 999px` restantes (`.admin-tab` e `.plan-badge`, deliberados e documentados); `telao-pulse` só nos pontos de conexão. Limitação: sem navegador neste sandbox — a prova ao vivo (o telão com os chips de canto reto + o selo AGORA sólido sem piscar, e a portaria com os chips da fila) fica p/ a verificação ao vivo.
-
-**Publicação** — o push deste ciclo foi rejeitado porque o remoto avançou durante o ciclo com `af90114` ("Ciclo UI 19: contagem de vinculos na API e na aba Responsaveis"). Sem force-push e sem reescrever histórico: reconciliado por merge (este commit) e publicado junto — o VPS recebe as duas mudanças no mesmo deploy.
-
-**Próximo (fila UI)** — a contagem na aba Responsáveis foi destravada pelo `af90114` (rota de vínculos em massa na API); candidatas: 2ª passada anti-genérica (abas pill da /escola como controle segmentado + pesos 800 nos números de destaque), join em grupo e Segurança/Equipe fase 2 (ambas com falta na API).
 ## 2026-11-17 23:20–23:27 — Ciclo UI 19: contagem de vínculos em 1 chamada na API (`studentCount`/`tutorCount`) e contagem na aba Responsáveis
 
 **Follow-up direto do Ciclo UI 18**
