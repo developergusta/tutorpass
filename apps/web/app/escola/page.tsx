@@ -13,6 +13,7 @@ import {
   getOnboardingChecklist,
   importStudents,
   linkTutor,
+  linkTutorUser,
   listClassrooms,
   listPasswordResets,
   listSchoolMembers,
@@ -22,6 +23,7 @@ import {
   loadSession,
   reopenOnboardingStep,
   setStudentStatus,
+  unlinkTutorUser,
   type Classroom,
   type ImportReport,
   type OnboardingChecklist,
@@ -635,6 +637,82 @@ function AlunosTab({
   );
 }
 
+/** Vínculo do responsável com a conta de login dele: sem vínculo, a
+ * conta TUTOR entra e não vê nada; com o vínculo (pelo e-mail da
+ * conta criada na aba Equipe), a área do responsável destrava —
+ * ele entra na fila pelos próprios filhos e mostra o QR na portaria. */
+function TutorAccountLink({
+  tutor,
+  onChanged,
+  onError,
+  onNotice,
+}: {
+  tutor: Tutor;
+  onChanged: () => Promise<void>;
+  onError: (m: string | null) => void;
+  onNotice: (m: string) => void;
+}) {
+  const [email, setEmail] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function onLink(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    onError(null);
+    try {
+      await linkTutorUser(tutor.id, email.trim());
+      setEmail('');
+      await onChanged();
+      onNotice(`Conta vinculada para ${tutor.name}.`);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Não foi possível vincular a conta.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onUnlink() {
+    setBusy(true);
+    onError(null);
+    try {
+      await unlinkTutorUser(tutor.id);
+      await onChanged();
+      onNotice(`Vínculo de conta removido de ${tutor.name}.`);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Não foi possível desvincular a conta.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (tutor.userId) {
+    return (
+      <span className="tutor-account">
+        <span className="chip ok">Conta vinculada</span>
+        <button className="btn secondary small" type="button" disabled={busy} onClick={onUnlink}>
+          Desvincular
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <form className="tutor-account" onSubmit={onLink}>
+      <input
+        type="email"
+        required
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="E-mail da conta dele(a)"
+        aria-label={`E-mail da conta de ${tutor.name}`}
+      />
+      <button className="btn secondary small" type="submit" disabled={busy || !email.trim()}>
+        {busy ? 'Vinculando…' : 'Vincular conta'}
+      </button>
+    </form>
+  );
+}
+
 function TutoresTab({
   tutors,
   onChanged,
@@ -709,6 +787,7 @@ function TutoresTab({
                 <span className="muted"> · {t.phone}</span>
                 {t.isBlocked ? <span className="badge danger">Bloqueado</span> : null}
               </span>
+              <TutorAccountLink tutor={t} onChanged={onChanged} onError={onError} onNotice={onNotice} />
             </li>
           ))
         )}

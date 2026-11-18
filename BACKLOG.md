@@ -39,18 +39,31 @@ mesmo do login: **o motor existe e é testado; falta a camada de uso**.
   (listar + vincular por e-mail/papel; ver CHANGELOG-DEV). Fase 2
   (falta rota na API): mudar papel de quem já está na equipe,
   remover/desativar membro e reenviar convite.
-- [ ] **IMPORTANTE — Persistência parcial (Step 2 aberto).** Só User/
-  School/SchoolMember persistem no Postgres; roster, fila, planos de
-  saída etc. seguem em memória — restart da API apaga os dados
-  operacionais. (A prova ao vivo do cadastro segue pendente de aval.)
+- [ ] **IMPORTANTE — Persistência parcial (Step 2 aberto).** User/
+  School/SchoolMember persistem desde o cadastro completo; o ROSTER
+  inteiro (turmas, alunos, tutores e vínculos) passou a persistir em
+  17/11/2026 (hidratação + write-through, migration
+  20261117214500_roster_persistence). Seguem em memória: a FILA de
+  retirada e os logs de pickup, planos de saída, refresh tokens,
+  lockout e 2FA — restart da API ainda apaga os dados operacionais
+  da fila (a fila do dia é efêmera por natureza; o cadastro, não).
+  (A prova ao vivo do cadastro segue pendente de aval.)
 - [ ] **MENOR — Sem página 404 e sem favicon** no web (link errado cai
   na tela padrão do Next; aba do navegador sem ícone da marca).
 - [ ] **MENOR — Mobile é esqueleto:** apps/mobile existe sem telas —
-  o app do tutor (entrar na fila, QR dinâmico) ainda não existe como
-  produto usável; hoje o tutor não tem como entrar na fila.
+  o app nativo do tutor ainda não existe. Desde 17/11/2026 o tutor
+  tem a área web (/responsavel: entrar na fila, status ao vivo, QR
+  dinâmico), então o app Expo virou melhoria, não pré-requisito.
 
 ## Bugs descobertos (topo)
-- [ ] **CRÍTICO — A fila em tempo real nunca recebe entradas (API).**
+- [x] **CRÍTICO — A fila em tempo real nunca recebe entradas (API).**
+  CORRIGIDO em 17/11/2026 ("funcionamento completo", pedido do
+  usuário): `PickupModule` importa `RealtimeModule`/`RosterModule`,
+  o `PickupService` injeta o `RealtimeService` e emite created/status
+  em todas as transições, com nome/turma no payload; a room
+  `tutor:{id}` também recebe. Testes de emissão no
+  pickup.service.spec; prova ao vivo com socket real no VPS junto da
+  entrega.
   Descoberto no ciclo UI 12, 17/11/2026, por inspeção de código:
   `RealtimeService.entryCreated`/`entryStatus` (que emitem
   `queue.entry.created` / `queue.entry.status_changed`) NÃO têm nenhum
@@ -69,22 +82,17 @@ mesmo do login: **o motor existe e é testado; falta a camada de uso**.
   (GET /roster/students + /roster/classrooms), então as linhas mostram
   o nome real quando os eventos passarem a sair; sem o roster (TEACHER/
   TUTOR recebem 403) o fallback "Aluno" continua.
-- [ ] **Falta na API — TEACHER não lê o roster (bloqueia a visão de
-  sala).** Descoberto no ciclo UI 14, 17/11/2026: GET /roster/students
-  e GET /roster/classrooms aceitam só ADMIN/COORDINATOR/GATE_AGENT —
-  o professor recebe 403. Sem ler o cadastro, a tela de sala (o
-  professor vê quem foi chamado e manda p/ o portão — padrão Cadence/
-  RapidDismiss) não tem como mostrar nomes. Correção é de API: liberar
-  a leitura do roster p/ TEACHER (só leitura, da própria escola).
-- [ ] **Falta na API — app do tutor sem porta de entrada.** Descoberto
-  no ciclo UI 14, 17/11/2026: `QrTokenService.issue` não tem controller
-  (nenhuma rota emite o QR dinâmico de 30 s p/ o tutor mostrar na
-  portaria) e não existe vínculo usuário ↔ entidade Tutor (o join pede
-  `tutorId` no body e o guard só confere o papel — um tutor pode entrar
-  na fila por outro). Sem essas duas rotas, nem o app Expo nem uma
-  tela web do tutor conseguem funcionar. Correção é de API: POST p/
-  emitir o QR do tutor da sessão + resolver o tutorId a partir do
-  `user.sub` no join/cancel.
+- [x] **Falta na API — TEACHER não lê o roster (bloqueia a visão de
+  sala).** CORRIGIDO em 17/11/2026: TEACHER entrou nos GETs de turmas
+  e alunos do RosterController (só leitura, própria escola) e a tela
+  /sala foi entregue no mesmo dia.
+- [x] **Falta na API — app do tutor sem porta de entrada.** CORRIGIDO
+  em 17/11/2026: vínculo usuário ↔ Tutor (Tutor.userId +
+  link-user/unlink-user na secretaria), `TutorMeController` com
+  me/join/cancel/qr-token resolvidos da sessão, join/cancel do
+  PickupController ignorando o tutorId do body p/ papel TUTOR, e a
+  tela web /responsavel entregue. Falta só o app Expo (ver MENOR —
+  Mobile é esqueleto).
 - [x] QR: assinatura truncada/adulterada virava 500 (`RangeError` no `timingSafeEqual`) em vez de 401 — corrigido em 16/11/2026, com teste de regressão.
 - [x] Geofencing: regra "ARRIVAL exige 2 pings" nunca valia — 1º ping já emitia `ENTER_ARRIVAL` — corrigido em 16/11/2026 com flag `confirmed`, com testes.
 - [x] Prisma: `schema.prisma` inteiro inválido (campos separados por `;` na mesma linha + enums de uma linha) — `prisma validate` dava 110 erros e `prisma generate` nunca tinha rodado. Corrigido em 16/11/2026 (reformatado + `prisma format`); schema válido e Prisma Client gerado.
@@ -125,6 +133,7 @@ mesmo do login: **o motor existe e é testado; falta a camada de uso**.
   - **Design Slop** — audita visual, acessibilidade, responsividade e confiança da interface; ideal p/ revisar páginas prontas e eliminar defeitos de layout.
   - **No Slop UI** — conjunto de regras que barra abuso de gradientes, glassmorphism e dashboards pouco usáveis; leve e direto p/ colocar nas regras do projeto.
   - ~~frontend-design~~ — já instalada (oficial da Anthropic, planejamento de tokens e revisão em duas passadas).
+- [x] **Desbloqueio da fila UI (17/11/2026, "funcionamento completo")** — os dois itens que os ciclos apontavam como "bloqueados na API" foram entregues FORA da rotina, a pedido do usuário: **tela de sala do professor** (/sala: escolhe a turma, vê chamados e fila dela; API liberou a leitura do roster p/ TEACHER) e **área do responsável** (/responsavel: "Estou chegando", status ao vivo, QR dinâmico; API ganhou vínculo conta ↔ Tutor e o TutorMeController). Junto: tempo real ligado de verdade e roster persistente no Postgres (ver "Bugs descobertos" e o item de persistência). A rotina NÃO precisa mais tratar esses dois como bloqueados; candidatas seguintes: Segurança fase 2 e Equipe fase 2 (dependem de rotas novas na API), join em grupo e a mesma contagem de alunos na aba Responsáveis.
 - [x] **A turma mostra o tamanho (ciclo UI 17, 17/11/2026)** — a aba
   Turmas da /escola listava nome, série, ano e sala, mas não quantos
   alunos havia em cada uma — a secretaria abria turma por turma p/

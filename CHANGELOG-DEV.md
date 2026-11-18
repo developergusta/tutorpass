@@ -1,3 +1,59 @@
+## 2026-11-17 22:37–23:05 — Funcionamento completo dos 5 perfis (pedido do usuário: "faça o funcionamento completo")
+
+**O buraco** — os 5 logins de visão existiam, mas duas visões eram
+decorativas: o professor entrava e via as telas genéricas (403 no
+roster, sem a turma dele) e o tutor entrava e não via NADA (sem
+vínculo conta ↔ cadastro, sem tela, sem como entrar na fila nem
+mostrar QR). E o achado do ciclo UI 12 se confirmou no código: o
+`RealtimeService` não tinha NENHUM chamador — o socket conectava,
+mas nenhuma entrada de fila era emitida.
+
+**API (531/531 testes, 45 suítes)**
+- **Tempo real ligado de verdade**: `PickupModule` importa
+  `RealtimeModule` + `RosterModule`; o `PickupService` emite
+  `entryCreated` no join e `entryStatus` em call/validate/release/
+  cancel/block/expire, com o payload enriquecido (nome e turma do
+  aluno, resolvidos no roster). O `RealtimeService` também emite
+  para a room `tutor:{id}` — a área do responsável acompanha a
+  própria chamada.
+- **Roster persistente no Postgres (Step 2)**: turmas, alunos,
+  tutores e vínculos ganham hidratação no boot + write-through via
+  upsert (antes só a escola persistia — cada deploy apagava o
+  cadastro). Ids viram UUID. Migration
+  `20261117214500_roster_persistence`: `Classroom.isActive`,
+  `Tutor.name/phone` e `Tutor.userId/qrSecret` opcionais.
+- **Vínculo conta ↔ responsável**: `TutorRecord.userId` +
+  `RosterService.setTutorUserId/getTutorByUserId` + rotas
+  `POST /roster/tutors/:id/link-user` (pelo e-mail da conta) e
+  `unlink-user` (ADMIN/COORDINATOR).
+- **Área do responsável na API**: `TutorMeController` —
+  `GET /pickup/schools/:id/me` (meus filhos + entrada ativa),
+  `POST /me/join`, `POST /me/entries/:id/cancel`,
+  `GET /me/qr-token`. Tudo resolvido da sessão: o tutor só age
+  sobre os próprios filhos (canPickup e bloqueio conferidos).
+- **Furo do join/cancel fechado**: com papel TUTOR, o
+  `PickupController` ignora o tutorId do body e usa o da sessão.
+- **Professor lê o roster**: TEACHER entra nos GETs de turmas e
+  alunos do `RosterController` (era o 403 que travava a sala).
+
+**Web (build OK, 18 rotas)**
+- **/sala** (nova): o professor escolhe a turma (fica salva) e vê
+  só os alunos dela — "Indo para o portão" (chamados) e "Na fila".
+  O hook da fila ganhou a opção `classroomId` (room da sala no
+  handshake, reconecta ao trocar de turma) e `classroomId` nos itens.
+- **/responsavel** (nova): filhos do responsável, "Estou chegando"
+  (com portão opcional), status ao vivo (socket na room do tutor +
+  releitura a cada 10 s), cancelar, e o **QR dinâmico de 30 s**
+  renderizado na tela (pacote `qrcode`, já era dependência).
+  Sem vínculo, a tela explica o que pedir na secretaria.
+- **Foto da fila no hook**: portaria/telão/sala buscam o snapshot
+  REST ao montar e no retry — recarregar no meio da saída não
+  mostra mais a fila vazia até o próximo evento.
+- **/escola → Responsáveis**: cada responsável ganha "Vincular
+  conta" (e-mail da conta) ou o selo "Conta vinculada" +
+  Desvincular. Topbar: links **Sala** (TEACHER) e **Responsável**
+  (TUTOR) só aparecem para quem tem o papel.
+
 ## 2026-11-17 22:24–22:31 — Ciclo UI 17: a turma mostra o tamanho (contagem de alunos na /escola)
 
 **Pesquisa do ciclo (frente b — UX de fluxos escolares e de atendimento)**

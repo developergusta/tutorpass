@@ -130,6 +130,10 @@ export default function AuthNav() {
         <Link href="/telao">Telão</Link>
         {session ? (
           <>
+            {session.roles.includes('TEACHER') ? <Link href="/sala">Sala</Link> : null}
+            {session.roles.includes('TUTOR') ? (
+              <Link href="/responsavel">Responsável</Link>
+            ) : null}
             <Link href="/escola">Escola</Link>
             <Link href="/seguranca">Segurança</Link>
             <span className="nav-user" title={`Logado como ${session.user.email}`}>

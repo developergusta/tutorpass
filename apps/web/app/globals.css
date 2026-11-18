@@ -1603,3 +1603,61 @@ html { scroll-behavior: smooth; }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Funcionamento completo (17/11/2026): vínculo de conta na /escola,
+   sala do professor e área do responsável. */
+.tutor-account {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.tutor-account input {
+  min-height: 40px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--ink);
+  min-width: 220px;
+}
+.sala-picker {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 14px 0 18px;
+}
+.sala-picker label {
+  font-weight: 600;
+}
+.sala-picker select {
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 1rem;
+}
+.resp-student {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.resp-student h2 {
+  margin: 0;
+}
+.qr-box {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+}
+.qr-box img {
+  width: 220px;
+  height: 220px;
+  border-radius: 12px;
+  background: #fff;
+  padding: 8px;
+}

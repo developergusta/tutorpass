@@ -7,23 +7,26 @@
 //   - `queue.entry.created`        (nova entrada na fila)
 //   - `queue.entry.status_changed` (mudança de status da entrada)
 //   - `student.called`             (aluno chamado na sala)
-// Não há endpoint REST de fila no Step 2 — a fila nasce vazia nesta sessão
-// e é montada a partir dos eventos. Sem API/socket, as telas mostram o
-// estado vazio amigável em vez de travar.
+// Ao montar (e no "tentar de novo"), o hook também busca a FOTO atual
+// da fila via REST (GET /pickup/schools/:id/queue) — sem ela, recarregar
+// a página no meio da saída mostrava a fila vazia até o próximo evento.
 //
-// Nomes: o payload do evento NÃO traz o nome do aluno nem a turma (falta
-// na API, ver BACKLOG — bug crítico do realtime). Como todo concorrente
-// de dismissal faz (PickupRoster, Cadence, RapidDismiss: o evento traz
-// o id e a tela resolve o nome no cadastro), o hook resolve o nome e a
-// turma no roster da escola (GET /roster/students + /roster/classrooms,
-// que a portaria já pode ler) e só usa o "Aluno" do evento quando o
-// roster não resolve — nunca um nome inventado. Sem permissão (TEACHER
-// e TUTOR recebem 403 no roster) ou fora do ar, a resolução some em
-// silêncio e a fila segue com o que o evento trouxe.
+// Nomes: desde 17/11/2026 o payload do evento já traz nome e turma do
+// aluno (o PickupService enriquece a partir do roster). A resolução no
+// cadastro continua como reforço (o evento pode vir de um caminho sem
+// enriquecimento) e é ela que dá o classroomId quando o evento não
+// traz. Sem permissão ou fora do ar, a resolução some em silêncio e a
+// fila segue com o que o evento trouxe — nunca um nome inventado.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
-import { API_URL, checkApiHealth, listClassrooms, listStudents } from './api';
+import {
+  API_URL,
+  checkApiHealth,
+  listClassrooms,
+  listQueueSnapshot,
+  listStudents,
+} from './api';
 
 export type QueueGroup = 'ready' | 'enRoute';
 
@@ -33,6 +36,8 @@ export interface QueueItem {
    * diferentes cruza por ele; o `id` acima é o da entrada, não do aluno. */
   studentId: string | null;
   studentName: string;
+  /** Turma do aluno (id) — a tela da sala filtra por ela. */
+  classroomId: string | null;
   classroomName: string | null;
   gate: string | null;
   group: QueueGroup;
@@ -45,7 +50,7 @@ export interface QueueItem {
 type RawEntry = Record<string, unknown>;
 
 /** Nome + turma vindos do cadastro — a fonte de verdade p/ exibir. */
-type RosterEntry = { name: string; classroomName: string | null };
+type RosterEntry = { name: string; classroomId: string | null; classroomName: string | null };
 type RosterMap = Map<string, RosterEntry>;
 
 function pickString(obj: RawEntry, keys: string[]): string | null {
@@ -113,6 +118,7 @@ function normalize(raw: unknown, fallback: QueueGroup, roster?: RosterMap): Queu
     id,
     studentId,
     studentName: resolved?.name ?? studentName,
+    classroomId: resolved?.classroomId ?? pickString(entry, ['classroomId']),
     classroomName: resolved?.classroomName ?? pickString(entry, ['classroomName', 'classroom']),
     gate: pickString(entry, ['gate', 'gateName']),
     group: groupFromStatus(rawStatus, fallback),
@@ -127,10 +133,19 @@ function enrichItem(item: QueueItem, roster: RosterMap): QueueItem {
   if (!item.studentId) return item;
   const resolved = roster.get(item.studentId);
   if (!resolved) return item;
-  if (item.studentName === resolved.name && item.classroomName === resolved.classroomName) {
+  if (
+    item.studentName === resolved.name &&
+    item.classroomName === resolved.classroomName &&
+    item.classroomId === resolved.classroomId
+  ) {
     return item;
   }
-  return { ...item, studentName: resolved.name, classroomName: resolved.classroomName };
+  return {
+    ...item,
+    studentName: resolved.name,
+    classroomName: resolved.classroomName,
+    classroomId: resolved.classroomId,
+  };
 }
 
 const REMOVED_HINTS = ['DELIVERED', 'PICKED_UP', 'RELEASED', 'COMPLETED', 'CANCELLED', 'CANCELED', 'REMOVED'];
@@ -145,7 +160,13 @@ export interface PickupQueueState {
   retry: () => void;
 }
 
-export function usePickupQueue(): PickupQueueState {
+export interface PickupQueueOptions {
+  /** Sala do professor: com a turma escolhida, o handshake entra na
+   * room da sala e a tela recebe os `student.called` dela. */
+  classroomId?: string;
+}
+
+export function usePickupQueue(options?: PickupQueueOptions): PickupQueueState {
   const [byId, setById] = useState<Map<string, QueueItem>>(new Map());
   const [socketConnected, setSocketConnected] = useState(false);
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
@@ -153,8 +174,28 @@ export function usePickupQueue(): PickupQueueState {
   const socketRef = useRef<Socket | null>(null);
   const rosterRef = useRef<RosterMap>(new Map());
   const retryRef = useRef<() => void>(() => {});
+  const classroomIdRef = useRef<string | undefined>(options?.classroomId);
+  classroomIdRef.current = options?.classroomId;
 
   const retry = useCallback(() => retryRef.current(), []);
+
+  // Foto atual da fila (REST): substitui o mapa — é a verdade do
+  // servidor no instante da leitura. Roda na montagem e no retry;
+  // depois disso, quem mantém a tela viva é o socket.
+  const loadSnapshot = useCallback(() => {
+    void listQueueSnapshot()
+      .then((entries) => {
+        const next = new Map<string, QueueItem>();
+        for (const raw of entries) {
+          const item = normalize(raw, 'enRoute', rosterRef.current);
+          if (item) next.set(item.id, item);
+        }
+        setById(next);
+      })
+      .catch(() => {
+        // Sem foto (sem permissão/fora do ar), a fila segue pelos eventos.
+      });
+  }, []);
 
   // O cadastro da escola, uma vez por montagem (+ no "Tentar de novo"):
   // alunos por id e turmas por id. Falha silenciosa — sem permissão
@@ -169,6 +210,7 @@ export function usePickupQueue(): PickupQueueState {
             s.id,
             {
               name: s.name,
+              classroomId: s.classroomId,
               classroomName: classroomName.get(s.classroomId) ?? null,
             },
           ]),
@@ -207,14 +249,16 @@ export function usePickupQueue(): PickupQueueState {
     };
     check();
     loadRoster();
+    loadSnapshot();
     const healthTimer = setInterval(check, 30_000);
-    // Retry manual: re-verifica a API, recarrega o cadastro e reconecta
-    // o socket (ele desiste sozinho após 5 tentativas — o botão devolve
-    // o controle). O roster recarrega aqui p/ um aluno cadastrado no
-    // meio do dia aparecer sem recarregar a página.
+    // Retry manual: re-verifica a API, recarrega o cadastro e a foto da
+    // fila e reconecta o socket (ele desiste sozinho após 5 tentativas
+    // — o botão devolve o controle). O roster recarrega aqui p/ um
+    // aluno cadastrado no meio do dia aparecer sem recarregar a página.
     retryRef.current = () => {
       check();
       loadRoster();
+      loadSnapshot();
       socketRef.current?.connect();
     };
 
@@ -247,6 +291,7 @@ export function usePickupQueue(): PickupQueueState {
             token: session?.accessToken,
             schoolId: session?.schoolId ?? undefined,
             role,
+            classroomId: classroomIdRef.current,
           });
         } catch {
           cb({});
@@ -297,7 +342,18 @@ export function usePickupQueue(): PickupQueueState {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [loadRoster]);
+  }, [loadRoster, loadSnapshot]);
+
+  // Trocar de turma (tela da sala) reconecta o socket: a room da sala
+  // entra no handshake, então sem reconectar o professor ficaria na
+  // sala antiga.
+  const firstClassroom = useRef(options?.classroomId);
+  useEffect(() => {
+    if (firstClassroom.current === options?.classroomId) return;
+    firstClassroom.current = options?.classroomId;
+    socketRef.current?.disconnect();
+    socketRef.current?.connect();
+  }, [options?.classroomId]);
 
   const items = useMemo(() => Array.from(byId.values()), [byId]);
   const ready = useMemo(() => items.filter((i) => i.group === 'ready'), [items]);

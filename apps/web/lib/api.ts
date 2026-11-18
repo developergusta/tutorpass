@@ -460,6 +460,9 @@ export interface Tutor {
   name: string;
   phone: string;
   document?: string;
+  /** Conta de login vinculada (User.id) — sem ela, o responsável não
+   * tem área própria; a secretaria vincula pelo e-mail da conta. */
+  userId?: string;
   isBlocked: boolean;
 }
 
@@ -658,6 +661,89 @@ export async function listSiblingGateConflicts(): Promise<SiblingGateConflict[]>
   return authedJson<SiblingGateConflict[]>(
     `/pickup/schools/${session.schoolId}/sibling-gate-conflicts`,
   );
+}
+
+// ------------------------------------------------- vínculo e área do
+// responsável (17/11/2026): a secretaria vincula a conta ao cadastro
+// (link-user) e o responsável ganha a superfície /me — a API resolve
+// quem ele é pela sessão, sem id de tutor no body.
+
+export function linkTutorUser(tutorId: string, email: string): Promise<Tutor> {
+  return authedJson<Tutor>(`/roster/tutors/${tutorId}/link-user`, {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export function unlinkTutorUser(tutorId: string): Promise<Tutor> {
+  return authedJson<Tutor>(`/roster/tutors/${tutorId}/unlink-user`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+export interface QueueEntryRaw {
+  id: string;
+  studentId: string;
+  tutorId: string;
+  gate: string | null;
+  status: string;
+  joinedAt: string;
+  [key: string]: unknown;
+}
+
+/** Foto atual da fila (REST) — as telas usam ao montar e no "tentar de
+ * novo", p/ não dependerem só dos eventos que chegarem depois. */
+export async function listQueueSnapshot(): Promise<QueueEntryRaw[]> {
+  const session = loadSession() ?? (await refreshSession());
+  if (!session?.schoolId) {
+    throw new Error('Sessão sem escola — entre de novo selecionando a escola.');
+  }
+  return authedJson<QueueEntryRaw[]>(`/pickup/schools/${session.schoolId}/queue`);
+}
+
+export interface MyStudent {
+  student: Student;
+  classroomName: string | null;
+  relationship: string;
+  isPrimary: boolean;
+  canPickup: boolean;
+  activeEntry: QueueEntryRaw | null;
+}
+
+export interface MyTutorInfo {
+  tutor: Tutor | null;
+  students: MyStudent[];
+}
+
+async function myPath(suffix: string): Promise<string> {
+  const session = loadSession() ?? (await refreshSession());
+  if (!session?.schoolId) {
+    throw new Error('Sessão sem escola — entre de novo selecionando a escola.');
+  }
+  return `/pickup/schools/${session.schoolId}/me${suffix}`;
+}
+
+export async function getMyTutor(): Promise<MyTutorInfo> {
+  return authedJson<MyTutorInfo>(await myPath(''));
+}
+
+export async function joinMyQueue(studentId: string, gate?: string): Promise<QueueEntryRaw> {
+  return authedJson<QueueEntryRaw>(await myPath('/join'), {
+    method: 'POST',
+    body: JSON.stringify({ studentId, gate: gate?.trim() ? gate.trim() : undefined }),
+  });
+}
+
+export async function cancelMyEntry(entryId: string): Promise<QueueEntryRaw> {
+  return authedJson<QueueEntryRaw>(await myPath(`/entries/${entryId}/cancel`), {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+export async function getMyQrToken(): Promise<{ token: string; expiresIn: number }> {
+  return authedJson<{ token: string; expiresIn: number }>(await myPath('/qr-token'));
 }
 
 /** true quando a API responde no healthcheck; false quando está fora do ar. */
