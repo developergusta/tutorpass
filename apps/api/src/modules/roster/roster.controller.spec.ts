@@ -65,22 +65,28 @@ describe('RosterController', () => {
 
   it('vincula tutor ao aluno da mesma escola e lista pelo aluno', () => {
     const aluno = controller.listStudents(adminA)[0];
+    expect(aluno.tutorCount).toBe(0);
     const tutor = controller.createTutor(adminA, {
       name: 'Maria Teste',
       phone: '11987654321',
     });
+    expect(controller.listTutors(adminA).find((t) => t.id === tutor.id)?.studentCount).toBe(0);
     const link = controller.linkTutor(adminA, tutor.id, {
       studentId: aluno.id,
       relationship: 'MOTHER',
       isPrimary: true,
     });
     expect(link.tutorId).toBe(tutor.id);
+    expect(controller.listStudents(adminA)[0].tutorCount).toBe(1);
+    expect(controller.listTutors(adminA).find((t) => t.id === tutor.id)?.studentCount).toBe(1);
     const doAluno = controller.tutorsOfStudent(adminA, aluno.id);
     expect(doAluno).toHaveLength(1);
     expect(doAluno[0].tutor.name).toBe('Maria Teste');
     expect(controller.unlinkTutor(adminA, tutor.id, aluno.id)).toEqual({
       removed: true,
     });
+    expect(controller.listStudents(adminA)[0].tutorCount).toBe(0);
+    expect(controller.listTutors(adminA).find((t) => t.id === tutor.id)?.studentCount).toBe(0);
   });
 
   it('importação CSV cria alunos e turmas pelo relatório do serviço', () => {

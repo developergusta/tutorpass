@@ -835,6 +835,13 @@ function TutoresTab({
         </p>
       </form>
 
+      {tutors.length > 0 ? (
+        <p className="muted" role="status">
+          {tutors.length} {tutors.length === 1 ? 'responsável' : 'responsáveis'} ·{' '}
+          {tutors.filter((t) => Boolean(t.userId)).length} com conta vinculada
+        </p>
+      ) : null}
+
       <ul className="roster-list">
         {tutors.length === 0 ? (
           <li className="muted">Nenhum responsável ainda.</li>
@@ -844,6 +851,12 @@ function TutoresTab({
               <span>
                 <strong>{t.name}</strong>
                 <span className="muted"> · {t.phone}</span>
+                {t.studentCount !== undefined ? (
+                  <span className="muted">
+                    {' '}
+                    · {t.studentCount} {t.studentCount === 1 ? 'aluno' : 'alunos'}
+                  </span>
+                ) : null}
                 {t.isBlocked ? <span className="badge danger">Bloqueado</span> : null}
               </span>
               <TutorAccountLink tutor={t} onChanged={onChanged} onError={onError} onNotice={onNotice} />

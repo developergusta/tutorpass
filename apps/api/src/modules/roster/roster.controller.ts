@@ -127,7 +127,12 @@ export class RosterController {
     @Query('classroomId') classroomId?: string,
     @Query('search') search?: string,
   ) {
-    return this.roster.listStudents(this.schoolId(user), { classroomId, search });
+    return this.roster
+      .listStudents(this.schoolId(user), { classroomId, search })
+      .map((s) => ({
+        ...s,
+        tutorCount: this.roster.listTutorsOfStudent(s.id).length,
+      }));
   }
 
   @Post('students')
@@ -179,7 +184,12 @@ export class RosterController {
   @Get('tutors')
   @Roles('ADMIN', 'COORDINATOR', 'GATE_AGENT')
   listTutors(@CurrentUser() user: AccessTokenPayload) {
-    return this.roster.listTutors(this.schoolId(user));
+    return this.roster.listTutors(this.schoolId(user)).map((t) => ({
+      ...t,
+      studentCount: this.roster
+        .listStudentsOfTutor(t.id)
+        .filter((l) => l.student.status === 'ACTIVE').length,
+    }));
   }
 
   @Post('tutors')

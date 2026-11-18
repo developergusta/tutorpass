@@ -1,3 +1,10 @@
+## 2026-11-17 23:20–23:27 — Ciclo UI 19: contagem de vínculos em 1 chamada na API (`studentCount`/`tutorCount`) e contagem na aba Responsáveis
+
+**Follow-up direto do Ciclo UI 18**
+- **API (`apps/api/src/modules/roster/roster.controller.ts` + `roster.controller.spec.ts`)**: `GET /roster/students` agora inclui `tutorCount` em cada aluno e `GET /roster/tutors` inclui `studentCount` (contagem de alunos ativos vinculados), eliminando a necessidade de N leituras para saber quantos vínculos existem.
+- **Web (`apps/web/lib/api.ts` + `apps/web/app/escola/page.tsx`)**: a aba **Responsáveis** agora exibe o resumo `N responsáveis · M com conta vinculada` (`role="status"`) e `· N aluno(s)` em cada linha de responsável.
+- **Build Windows (`apps/web/next.config.mjs`)**: `output: 'standalone'` desativado apenas no `win32` local (mantido no Linux/Docker e quando `NEXT_STANDALONE=1`), evitando `EPERM: symlink` no `pnpm build` em máquinas Windows.
+
 ## 2026-11-17 22:54–23:00 — Ciclo UI 18: o aluno sem responsável aparece na lista
 
 **Pesquisa do ciclo (frente c — acessibilidade e mobile)**
