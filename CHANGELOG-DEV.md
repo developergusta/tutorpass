@@ -1,3 +1,12 @@
+## 2026-11-17 23:28–23:35 — Ciclo UI 20: redesign editorial da Landing Page (`Impeccable` + `Oil UI` + `Design Slop` + `No Slop UI`)
+
+**Auditoria anti-genérica da Landing Page (`.gemini/skills/anti-slop-ui/SKILL.md`)**
+- **Defeito de superfície corrigido (`Design Slop`)**: na home anterior, `.step` tinha `background: transparent; border-radius: 0; padding: 20px 0 0`, mas a regra `.plan:hover, .step:hover` aplicava `box-shadow: 0 16px 32px` numa caixa transparente colada no texto. Agora `.step-card` tem superfície real (`var(--card)`), borda, padding de 22px e chip do ator de cada etapa.
+- **Hero interativo (`Impeccable polish` + `Taste Skill`)**: `HeroBoard.tsx` ganhou seletor de portão (`Portão principal` / `Educação Infantil`), botão interativo `"Chamar próximo →"` para o visitante disparar a chamada ao vivo na hora, e rodapé de auditoria criptográfica (`LOG #0482 · sha256:9f3a…e81c · Cadeia íntegra`) que avança a cada chamada. O lado esquerdo ganhou kicker editorial e faixa de 3 métricas tabulares (`30 s · uso único`, `53 min via CSV`, `Grátis até 30 alunos`).
+- **Destaque assimétrico com espécimes técnicos (`Impeccable shape`)**: em vez de 6 linhas idênticas com o mesmo peso visual, os 2 diferenciais centrais (**QR dinâmico anti-fraude** e **Cadeia de custódia imutável**) ganharam cartões de destaque (`.spotlight-card`) com espécimes monoespaciados mostrando o bloqueio de print (`401 · QR_REJECTED`) e o encadeamento `sha256`, seguidos pelos 4 pilares operacionais em lista editorial.
+- **As 5 visões conectadas (`.role-grid`)**: a seção de navegação rápida antes listava só 3 telas; agora apresenta os 5 papéis reais entregues no produto (`/portaria`, `/sala`, `/responsavel`, `/telao` e `/escola`).
+- **Preços em ledger escaneável (`Oil UI`)**: a faixa final (`.cta-split`) trocou o parágrafo de preços corridos por um quadro tabular `.cta-ledger` com as 4 faixas (`Grátis`, `R$ 89/mês`, `R$ 199/mês`, `R$ 349/mês`) ao lado do CTA.
+
 ## 2026-11-17 23:20–23:27 — Ciclo UI 19: contagem de vínculos em 1 chamada na API (`studentCount`/`tutorCount`) e contagem na aba Responsáveis
 
 **Follow-up direto do Ciclo UI 18**
