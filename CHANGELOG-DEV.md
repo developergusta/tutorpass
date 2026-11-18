@@ -1,3 +1,14 @@
+## 2026-11-18 20:30–20:38 — Ciclo UI 22: Reforma estrutural da Tela Inicial — Bancada de Despacho em 5 Lentes & Dossiê Assimétrico (`frontend-design`)
+
+**Fim do esqueleto de landing page de SaaS**
+- **Ficha de comando + Bancada Operacional em largura total (`.workbench-stage` + `HeroBoard.tsx`)**: eliminamos o hero 50/50 tradicional ("texto à esquerda + card à direita"). O topo agora abre em `1180px` com uma ficha de comando assimétrica seguida de uma **Bancada de Despacho Interativa** em 2 colunas com fita de auditoria SHA-256 ao vivo:
+  - O visitante seleciona qualquer aluno da fila (`Alice Martins`, `Pedro Santos`, `Lucas Almeida`, `Sofia Ribeiro` ou alunos da `Educação Infantil`), avança o estado real (`A caminho` → `Chamado à baia` → `QR validado` → `Entregue`), simula uma tentativa de fraude com print clonado (`401 QR_REJECTED`) e alterna entre **5 lentes operacionais** dentro do próprio console (`1. Visão Portaria`, `2. Visão Sala de Aula`, `3. Celular da Família`, `4. Telão do Pátio` e `5. Livro SHA-256`).
+- **Corpo em Dossiê Técnico Assimétrico (`.dossier-layout`)**: em vez de seções centralizadas empilhadas com cartões de 3 colunas, o corpo da página usa uma arquitetura de manual de engenharia com um **Trilho Lateral Fixo** (`.dossier-rail`, `270px`, com parâmetros técnicos e índice `§1`–`§4`) à esquerda e o manifesto operacional à direita:
+  - **§ 01 Cronologia real (`17:38:04` → `17:42:27`)**: substitui os "3 passos em cards" por um registro cronológico com carimbo de relógio (`IBM Plex Mono`) e artefato do servidor em cada evento.
+  - **§ 02 Folha de Especificação (`SPEC-A` a `SPEC-D`)**: substitui a grade de features com ícones por blocos de especificação técnica lado a lado (`230px` meta + corpo com espécime `NONCE #84A2` e alerta de irmãos em portões diferentes).
+  - **§ 03 Índice de Terminais (`TERM-01` a `TERM-05`)**: diretório tabular de acesso direto às 5 rotas reais do sistema.
+  - **§ 04 Folha Comercial Aberta (`.contract-ledger`)**: tabela contratual direta com as 5 faixas (`FAIXA 00`, `TESTE 30D`, `PRO A/B/C`) sem prosa promocional.
+
 ## 2026-11-18 19:31–19:40 — Ciclo UI 21: Identidade visual "Mesa de Despacho" (`frontend-design` + `anti-slop-ui`)
 
 **Instalação e aplicação da skill `frontend-design` (`npx skills add https://github.com/anthropics/skills --skill frontend-design`)**

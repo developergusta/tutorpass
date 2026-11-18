@@ -1,384 +1,421 @@
 import Link from 'next/link';
-import type { ReactNode } from 'react';
 import HeroBoard from '../components/HeroBoard';
 
-function Icon({ children }: { children: ReactNode }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {children}
-    </svg>
-  );
-}
-
-const iconQr = (
-  <Icon>
-    <rect x="3" y="3" width="7" height="7" rx="1.5" />
-    <rect x="14" y="3" width="7" height="7" rx="1.5" />
-    <rect x="3" y="14" width="7" height="7" rx="1.5" />
-    <path d="M14 14h3v3h-3zM21 14v.01M14 21v.01M18 18h3v3h-3z" />
-  </Icon>
-);
-
-const iconRadar = (
-  <Icon>
-    <circle cx="12" cy="12" r="2" />
-    <path d="M12 10V4M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M5 5a10 10 0 0 0 0 14M19 5a10 10 0 0 1 0 14" />
-  </Icon>
-);
-
-const iconShield = (
-  <Icon>
-    <path d="M12 3l7 3v5c0 4.5-3 8.1-7 10-4-1.9-7-5.5-7-10V6l7-3z" />
-    <path d="M9 12l2 2 4-4" />
-  </Icon>
-);
-
-const iconQueue = (
-  <Icon>
-    <path d="M4 6h16M4 12h16M4 18h10" />
-    <path d="M18 17l1.5 1.5L22 16" transform="translate(-2 1)" />
-  </Icon>
-);
-
-const iconLock = (
-  <Icon>
-    <rect x="5" y="11" width="14" height="9" rx="2" />
-    <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-    <circle cx="12" cy="15.5" r="1.4" />
-  </Icon>
-);
-
-const iconTv = (
-  <Icon>
-    <rect x="3" y="5" width="18" height="12" rx="2" />
-    <path d="M9 21h6" />
-  </Icon>
-);
-
-const iconGate = (
-  <Icon>
-    <path d="M5 21V8l7-4 7 4v13" />
-    <path d="M2 21h20" />
-    <path d="M10 21v-5h4v5" />
-  </Icon>
-);
-
-const iconClassroom = (
-  <Icon>
-    <path d="M4 5h16v11H4z" />
-    <path d="M8 20h8M12 16v4" />
-  </Icon>
-);
-
-const iconFamily = (
-  <Icon>
-    <circle cx="9" cy="7" r="3" />
-    <path d="M3 20v-1a5 5 0 0 1 10 0v1" />
-    <circle cx="17" cy="9" r="2.2" />
-    <path d="M15 20v-1a3.5 3.5 0 0 1 6 0v1" />
-  </Icon>
-);
-
-const iconSchool = (
-  <Icon>
-    <path d="M12 3L2 8l10 5 10-5-10-5z" />
-    <path d="M6 10.5V17c0 1.7 2.7 3 6 3s6-1.3 6-3v-6.5" />
-  </Icon>
-);
-
-const ledgerFeatures = [
+const protocolLogs = [
   {
-    icon: iconRadar,
-    title: 'Geofencing com dupla confirmação no servidor',
-    text: 'Exige duas leituras consecutivas dentro do raio da escola antes de acionar a chamada. Evita alarmes falsos de quem apenas passou pela rua.',
+    time: '17:38:04',
+    code: '01 / GEOFENCE_2X',
+    actor: 'Responsável (/responsavel)',
+    title: 'Aproximação validada com dupla leitura na cerca virtual',
+    detail:
+      'O responsável toca em "Estou chegando" ou entra no raio da escola. O servidor exige duas confirmações consecutivas antes de enfileirar o aluno — eliminando alarmes falsos de carros que apenas cruzam a avenida.',
+    artifact: 'gate: Portão Principal · leituras: 2/2 · coordenadas brutas: descartadas (LGPD)',
   },
   {
-    icon: iconQueue,
-    title: 'Múltiplos portões e alerta de irmãos separados',
-    text: 'Cada portão opera sua própria fila ao vivo, mas o painel avisa na hora se dois filhos do mesmo responsável caírem em portões diferentes.',
+    time: '17:40:19',
+    code: '02 / SILENT_CALL',
+    actor: 'Sala de Aula (/sala) e Pátio (/telao)',
+    title: 'Chamada silenciosa na turma certa, sem microfone no pátio',
+    detail:
+      'Quando o agente de portão chama o aluno, somente a tela da turma dele destaca a saída. Se dois irmãos estiverem alocados em portões diferentes, um alerta âmbar trava a confusão antes da criança descer.',
+    artifact: 'turma: 3º B (Sala 14) · alerta de irmãos: 0 conflitos · latência WebSocket: <40ms',
   },
   {
-    icon: iconTv,
-    title: 'Modo Telão para TV e credencial impressa',
-    text: 'Painel de alto contraste sem rolagem para a TV do pátio e cartão com código de 6 dígitos para avós ou portadores autorizados sem smartphone.',
+    time: '17:42:18',
+    code: '03 / NONCE_30S',
+    actor: 'Agente de Portão (/portaria)',
+    title: 'Validação de QR efêmero de 30 segundos ou credencial impressa',
+    detail:
+      'Na grade, o agente valida o QR dinâmico que rotaciona a cada 30s no Redis (ou o código impresso de 6 dígitos para avós sem smartphone). Qualquer print de tela encaminhado ou já lido retorna erro 401 na hora.',
+    artifact: 'token: NONCE #84A2-91F · TTL: 30s · segunda leitura: 401 QR_REJECTED',
   },
   {
-    icon: iconLock,
-    title: 'Governança LGPD nativa para escolas',
-    text: 'Sem armazenamento de coordenadas brutas de GPS, atendimento aos artigos 18 e 19 direto no painel e registro de incidentes com prazo ANPD.',
+    time: '17:42:27',
+    code: '04 / SHA256_CHAIN',
+    actor: 'Livro de Custódia (/escola)',
+    title: 'Entrega assinada em cadeia criptográfica à prova de edição',
+    detail:
+      'A liberação grava quem retirou, em qual portão, por qual agente e calcula um hash SHA-256 ligado ao evento anterior. A direção tem prova técnica irrefutável de cada saída do ano letivo.',
+    artifact: 'evt_0484 · sha256: 9f3a8c12…e81c ⟵ prev: 4c127b09…ab10 · cadeia íntegra',
   },
 ];
 
-const steps = [
-  {
-    n: '01',
-    actor: 'Responsável no celular',
-    title: 'O responsável avisa que está chegando',
-    text: 'Com um toque na área do responsável (ou por aproximação na cerca virtual), os filhos entram na fila do portão certo e a escola recebe a estimativa em tempo real.',
-  },
-  {
-    n: '02',
-    actor: 'Sala de aula e pátio',
-    title: 'A sala libera apenas quem já está no portão',
-    text: 'A professora vê na tela da turma quem acabou de ser chamado e para qual portão encaminhar — sem microfone gritando no pátio nem alunos acumulados na grade.',
-  },
-  {
-    n: '03',
-    actor: 'Portaria e livro de custódia',
-    title: 'QR de 30 s validado e entrega gravada',
-    text: 'O agente confere o QR dinâmico (ou código impresso), libera o aluno e o evento entra na cadeia SHA-256 à prova de adulteração.',
-  },
-];
-
-const roleViews = [
+const roleTerminals = [
   {
     href: '/portaria',
-    role: 'Agente de portão',
+    code: 'TERM-01',
     route: '/portaria',
-    title: 'Portaria ao vivo',
-    desc: 'Chama o aluno, valida o QR dinâmico e confirma a retirada por portão.',
-    icon: iconGate,
+    role: 'Agente de portão',
+    title: 'Mesa da Portaria',
+    desc: 'Opera a fila por portão: chama a sala, lê o QR de 30s, recebe alerta de irmãos separados e assina a entrega.',
   },
   {
     href: '/sala',
-    role: 'Professor(a)',
+    code: 'TERM-02',
     route: '/sala',
-    title: 'Visão de sala',
-    desc: 'Filtra pela turma e destaca quem já deve descer para o portão.',
-    icon: iconClassroom,
+    role: 'Professor(a)',
+    title: 'Terminal de Sala',
+    desc: 'Filtra exclusivamente os alunos da turma atual e separa quem já deve descer para a baia de quem ainda está a caminho.',
   },
   {
     href: '/responsavel',
-    role: 'Família / Tutor',
+    code: 'TERM-03',
     route: '/responsavel',
-    title: 'Área do responsável',
-    desc: 'Avisa "Estou chegando", acompanha a posição e exibe o QR de 30 s.',
-    icon: iconFamily,
+    role: 'Família / Tutor',
+    title: 'Credencial do Responsável',
+    desc: 'Avisa chegada com um toque, acompanha o status do filho ao vivo e exibe o QR dinâmico anti-print na portaria.',
   },
   {
     href: '/telao',
-    role: 'Pátio / Recepção',
+    code: 'TERM-04',
     route: '/telao',
-    title: 'Telão para TV',
-    desc: 'Duas colunas de alto contraste legíveis a mais de 5 metros de distância.',
-    icon: iconTv,
+    role: 'Pátio / Recepção',
+    title: 'Telão de Alto Contraste',
+    desc: 'Modo TV em tela cheia com fundo escuro chapado e tipografia dimensionada para leitura a mais de 5 metros.',
   },
   {
     href: '/escola',
-    role: 'Secretaria / Direção',
+    code: 'TERM-05',
     route: '/escola',
-    title: 'Cadastro e implantação',
-    desc: 'Turmas, alunos, responsáveis, importação CSV e checklist de implantação.',
-    icon: iconSchool,
+    role: 'Secretaria / Direção',
+    title: 'Cadastro & Implantação',
+    desc: 'Turmas, alunos, vínculo de contas de responsáveis, importação CSV com prévia e checklist de implantação em 53 minutos.',
   },
 ];
 
 const priceTiers = [
-  { band: 'Até 30 alunos', detail: 'Para testar ou operar escolas pequenas', price: 'Grátis' },
-  { band: 'Até 50 alunos', detail: 'Todos os módulos e múltiplos portões', price: 'R$ 89/mês' },
-  { band: '51 a 200 alunos', detail: 'Telão de TV, relatórios e LGPD completo', price: 'R$ 199/mês' },
-  { band: 'Acima de 200 alunos', detail: 'Operação de alto fluxo até 1.000 alunos', price: 'R$ 349/mês' },
+  {
+    code: 'FAIXA 00',
+    band: 'Até 30 alunos',
+    limit: 'Até 5 funcionários · fila ao vivo + QR 30s + relatório diário',
+    price: 'R$ 0/mês',
+    note: 'Grátis para sempre',
+  },
+  {
+    code: 'TESTE 30D',
+    band: 'Qualquer porte (30 dias)',
+    limit: 'Todos os módulos do PRO liberados · sem pedir cartão',
+    price: 'R$ 0',
+    note: 'Volta ao Grátis se não assinar',
+  },
+  {
+    code: 'PRO · FAIXA A',
+    band: 'Até 50 alunos',
+    limit: 'Todos os módulos · múltiplos portões · telão · van · LGPD',
+    price: 'R$ 89/mês',
+    note: 'Valor fixo da escola',
+  },
+  {
+    code: 'PRO · FAIXA B',
+    band: 'De 51 a 200 alunos',
+    limit: 'Todos os módulos · até 50 funcionários · relatórios de pico',
+    price: 'R$ 199/mês',
+    note: 'Valor fixo da escola',
+  },
+  {
+    code: 'PRO · FAIXA C',
+    band: 'De 201 a 2.000 alunos',
+    limit: 'Operação completa de alto fluxo · condição de rede acima de 1.000',
+    price: 'R$ 349/mês',
+    note: 'Valor fixo da escola',
+  },
 ];
 
 export default function HomePage() {
   return (
-    <main id="conteudo" tabIndex={-1}>
-      <section className="hero">
-        <div className="container hero-grid">
-          <div>
-            <p className="hero-kicker">
-              Despacho de saída escolar em tempo real
-            </p>
-            <h1>
-              A saída da escola sem fila na calçada, com cada entrega provada
-            </h1>
-            <p className="hero-sub">
-              O responsável avisa que está a caminho, a sala recebe o chamado silencioso na
-              hora exata e a portaria só entrega a criança após validar o QR dinâmico de uso
-              único.
-            </p>
-            <div className="hero-ctas">
-              <Link className="btn btn-hero" href="/cadastro">
-                Começar grátis em 1 dia
-              </Link>
-              <Link className="btn btn-hero-ghost" href="/planos">
-                Simular mensalidade
-              </Link>
+    <main id="conteudo" tabIndex={-1} className="dossier-home">
+      {/* CABEÇALHO EM FICHA DE COMANDO + BANCADA DE DESPACHO EM LARGURA TOTAL */}
+      <section className="workbench-stage">
+        <div className="container container-wide">
+          <div className="command-masthead">
+            <div className="cm-headline">
+              <div className="cm-kicker-row">
+                <span className="cm-badge">SISTEMA DE CUSTÓDIA E DESPACHO ESCOLAR</span>
+                <span className="cm-spec">SHA-256 · QR 30s · LGPD NATIVA</span>
+              </div>
+              <h1>
+                Saída escolar coordenada como controle de tráfego, não no grito.
+              </h1>
             </div>
-            <dl className="hero-metrics">
-              <div>
-                <dt>Validade do QR</dt>
-                <dd>30 s (uso único)</dd>
+
+            <div className="cm-brief">
+              <p>
+                Substitua a fila dupla na calçada e o microfone no pátio por uma
+                mesa de despacho sincronizada entre celular da família, sala de
+                aula e portaria — com cada entrega assinada em cadeia criptográfica.
+              </p>
+              <div className="cm-actions">
+                <Link className="btn btn-hero" href="/cadastro">
+                  Implantar na minha escola (Grátis até 30 alunos)
+                </Link>
+                <Link className="btn btn-hero-ghost" href="/planos">
+                  Calcular mensalidade fixa
+                </Link>
               </div>
-              <div>
-                <dt>Implantação</dt>
-                <dd>53 min via CSV</dd>
-              </div>
-              <div>
-                <dt>Faixa inicial</dt>
-                <dd>R$ 0 até 30 alunos</dd>
-              </div>
-            </dl>
+            </div>
           </div>
+
+          {/* A peça única desta página: a bancada operacional interativa em 5 lentes */}
           <HeroBoard />
         </div>
       </section>
 
-      <section className="container section home-section">
-        <div className="section-header">
-          <h2 className="section-title">Três movimentos da calçada até a entrega</h2>
-          <p className="muted section-lead">
-            Cada pessoa vê somente a fila e o comando que precisa para agir em segundos — do
-            celular da família até o tablet da portaria.
-          </p>
-        </div>
-        <ol className="protocol-ledger">
-          {steps.map((s) => (
-            <li key={s.n} className="protocol-item">
-              <div className="protocol-top">
-                <span className="step-n">{s.n}</span>
-                <span className="step-tag">{s.actor}</span>
-              </div>
-              <h3>{s.title}</h3>
-              <p className="muted">{s.text}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      <section className="container section home-section">
-        <div className="section-header">
-          <h2 className="section-title">Feito para os 25 minutos mais críticos do dia</h2>
-          <p className="muted section-lead">
-            Verificação criptográfica na portaria e cadeia de custódia verificável para
-            proteger o aluno, a família e a direção da escola.
-          </p>
-        </div>
-
-        <div className="spotlight-grid">
-          <article className="spotlight-card">
-            <div className="spotlight-head">
-              <span className="f-icon">{iconQr}</span>
-              <div>
-                <h3>QR dinâmico anti-fraude</h3>
-                <p className="muted">
-                  Renovado a cada 30 segundos com nonce criptográfico no servidor. Captura
-                  de tela encaminhada por mensagem ou código já lido é recusado na hora.
-                </p>
-              </div>
-            </div>
-            <div className="specimen-box" aria-hidden="true">
-              <div className="specimen-row is-valid">
-                <span className="specimen-code">NONCE #84A2 [00:24]</span>
-                <span className="specimen-pill ok">1ª leitura · Liberado</span>
-              </div>
-              <div className="specimen-row is-blocked">
-                <span className="specimen-code">REPLAY #84A2 [captura]</span>
-                <span className="specimen-pill err">401 · QR_REJECTED</span>
-              </div>
-            </div>
-          </article>
-
-          <article className="spotlight-card">
-            <div className="spotlight-head">
-              <span className="f-icon">{iconShield}</span>
-              <div>
-                <h3>Cadeia de custódia imutável</h3>
-                <p className="muted">
-                  Cada chamada, validação e liberação grava um hash SHA-256 encadeado ao
-                  evento anterior. Qualquer alteração manual invalida a auditoria.
-                </p>
-              </div>
-            </div>
-            <div className="specimen-box" aria-hidden="true">
-              <div className="specimen-row">
-                <span className="specimen-code">evt_0481 VALIDATED</span>
-                <span className="specimen-hash">prev: 4c12…b09a</span>
-              </div>
-              <div className="specimen-row is-valid">
-                <span className="specimen-code">evt_0482 RELEASED</span>
-                <span className="specimen-hash">sha256: 9f3a…e81c</span>
-              </div>
-            </div>
-          </article>
-        </div>
-
-        <div className="feature-list">
-          {ledgerFeatures.map((f) => (
-            <div className="feature-row" key={f.title}>
-              <span className="f-icon">{f.icon}</span>
-              <div>
-                <h3>{f.title}</h3>
-                <p className="muted">{f.text}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="container section home-section">
-        <div className="section-header">
-          <h2 className="section-title">Cinco terminais conectados à mesma fila</h2>
-          <p className="muted section-lead">
-            Abra diretamente qualquer visão operacional do sistema para testar o fluxo de
-            ponta a ponta.
-          </p>
-        </div>
-        <nav className="dispatch-directory" aria-label="Visões operacionais do produto">
-          {roleViews.map((v) => (
-            <Link key={v.href} className="dispatch-row" href={v.href}>
-              <div className="dispatch-row-id">
-                <span className="q-icon">{v.icon}</span>
+      {/* CORPO EM DOSSIÊ ASSIMÉTRICO (ÍNDICE FIXO À ESQUERDA + MANIFESTO TÉCNICO À DIREITA) */}
+      <div className="container container-wide dossier-layout">
+        <aside className="dossier-rail" aria-label="Especificação operacional">
+          <div className="rail-sticky">
+            <div className="rail-box">
+              <span className="rail-title">PARÂMETROS DO SISTEMA</span>
+              <dl className="rail-specs">
                 <div>
-                  <span className="role-tag">{v.role}</span>
-                  <h3>{v.title}</h3>
+                  <dt>Rotação de token QR</dt>
+                  <dd>30 segundos (Redis)</dd>
                 </div>
-              </div>
-              <p className="muted dispatch-row-desc">{v.desc}</p>
-              <span className="dispatch-row-route">{v.route}</span>
-            </Link>
-          ))}
-        </nav>
-      </section>
-
-      <section className="container section home-section">
-        <div className="cta-band cta-split">
-          <div className="cta-copy">
-            <h2>Mensalidade fixa por faixa de alunos, publicada na página</h2>
-            <p>
-              Sem taxa de implantação e sem cobrança por responsável cadastrado. Comece no
-              plano gratuito até 30 alunos ou ative 30 dias de teste do PRO sem cartão.
-            </p>
-            <div className="cta-actions">
-              <Link className="btn btn-hero" href="/planos">
-                Abrir calculadora de planos
-              </Link>
-              <Link className="btn secondary" href="/login">
-                Entrar na minha escola
-              </Link>
+                <div>
+                  <dt>Proteção contra print</dt>
+                  <dd>Nonce de leitura única</dd>
+                </div>
+                <div>
+                  <dt>Auditoria de entrega</dt>
+                  <dd>Hash SHA-256 encadeado</dd>
+                </div>
+                <div>
+                  <dt>Cerca virtual (GPS)</dt>
+                  <dd>2 leituras · zero rastro bruto</dd>
+                </div>
+                <div>
+                  <dt>Tempo de implantação</dt>
+                  <dd>53 min via planilha CSV</dd>
+                </div>
+              </dl>
+              <nav className="rail-anchors" aria-label="Seções do dossiê">
+                <a href="#cronologia">§1. Cronologia de custódia</a>
+                <a href="#engenharia">§2. Provas anti-fraude</a>
+                <a href="#terminais">§3. Os 5 terminais ao vivo</a>
+                <a href="#tabela-precos">§4. Tabela pública de preços</a>
+              </nav>
             </div>
           </div>
-          <dl className="cta-ledger" aria-label="Faixas de preço mensal">
-            {priceTiers.map((t) => (
-              <div className="cta-ledger-row" key={t.band}>
-                <dt>
-                  <strong>{t.band}</strong>
-                  <span>{t.detail}</span>
-                </dt>
-                <dd>{t.price}</dd>
+        </aside>
+
+        <div className="dossier-content">
+          {/* §1. CRONOLOGIA TÉCNICA DE UMA RETIRADA (substitui cartões de "3 passos") */}
+          <section id="cronologia" className="dossier-section">
+            <header className="ds-head">
+              <span className="ds-num">§ 01</span>
+              <div>
+                <h2>Cronologia real de uma retirada (17h38 às 17h42)</h2>
+                <p className="muted">
+                  Em vez de promessas abstratas, veja exatamente o que o servidor
+                  valida nos 4 minutos entre a aproximação do responsável e a saída
+                  pelo portão.
+                </p>
               </div>
-            ))}
-          </dl>
+            </header>
+
+            <ol className="timeline-ledger">
+              {protocolLogs.map((item) => (
+                <li key={item.code} className="tl-row">
+                  <div className="tl-time-col">
+                    <span className="tl-clock">{item.time}</span>
+                    <span className="tl-code">{item.code}</span>
+                  </div>
+                  <div className="tl-main-col">
+                    <span className="tl-actor">{item.actor}</span>
+                    <h3>{item.title}</h3>
+                    <p className="muted">{item.detail}</p>
+                    <div className="tl-artifact" aria-hidden="true">
+                      <code>{item.artifact}</code>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          {/* §2. ESPECIFICAÇÃO ANTI-FRAUDE E LGPD (substitui grade de features com ícones) */}
+          <section id="engenharia" className="dossier-section">
+            <header className="ds-head">
+              <span className="ds-num">§ 02</span>
+              <div>
+                <h2>Arquitetura contra fraude, fila travada e vazamento de dados</h2>
+                <p className="muted">
+                  Construído especificamente para o horário de pico de escolas
+                  particulares brasileiras, onde segurança jurídica e velocidade na
+                  calçada não admitem improviso.
+                </p>
+              </div>
+            </header>
+
+            <div className="spec-sheet">
+              <article className="spec-block">
+                <div className="spec-block-meta">
+                  <span className="spec-id">SPEC-A · ANTI-REPLAY</span>
+                  <h3>Bloqueio instantâneo de print de WhatsApp</h3>
+                </div>
+                <div className="spec-block-body">
+                  <p className="muted">
+                    Códigos QR fixos colados no vidro do carro ou enviados por
+                    mensagem permitem que qualquer pessoa retire um aluno sem a
+                    escola perceber. No TutorPass, cada QR nasce com validade de 30
+                    segundos e morre na primeira leitura da portaria.
+                  </p>
+                  <div className="specimen-box" aria-hidden="true">
+                    <div className="specimen-row">
+                      <span className="specimen-code">1ª LEITURA · NONCE #84A2</span>
+                      <span className="specimen-pill ok">200 OK · LIBERADO</span>
+                    </div>
+                    <div className="specimen-row">
+                      <span className="specimen-code">PRINT REPASSADO · #84A2</span>
+                      <span className="specimen-pill err">401 · QR_REJECTED</span>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article className="spec-block">
+                <div className="spec-block-meta">
+                  <span className="spec-id">SPEC-B · MULTI-GATE</span>
+                  <h3>Detecção automática de irmãos em portões diferentes</h3>
+                </div>
+                <div className="spec-block-body">
+                  <p className="muted">
+                    Escolas que separam a saída do Infantil e do Fundamental
+                    sofrem quando uma mesma mãe tem filhos nos dois blocos. O motor
+                    da fila cruza o identificador do responsável em todos os portões
+                    ativos e exibe um alerta de unificação para o porteiro.
+                  </p>
+                  <div className="specimen-box" aria-hidden="true">
+                    <div className="specimen-row">
+                      <span className="specimen-code">
+                        CONFLITO DETECTADO · TUTOR #194 (2 FILHOS)
+                      </span>
+                      <span className="specimen-pill warn">
+                        Portão A + Portão Infantil
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article className="spec-block">
+                <div className="spec-block-meta">
+                  <span className="spec-id">SPEC-C · CONTINGÊNCIA</span>
+                  <h3>Cartão impresso com código para avós sem celular</h3>
+                </div>
+                <div className="spec-block-body">
+                  <p className="muted">
+                    Nem todo portador autorizado usa aplicativo. A secretaria emite
+                    credenciais impressas com código verificador e delegação
+                    temporária com data de validade, mantendo o mesmo registro no
+                    livro SHA-256.
+                  </p>
+                </div>
+              </article>
+
+              <article className="spec-block">
+                <div className="spec-block-meta">
+                  <span className="spec-id">SPEC-D · PRIVACIDADE LGPD</span>
+                  <h3>Geofencing sem rastrear a rotina da família</h3>
+                </div>
+                <div className="spec-block-body">
+                  <p className="muted">
+                    A cerca virtual calcula apenas se o responsável entrou no raio
+                    de chegada da escola e descarta a coordenada exata. Inclui
+                    fluxo nativo de direitos do titular (art. 18 e 19 da LGPD) e
+                    relatório de conformidade para a direção.
+                  </p>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          {/* §3. ÍNDICE DE TERMINAIS OPERACIONAIS */}
+          <section id="terminais" className="dossier-section">
+            <header className="ds-head">
+              <span className="ds-num">§ 03</span>
+              <div>
+                <h2>Cinco terminais dedicados, conectados ao mesmo núcleo</h2>
+                <p className="muted">
+                  Nada de um painel genérico cheio de menus para todo mundo. Cada
+                  papel abre direto na sua superfície de trabalho.
+                </p>
+              </div>
+            </header>
+
+            <nav
+              className="dispatch-directory"
+              aria-label="Terminais operacionais do sistema"
+            >
+              {roleTerminals.map((t) => (
+                <Link key={t.href} className="dispatch-row" href={t.href}>
+                  <div className="dispatch-row-id">
+                    <span className="term-code">{t.code}</span>
+                    <div>
+                      <span className="role-tag">{t.role}</span>
+                      <h3>{t.title}</h3>
+                    </div>
+                  </div>
+                  <p className="muted dispatch-row-desc">{t.desc}</p>
+                  <span className="dispatch-row-route">Abrir {t.route}</span>
+                </Link>
+              ))}
+            </nav>
+          </section>
+
+          {/* §4. TABELA PÚBLICA DE PREÇOS EM FORMATO DE FOLHA DE CONTRATO */}
+          <section id="tabela-precos" className="dossier-section">
+            <header className="ds-head">
+              <span className="ds-num">§ 04</span>
+              <div>
+                <h2>Tabela comercial aberta — valor fixo por faixa de alunos</h2>
+                <p className="muted">
+                  Sem reunião obrigatória para descobrir preço e sem cobrança por
+                  aluno ou responsável adicional dentro da faixa.
+                </p>
+              </div>
+            </header>
+
+            <div className="contract-ledger">
+              <div className="cl-table" role="table" aria-label="Faixas de preço mensal">
+                {priceTiers.map((tier) => (
+                  <div className="cl-row" role="row" key={tier.code}>
+                    <div className="cl-cell-code" role="cell">
+                      <span>{tier.code}</span>
+                    </div>
+                    <div className="cl-cell-main" role="cell">
+                      <strong>{tier.band}</strong>
+                      <span className="muted">{tier.limit}</span>
+                    </div>
+                    <div className="cl-cell-price" role="cell">
+                      <strong>{tier.price}</strong>
+                      <span>{tier.note}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="cl-footer">
+                <p className="muted">
+                  A escola cria a conta em 1 minuto, importa os alunos por CSV e
+                  pode ativar 30 dias do plano PRO completo sem informar cartão.
+                </p>
+                <div className="cl-actions">
+                  <Link className="btn" href="/cadastro">
+                    Criar conta da escola agora
+                  </Link>
+                  <Link className="btn secondary" href="/planos">
+                    Simular na calculadora
+                  </Link>
+                  <Link className="btn secondary" href="/login">
+                    Entrar em conta existente
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
-      </section>
+      </div>
     </main>
   );
 }
