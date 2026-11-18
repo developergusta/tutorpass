@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Open_Sans, Sora } from 'next/font/google';
+import { IBM_Plex_Mono, Plus_Jakarta_Sans, Sora } from 'next/font/google';
 import Link from 'next/link';
 import Script from 'next/script';
 import type { ReactNode } from 'react';
@@ -7,21 +7,24 @@ import AuthNav from '../components/AuthNav';
 import TopbarScroll from '../components/TopbarScroll';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
-// Fonte de display (títulos e marca) — passada anti-genérica/unslop de
-// 17/11/2026: Inter em tudo era o sinal nº 1 de "template de IA".
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
+});
+
 const sora = Sora({
   subsets: ['latin'],
   variable: '--font-display',
   display: 'swap',
   weight: ['500', '600', '700'],
 });
-// Open Sans: só o texto da Hero Section da home (pedido do usuário,
-// 17/11/2026) — aplicada via .hero no globals.css.
-const openSans = Open_Sans({
+
+const plexMono = IBM_Plex_Mono({
   subsets: ['latin'],
-  variable: '--font-open-sans',
+  variable: '--font-mono',
   display: 'swap',
+  weight: ['500', '600'],
 });
 
 export const metadata: Metadata = {
@@ -63,7 +66,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="pt-BR"
-      className={`${inter.variable} ${sora.variable} ${openSans.variable}`}
+      className={`${plusJakarta.variable} ${sora.variable} ${plexMono.variable}`}
       suppressHydrationWarning
     >
       <body>

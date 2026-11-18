@@ -1,3 +1,16 @@
+## 2026-11-18 19:31–19:40 — Ciclo UI 21: Identidade visual "Mesa de Despacho" (`frontend-design` + `anti-slop-ui`)
+
+**Instalação e aplicação da skill `frontend-design` (`npx skills add https://github.com/anthropics/skills --skill frontend-design`)**
+- **Tipografia com personalidade técnica (`Plus Jakarta Sans` + `Sora` + `IBM Plex Mono`)**: substituímos `Inter` e `Open Sans` (as duas fontes mais genéricas de templates de IA) por `Plus Jakarta Sans` no corpo, mantendo `Sora` nos títulos e introduzindo `IBM Plex Mono` (`--font-mono`) dedicada a hashes `sha256`, contadores de fila, ETAs, preços e rotas operacionais.
+- **Paleta mineral sálvia e geometria de engenharia**: abandonamos o fundo cinza-azulado genérico (`#f6f7f9`) e o branco estéril (`#ffffff`) em favor de uma superfície mineral sálvia (`--bg: #f1f4f1`, `--card: #fafbfa`, `--border: #cfd9d3`), com cantos precisos (`--radius: 8px`, `--radius-sm: 6px`) e sombras suaves substituídas por bordas estruturais nítidas e filetes de status (`border-left` / `border-top` em `--brand`).
+- **Remoção de "template chrome" de IA (`frontend-design`)**:
+  - Eliminados todos os *eyebrows* decorativos acima dos títulos de seção, os separadores com ponto médio (`A · B · C`) nas etiquetas e as setas `→` penduradas nos botões e cartões.
+  - Desativadas as animações repetitivas de *fade-and-slide-up* (`Reveal`) em cada seção do scroll e o efeito de flutuação (`translateY(-4px)` + sombra) em todos os cartões, concentrando o movimento exclusivamente na demonstração ao vivo do hero (`HeroBoard`) e na entrada real de itens na fila.
+- **Arquitetura em Ledger e Diretório de Terminais (`Oil UI` + `frontend-design`)**:
+  - Os 3 movimentos operacionais da home deixaram de ser 3 cartões soltos e viraram um quadro contínuo (`.protocol-ledger`) dividido por linhas arquitetônicas de 1px.
+  - As 5 visões do produto deixaram de ser uma grade de cartões-clones (`.role-grid`) e passaram a ser um diretório de terminais (`.dispatch-directory`) com rota monoespaciada (`/portaria`, `/sala`, `/responsavel`, `/telao`, `/escola`) e filete lateral verde no foco.
+  - Na `/portaria`, o resumo da fila (`.queue-summary`) foi unificado em um único painel com divisórias verticais e contadores em `IBM Plex Mono`, com crachás de posição quadrados de canto `6px`.
+
 ## 2026-11-17 23:28–23:35 — Ciclo UI 20: redesign editorial da Landing Page (`Impeccable` + `Oil UI` + `Design Slop` + `No Slop UI`)
 
 **Auditoria anti-genérica da Landing Page (`.gemini/skills/anti-slop-ui/SKILL.md`)**
