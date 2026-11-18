@@ -453,6 +453,8 @@ export interface Student {
   birthDate?: string;
   status: 'ACTIVE' | 'INACTIVE' | 'TRANSFERRED';
   pickupBlocked: boolean;
+  /** Quantos responsáveis estão vinculados a este aluno (0 = ninguém retira). */
+  tutorCount?: number;
 }
 
 export interface Tutor {
@@ -464,6 +466,8 @@ export interface Tutor {
    * tem área própria; a secretaria vincula pelo e-mail da conta. */
   userId?: string;
   isBlocked: boolean;
+  /** Quantos alunos ativos estão vinculados a este responsável. */
+  studentCount?: number;
 }
 
 export interface StudentTutor {

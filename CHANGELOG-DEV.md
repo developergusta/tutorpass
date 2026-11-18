@@ -24,9 +24,15 @@
 
 **Verificação** — `next build` em apps/web: **OK** (tipos válidos, 18 rotas; tamanhos inalterados — só CSS). Conferência por grep: 2 `border-radius: 999px` restantes (`.admin-tab` e `.plan-badge`, deliberados e documentados); `telao-pulse` só nos pontos de conexão. Limitação: sem navegador neste sandbox — a prova ao vivo (o telão com os chips de canto reto + o selo AGORA sólido sem piscar, e a portaria com os chips da fila) fica p/ a verificação ao vivo.
 
-**Publicação** — o push falhou (rejeitado: o remoto avançou durante o ciclo — outro ciclo publicou `af90114` "Ciclo UI 19: contagem de vinculos na API (tutorCount/studentCount) e na aba Responsaveis", que destrava a contagem na aba Responsáveis). Sem force-push e sem reescrever histórico: o commit local `3dfea7a` fica aguardando reconciliação — o próximo ciclo faz o merge/rebase sobre `af90114` e publica. O VPS ainda não recebeu esta passada.
+**Publicação** — o push deste ciclo foi rejeitado porque o remoto avançou durante o ciclo com `af90114` ("Ciclo UI 19: contagem de vinculos na API e na aba Responsaveis"). Sem force-push e sem reescrever histórico: reconciliado por merge (este commit) e publicado junto — o VPS recebe as duas mudanças no mesmo deploy.
 
-**Próximo (fila UI)** — a mesma contagem na aba Responsáveis segue bloqueada na rota de vínculos em massa da API; candidatas: 2ª passada anti-genérica (abas pill da /escola como controle segmentado + pesos 800 nos números de destaque), join em grupo e Segurança/Equipe fase 2 (ambas com falta na API).
+**Próximo (fila UI)** — a contagem na aba Responsáveis foi destravada pelo `af90114` (rota de vínculos em massa na API); candidatas: 2ª passada anti-genérica (abas pill da /escola como controle segmentado + pesos 800 nos números de destaque), join em grupo e Segurança/Equipe fase 2 (ambas com falta na API).
+## 2026-11-17 23:20–23:27 — Ciclo UI 19: contagem de vínculos em 1 chamada na API (`studentCount`/`tutorCount`) e contagem na aba Responsáveis
+
+**Follow-up direto do Ciclo UI 18**
+- **API (`apps/api/src/modules/roster/roster.controller.ts` + `roster.controller.spec.ts`)**: `GET /roster/students` agora inclui `tutorCount` em cada aluno e `GET /roster/tutors` inclui `studentCount` (contagem de alunos ativos vinculados), eliminando a necessidade de N leituras para saber quantos vínculos existem.
+- **Web (`apps/web/lib/api.ts` + `apps/web/app/escola/page.tsx`)**: a aba **Responsáveis** agora exibe o resumo `N responsáveis · M com conta vinculada` (`role="status"`) e `· N aluno(s)` em cada linha de responsável.
+- **Build Windows (`apps/web/next.config.mjs`)**: `output: 'standalone'` desativado apenas no `win32` local (mantido no Linux/Docker e quando `NEXT_STANDALONE=1`), evitando `EPERM: symlink` no `pnpm build` em máquinas Windows.
 
 ## 2026-11-17 22:54–23:00 — Ciclo UI 18: o aluno sem responsável aparece na lista
 
