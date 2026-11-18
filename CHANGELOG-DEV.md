@@ -1,3 +1,81 @@
+## 2026-11-17 21:24–21:45 — Ciclo UI 15: a implantação em 1 dia ganha tela (aba na /escola)
+
+**Pesquisa do ciclo (frente d — design systems / espaçamento em tokens)**
+- **Escala curta nomeada, base 4 px** (muuds.design, 2026; VegaStack,
+  2026): 4/8/12/16/24/32/48/64 px como variáveis CSS — "o valor fácil de
+  digitar é o certo"; o código novo usa os tokens e o CSS antigo migra
+  quando a tela é tocada, sem reescrita em massa.
+- **Gap no container, não margem no filho** (muuds.design, 2026): `gap`
+  põe espaço só entre itens, nunca nas bordas — remove uma classe inteira
+  de bugs de alinhamento.
+- **Componente cuida do dentro, layout cuida do fora** (muuds.design,
+  2026): o cartão define o próprio padding; quem o empilha define o gap.
+- Achados registrados em `docs/product/IDEAS.md` (frente d, ciclo UI
+  15); o item implementado era o da fila UI: **o checklist de
+  implantação** — a home promete "Implantação em 1 dia" e o web não
+  tinha nenhuma tela p/ acompanhar (a API já tinha o checklist e as
+  rotas de marcar/reabrir desde o ciclo 25).
+
+**Direção (unslop)** — Produto: a secretaria da escola no primeiro dia,
+acompanhando os 4 passos do runbook até a primeira saída. Caráter:
+calmo, exato. Momento: um só — a barra de progresso verde e o passo
+seguinte com a borda da marca; o resto é cartão quieto. Assinatura: o
+número do passo em círculo, o mesmo gesto dos passos da home.
+
+**O que foi feito**
+- **Aba Implantação na /escola** (`escola/page.tsx`, 6ª aba):
+  cartão com o progresso ("2 de 4 passos · cerca de 35 min restantes",
+  `role="progressbar"` com `aria-valuenow`) e a lista dos 4 passos do
+  runbook — número em círculo (✓ verde quando feito), título, descrição
+  e "Cerca de N min". O próximo passo tem a borda da marca e o texto
+  quieto "Próximo passo".
+- **Atalhos que andam**: cada passo aberto leva a onde ele se faz —
+  "Importar o CSV" (aba Importar), "Vincular a equipe" (aba Equipe) e
+  "Abrir a portaria" (link p/ /portaria); o passo da conta não tem
+  atalho (ele já foi feito quando a escola existe).
+- **Marcar/reabrir** (só ADMIN/COORDINATOR, o papel vem da sessão):
+  "Marcar como feito" / "Reabrir" por passo, com o aviso na página e
+  recarregamento do checklist. A marcação é manual e o botão diz isso —
+  não finge automação (a API marcar sozinha é Step 2). GATE_AGENT/
+  TEACHER veem o checklist sem os botões; TUTOR vê 1 frase explicando
+  que o checklist é da equipe. Sem escola na sessão ou com a API fora
+  do ar, o erro aparece com "Tentar de novo" e a página segue.
+- **Detalhe honesto**: escola de demonstração mostra a linha "o
+  checklist zera todo dia às 06:00" (só quando `isDemo` é verdadeiro).
+- `lib/api.ts`: `OnboardingChecklist` + `OnboardingStepState` +
+  `getOnboardingChecklist()` / `completeOnboardingStep()` /
+  `reopenOnboardingStep()` no padrão das ações da fila (schoolId da
+  sessão, `authedJson`). Nenhuma regra de negócio, preço ou API tocada.
+- **Design system**: escala `--space-1..16` (4/8/12/16/24/32/48/64) no
+  `:root`; o CSS novo (`.onboarding-*`) já usa os tokens e `gap` no
+  container. O CSS antigo não foi reescrito — migra quando cada tela
+  for tocada.
+- **Unslop, 2 sinais**: `.plan-badge` "Recomendado" em sentence case
+  (era caixa alta com tracking 0.03em — rótulo de 1 palavra não é
+  mensagem de ação), peso 700 e padding na grade (4px 12px); o pulso
+  em loop saiu do selo "Agora" do hero (demonstração, sem dado vivo —
+  o pop-in da linha chamada já marca o momento; o pulso fica no ponto
+  "Ao vivo" do telão/portaria, onde há conexão real).
+
+**Arquivos alterados**
+- `apps/web/app/escola/page.tsx` (aba Implantação + `ImplantacaoTab`)
+- `apps/web/lib/api.ts` (+ seção implantação)
+- `apps/web/app/globals.css` (+ `--space-*`, `.onboarding-*`,
+  `.plan-badge`, fim do pulso do `.hb-tag`)
+- `docs/product/IDEAS.md` (frente d, ciclo UI 15), `BACKLOG.md` (fila UI/UX)
+
+**Verificação** — `next build` em apps/web: **OK** (tipos válidos, 16
+rotas; `/escola` 8,11 → 9,4 kB). Limitação: sem navegador neste sandbox
+e sem escola de teste com o checklist parcialmente feito — a prova ao
+vivo (marcar um passo e ver a barra andar + o atalho p/ a importação)
+fica p/ a verificação ao vivo.
+
+**Próximo (fila UI)** — tela de sala p/ o professor (quem foi chamado
++ p/ qual portão mandar), bloqueada na API (TEACHER precisa ler o
+roster); app do tutor segue bloqueado na API (rota p/ emitir o QR +
+vínculo usuário ↔ Tutor); candidatas com falta na API: join em grupo
+e Segurança/Equipe fase 2.
+
 ## 2026-11-17 20:55–21:10 — Ciclo UI 14: a fila mostra o nome de verdade (resolvido no roster)
 
 **Pesquisa do ciclo (frente a — painéis de saída / filas em tempo real)**

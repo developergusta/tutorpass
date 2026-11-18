@@ -19,6 +19,18 @@
   --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.06);
   --shadow-md: 0 6px 16px -6px rgba(16, 24, 40, 0.14), 0 2px 6px rgba(16, 24, 40, 0.06);
   --radius: 14px;
+  /* Escala de espaçamento (design system, ciclo UI 15 — frente d):
+     base 4 px, passos 4/8/12/16/24/32/48/64; o valor fácil de digitar
+     é o certo. Código novo usa os tokens; o CSS antigo migra quando a
+     tela é tocada, sem reescrita em massa. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
   /* Tokens de tema (claro/escuro, 17/11/2026): --brand-text é o verde
      p/ TEXTO sobre superfícies (no claro = o próprio brand; no escuro
      clareia p/ manter contraste). --brand/--brand-dark NÃO mudam no
@@ -264,6 +276,65 @@ a { color: var(--brand-text); }
 }
 .roster-item { border-bottom: 1px solid var(--border); }
 .roster-item .roster-row { border-bottom: none; }
+/* Implantação em 1 dia (ciclo UI 15): o checklist do runbook na /escola.
+   Um só momento verde — a barra de progresso e o passo seguinte; o resto
+   é cartão quieto no padrão .card. Espaçamento já nos tokens --space-*. */
+.onboarding-card { margin-bottom: var(--space-4); }
+.onboarding-progress-text { font-weight: 600; color: var(--text); margin: var(--space-4) 0 var(--space-2); }
+.onboarding-bar {
+  height: var(--space-2);
+  border-radius: var(--space-2);
+  background: var(--border);
+  overflow: hidden;
+  margin-bottom: var(--space-2);
+}
+.onboarding-bar span {
+  display: block;
+  height: 100%;
+  background: var(--brand);
+  border-radius: var(--space-2);
+  transition: width 0.3s ease;
+}
+.onboarding-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.onboarding-step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.onboarding-step.is-next { border-color: var(--brand); }
+.onb-num {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--muted);
+}
+.onboarding-step.is-done .onb-num { background: var(--brand); border-color: var(--brand); color: #fff; }
+.onb-body { flex: 1; min-width: 0; }
+.onb-body h3 { margin: 0 0 var(--space-1); font-size: 1.05rem; }
+.onb-body p { margin: 0 0 var(--space-2); }
+.onb-body p:last-child { margin-bottom: 0; }
+.onb-next {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--brand-text);
+  margin-left: var(--space-2);
+  white-space: nowrap;
+}
+.onb-meta { font-size: 0.85rem; }
+@media (max-width: 560px) {
+  .onboarding-step { flex-wrap: wrap; }
+  .onboarding-step > .btn { margin-left: 44px; }
+}
 /* Equipe: inicial em círculo (mesmo gesto do avatar da topbar) + nome. */
 .member-id { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
 .member-avatar {
@@ -515,18 +586,18 @@ input:focus {
   .plan.recommended { transform: scale(1.02); }
 }
 /* Selo do recomendado: sem ele, só a borda verde distinguia o cartão e o
-   visitante não sabia por que aquele era o ponto de partida. */
+   visitante não sabia por que aquele era o ponto de partida. Sentence
+   case (unslop, ciclo UI 15): era caixa alta com tracking — rótulo de
+   1 palavra não é mensagem de ação, então não grita. */
 .plan-badge {
   align-self: flex-start;
   background: var(--brand);
   color: #fff;
   font-size: 0.8rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  font-weight: 700;
   border-radius: 999px;
-  padding: 5px 12px;
-  margin: 0 0 10px;
+  padding: 4px 12px;
+  margin: 0 0 8px;
 }
 /* Faixas do PRO como lista (faixa ↔ preço), não parágrafo corrido: o olho
    compara os 3 valores sem reler a frase. Mesmos valores da API. */
@@ -1455,7 +1526,10 @@ input:focus {
 .hero-board { animation: rise-in 0.55s 0.15s ease backwards; }
 .hb-row { animation: rise-in 0.45s ease backwards; }
 .hb-row.is-now { animation: pop-in 0.5s cubic-bezier(0.22, 1.2, 0.36, 1) backwards; }
-.hb-tag { animation: hb-pulse 1.6s ease-in-out infinite; }
+/* O selo "Agora" do hero NÃO pulsa (unslop, ciclo UI 15): o pop-in da
+   linha já marca o momento da chamada; pulsar em loop num painel de
+   demonstração é movimento sem dado vivo por trás. O pulso fica só no
+   ponto "Ao vivo" do telão/portaria, onde há conexão real. */
 
 /* Micro-interações: aperto de botão, seta que anda, menu que desce
    e troca de tema sem corte seco. */

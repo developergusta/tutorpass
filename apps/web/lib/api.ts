@@ -274,6 +274,74 @@ export function addSchoolMember(email: string, role: SchoolRole): Promise<School
   });
 }
 
+// ------------------------------------------------------------ implantação
+// Checklist de implantação em 1 dia (OnboardingService, 4 passos do
+// runbook: conta → alunos do CSV → equipe → primeira saída). A API já
+// tinha GET /onboarding/schools/:schoolId/checklist e POST
+// steps/:step/complete|reopen; o web não mostrava nada — e a home
+// promete "Implantação em 1 dia" sem nenhuma tela p/ acompanhar.
+// Leitura: ADMIN/COORDINATOR/GATE_AGENT/TEACHER; marcar/reabrir:
+// ADMIN/COORDINATOR. A marcação ainda é manual — a integração
+// automática (marcar ao importar o CSV etc.) é Step 2 da API.
+
+export type OnboardingStepId =
+  | 'ACCOUNT_CREATED'
+  | 'ROSTER_IMPORTED'
+  | 'STAFF_INVITED'
+  | 'FIRST_DISMISSAL_DONE';
+
+export interface OnboardingStepState {
+  id: OnboardingStepId;
+  title: string;
+  description: string;
+  minutes: number;
+  done: boolean;
+  doneAt: string | null;
+  doneBy: string | null;
+}
+
+export interface OnboardingChecklist {
+  schoolId: string;
+  steps: OnboardingStepState[];
+  doneCount: number;
+  totalCount: number;
+  progressPercent: number;
+  nextStep: OnboardingStepId | null;
+  isComplete: boolean;
+  estimatedMinutesTotal: number;
+  estimatedMinutesRemaining: number;
+  isDemo: boolean;
+}
+
+async function onboardingSchoolId(): Promise<string> {
+  const session = loadSession() ?? (await refreshSession());
+  if (!session?.schoolId) {
+    throw new Error('Sessão sem escola — entre de novo selecionando a escola.');
+  }
+  return session.schoolId;
+}
+
+export async function getOnboardingChecklist(): Promise<OnboardingChecklist> {
+  const schoolId = await onboardingSchoolId();
+  return authedJson<OnboardingChecklist>(`/onboarding/schools/${schoolId}/checklist`);
+}
+
+export async function completeOnboardingStep(step: OnboardingStepId): Promise<OnboardingChecklist> {
+  const schoolId = await onboardingSchoolId();
+  return authedJson<OnboardingChecklist>(`/onboarding/schools/${schoolId}/steps/${step}/complete`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+export async function reopenOnboardingStep(step: OnboardingStepId): Promise<OnboardingChecklist> {
+  const schoolId = await onboardingSchoolId();
+  return authedJson<OnboardingChecklist>(`/onboarding/schools/${schoolId}/steps/${step}/reopen`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
 // ------------------------------------------------------------ segurança
 // Segurança da conta — 2FA TOTP, troca de senha e sessões ativas.
 // As rotas /api/auth/2fa/*, /auth/change-password, /auth/sessions e

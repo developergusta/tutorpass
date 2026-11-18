@@ -1,13 +1,16 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import RequireAuth from '../../components/RequireAuth';
 import {
   addSchoolMember,
+  completeOnboardingStep,
   createClassroom,
   createStudent,
   createTutor,
   deactivateClassroom,
+  getOnboardingChecklist,
   importStudents,
   linkTutor,
   listClassrooms,
@@ -17,9 +20,12 @@ import {
   listStudents,
   listTutors,
   loadSession,
+  reopenOnboardingStep,
   setStudentStatus,
   type Classroom,
   type ImportReport,
+  type OnboardingChecklist,
+  type OnboardingStepId,
   type PendingReset,
   type SchoolMember,
   type SchoolRole,
@@ -41,7 +47,7 @@ const RELATIONSHIPS: { value: string; label: string }[] = [
   { value: 'OTHER', label: 'Outro' },
 ];
 
-type Tab = 'turmas' | 'alunos' | 'tutores' | 'importar' | 'equipe';
+type Tab = 'turmas' | 'alunos' | 'tutores' | 'importar' | 'equipe' | 'implantacao';
 
 // Entrega v1 dos links de redefinição de senha: só aparece p/ ADMIN
 // (a API responde 403 p/ os demais — aí o cartão nem renderiza).
@@ -157,6 +163,7 @@ function EscolaPanel() {
             ['tutores', 'Responsáveis'],
             ['importar', 'Importar CSV'],
             ['equipe', 'Equipe'],
+            ['implantacao', 'Implantação'],
           ] as [Tab, string][]
         ).map(([value, label]) => (
           <button
@@ -188,6 +195,9 @@ function EscolaPanel() {
       ) : null}
       {tab === 'importar' ? <ImportarTab onDone={reloadBase} onError={setError} /> : null}
       {tab === 'equipe' ? <EquipeTab onError={setError} onNotice={flash} /> : null}
+      {tab === 'implantacao' ? (
+        <ImplantacaoTab onError={setError} onNotice={flash} onGoTab={setTab} />
+      ) : null}
     </main>
   );
 }
@@ -880,6 +890,199 @@ function EquipeTab({
           ))}
         </ul>
       )}
+    </section>
+  );
+}
+
+// Checklist de implantação em 1 dia (ciclo UI 15): os 4 passos do
+// runbook da API, com progresso e o próximo passo. A home promete
+// "Implantação em 1 dia" e até aqui não havia nenhuma tela p/ acompanhar.
+// A marcação é manual (a API marca sozinha no Step 2) — o botão diz
+// "Marcar como feito" e não finge automação. Só ADMIN/COORDINATOR
+// marcam; GATE_AGENT/TEACHER veem; TUTOR (403) vê 1 frase.
+function ImplantacaoTab({
+  onError,
+  onNotice,
+  onGoTab,
+}: {
+  onError: (m: string | null) => void;
+  onNotice: (m: string) => void;
+  onGoTab: (tab: Tab) => void;
+}) {
+  const roles = loadSession()?.roles ?? [];
+  const canView =
+    roles.includes('ADMIN') ||
+    roles.includes('COORDINATOR') ||
+    roles.includes('GATE_AGENT') ||
+    roles.includes('TEACHER');
+  const canMark = roles.includes('ADMIN') || roles.includes('COORDINATOR');
+  const [checklist, setChecklist] = useState<OnboardingChecklist | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [busyStep, setBusyStep] = useState<OnboardingStepId | null>(null);
+
+  const reload = useCallback(async () => {
+    try {
+      setFailed(false);
+      setChecklist(await getOnboardingChecklist());
+    } catch (err) {
+      setFailed(true);
+      onError(err instanceof Error ? err.message : 'Não foi possível carregar o checklist.');
+    }
+  }, [onError]);
+
+  useEffect(() => {
+    if (canView) void reload();
+  }, [canView, reload]);
+
+  if (!canView) {
+    return (
+      <section className="card">
+        <h2>Implantação em 1 dia</h2>
+        <p className="muted">
+          O checklist de implantação só aparece para a equipe da escola. Quem é
+          responsável só precisa entrar na fila — a implantação é da secretaria.
+        </p>
+      </section>
+    );
+  }
+
+  if (failed) {
+    return (
+      <section className="card">
+        <h2>Implantação em 1 dia</h2>
+        <p className="muted">Não foi possível carregar o checklist agora.</p>
+        <p>
+          <button className="btn secondary small" type="button" onClick={() => void reload()}>
+            Tentar de novo
+          </button>
+        </p>
+      </section>
+    );
+  }
+
+  if (!checklist) {
+    return (
+      <section className="card">
+        <h2>Implantação em 1 dia</h2>
+        <p className="muted" role="status">
+          Carregando o checklist…
+        </p>
+      </section>
+    );
+  }
+
+  async function onToggle(step: OnboardingStepId, done: boolean) {
+    setBusyStep(step);
+    onError(null);
+    try {
+      const next = done
+        ? await reopenOnboardingStep(step)
+        : await completeOnboardingStep(step);
+      setChecklist(next);
+      onNotice(done ? 'Passo reaberto no checklist.' : 'Passo marcado como feito.');
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Não foi possível atualizar o passo.');
+    } finally {
+      setBusyStep(null);
+    }
+  }
+
+  return (
+    <section>
+      <div className="card onboarding-card">
+        <h2>Implantação em 1 dia</h2>
+        <p className="muted">
+          Quatro passos, do cadastro à primeira saída. Marque cada um quando estiver
+          feito de verdade — a fila, o telão e o log só funcionam com os passos 2 a 4.
+        </p>
+        <p className="onboarding-progress-text" role="status">
+          {checklist.isComplete
+            ? 'Implantação concluída — a escola já opera a saída.'
+            : `${checklist.doneCount} de ${checklist.totalCount} passos · cerca de ${checklist.estimatedMinutesRemaining} min restantes`}
+        </p>
+        <div
+          className="onboarding-bar"
+          role="progressbar"
+          aria-valuenow={checklist.progressPercent}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Progresso da implantação"
+        >
+          <span style={{ width: `${checklist.progressPercent}%` }} />
+        </div>
+        {checklist.isDemo ? (
+          <p className="muted">
+            Escola de demonstração — o checklist zera todo dia às 06:00.
+          </p>
+        ) : null}
+      </div>
+
+      <ol className="onboarding-list">
+        {checklist.steps.map((step, i) => {
+          const isNext = step.id === checklist.nextStep;
+          return (
+            <li
+              key={step.id}
+              className={`onboarding-step${step.done ? ' is-done' : ''}${isNext ? ' is-next' : ''}`}
+            >
+              <span className="onb-num" aria-hidden="true">
+                {step.done ? '✓' : i + 1}
+              </span>
+              <div className="onb-body">
+                <h3>
+                  {step.title}
+                  {isNext ? <span className="onb-next">Próximo passo</span> : null}
+                </h3>
+                <p className="muted">{step.description}</p>
+                <p className="onb-meta muted">Cerca de {step.minutes} min</p>
+                {step.id === 'ROSTER_IMPORTED' && !step.done ? (
+                  <p>
+                    <button
+                      className="btn secondary small"
+                      type="button"
+                      onClick={() => onGoTab('importar')}
+                    >
+                      Importar o CSV
+                    </button>
+                  </p>
+                ) : null}
+                {step.id === 'STAFF_INVITED' && !step.done ? (
+                  <p>
+                    <button
+                      className="btn secondary small"
+                      type="button"
+                      onClick={() => onGoTab('equipe')}
+                    >
+                      Vincular a equipe
+                    </button>
+                  </p>
+                ) : null}
+                {step.id === 'FIRST_DISMISSAL_DONE' && !step.done ? (
+                  <p>
+                    <Link className="btn secondary small" href="/portaria">
+                      Abrir a portaria
+                    </Link>
+                  </p>
+                ) : null}
+              </div>
+              {canMark ? (
+                <button
+                  className="btn secondary small"
+                  type="button"
+                  disabled={busyStep === step.id}
+                  onClick={() => void onToggle(step.id, step.done)}
+                >
+                  {busyStep === step.id
+                    ? 'Salvando…'
+                    : step.done
+                      ? 'Reabrir'
+                      : 'Marcar como feito'}
+                </button>
+              ) : null}
+            </li>
+          );
+        })}
+      </ol>
     </section>
   );
 }

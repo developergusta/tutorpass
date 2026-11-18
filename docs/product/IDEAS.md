@@ -1796,3 +1796,41 @@ Fontes: tvpilot.app "Digital Signage Color Contrast: What Works on a Real TV" e 
 Concorrente BR forte é suite ampla (comunicação/ERP/facial). TutorPass vence sendo **o melhor só em saída**:
 mais rápido de implantar, QR dinâmico anti-fraude (eles usam QR estático), auditoria imutável com hash
 (ângulo jurídico/LGPD) e preço simples por aluno. Toda ideia nova deve reforçar essa tese ou ser fase 2.
+
+## Semeado em 17/11/2026 — checklist de implantação em 1 dia na /escola (frente d, ciclo UI 15)
+- **Espaçamento em tokens nomeados, não em números soltos** (muuds.design,
+  2026; design.vegastack.com, 2026): escala curta (4/8/12/16/24/32/48/64
+  px) como variáveis CSS; "o valor fácil de digitar é o certo" — o código
+  novo usa os tokens e o CSS antigo migra quando a tela é tocada, sem
+  reescrita em massa. Impacto 3, Esforço 1 — **implementado neste ciclo**
+  (`--space-1..16` no `:root`; o CSS novo da implantação já usa os tokens).
+- **Gap no container, não margem no filho** (muuds.design, 2026): `gap`
+  põe espaço só entre itens, nunca nas bordas — remove uma classe inteira
+  de bugs de alinhamento. Impacto 2, Esforço 1 — **implementado neste ciclo**
+  (`.onboarding-list` em grid com `gap: var(--space-3)`).
+- **Componente cuida do dentro, layout cuida do fora** (muuds.design,
+  2026): o cartão define o próprio padding; quem o empilha define o gap.
+  Impacto 2, Esforço 1 — **implementado neste ciclo** (`.onboarding-step`
+  com padding próprio; a lista só dá o gap).
+- **O checklist de implantação existe na API e não tinha tela**
+  (OnboardingService, 2026): a home promete "Implantação em 1 dia" e
+  nenhuma tela acompanhava os 4 passos (conta → CSV → equipe → primeira
+  saída, 53 min no runbook). Impacto 4, Esforço 2 — **implementado neste
+  ciclo** (aba Implantação na /escola: barra de progresso, próximo passo
+  destacado, atalhos p/ importar o CSV, vincular a equipe e abrir a
+  portaria; marcar/reabrir só ADMIN/COORDINATOR; a marcação ainda é
+  manual — a integração automática é Step 2 da API).
+- **Rótulo de 1 palavra não é mensagem de ação** (unslop, 2026; FHWA,
+  2009): caps com tracking é p/ "KEEP RIGHT", não p/ selo de cartão.
+  Impacto 2, Esforço 1 — **implementado neste ciclo** (`.plan-badge`
+  "Recomendado" em sentence case, peso 700, padding na grade 4 px).
+- **Pulso em loop só onde há dado vivo** (unslop, 2026): o selo "Agora"
+  do hero pulsava num painel de demonstração — movimento sem dado vivo
+  por trás. Impacto 2, Esforço 1 — **implementado neste ciclo** (o pulso
+  saiu do `.hb-tag`; o pop-in da linha chamada já marca o momento; o
+  pulso fica no ponto "Ao vivo" do telão/portaria, onde há conexão real).
+- **O que falta p/ o padrão completo (não neste ciclo)**: a API marcar
+  os passos sozinha (importou o CSV → ROSTER_IMPORTED; vinculou staff →
+  STAFF_INVITED; primeira liberação → FIRST_DISMISSAL_DONE) e o job
+  diário das 06:00 zerar a demo — integração do Step 2, fora do escopo
+  desta rotina. Impacto 3, Esforço 2 — **registrado no BACKLOG**.

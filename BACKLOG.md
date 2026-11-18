@@ -116,6 +116,25 @@ mesmo do login: **o motor existe e é testado; falta a camada de uso**.
 - [ ] Observabilidade: logs estruturados, métricas de fila, alerta de fila > N
 
 ## Fila UI/UX (rotina de 30 min — ordem: login → portaria → telão → planos → estados vazios/erro → mobile)
+- [x] **Implantação em 1 dia (ciclo UI 15, 17/11/2026)** — a home promete
+  "Implantação em 1 dia" e o web não tinha nenhuma tela p/ acompanhar: a
+  API já tinha GET /onboarding/schools/:schoolId/checklist e POST
+  steps/:step/complete|reopen (4 passos do runbook, 53 min). Agora a
+  /escola tem a aba Implantação: barra de progresso ("2 de 4 passos ·
+  ~35 min restantes", `role="progressbar"`), próximo passo destacado,
+  atalhos p/ importar o CSV, vincular a equipe e abrir a portaria, e
+  "Marcar como feito"/"Reabrir" só p/ ADMIN/COORDINATOR (a marcação ainda
+  é manual — a automática é Step 2 da API); GATE_AGENT/TEACHER veem, TUTOR
+  vê 1 frase. Falha some sem quebrar a página (carregando/erro com
+  retry). Escala de espaçamento `--space-*` (4/8/12/16/24/32/48/64) no
+  `:root`, já usada no CSS novo. Unslop: `.plan-badge` "Recomendado" em
+  sentence case (era caixa alta com tracking) e o pulso em loop saiu do
+  selo "Agora" do hero (demonstração, sem dado vivo — o pop-in da linha
+  já marca o momento). `next build` OK (16 rotas; /escola 9,4 kB).
+  Próximo da fila UI: **tela de sala p/ o professor**, bloqueada na API
+  (TEACHER recebe 403 no roster); **app do tutor** segue bloqueado na API
+  (sem rota p/ emitir o QR dinâmico nem vínculo usuário ↔ Tutor). Ver
+  docs/product/IDEAS.md, frente d, ciclo UI 15.
 - [x] **Nomes da fila resolvidos no roster (ciclo UI 14, 17/11/2026)** —
   o payload do evento não traz nome nem turma e as linhas liam "Aluno"
   (agravante do bug crítico do realtime). Agora o hook da fila
