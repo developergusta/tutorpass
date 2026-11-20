@@ -5,6 +5,24 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense, useState, type FormEvent } from 'react';
 import { resetPassword } from '../../lib/api';
 
+function EyeIcon({ off }: { off?: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+      <circle cx="12" cy="12" r="3" />
+      {off ? <path d="M4 4l16 16" /> : null}
+    </svg>
+  );
+}
+
 // Redefinição de senha pelo link (?token=...): consome o token de uso
 // único, define a senha nova e derruba as sessões antigas (a API revoga
 // todos os refresh tokens da conta).
@@ -13,6 +31,8 @@ function RedefinirForm() {
   const token = params.get('token') ?? '';
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,26 +95,48 @@ function RedefinirForm() {
       ) : null}
       <div className="field">
         <label htmlFor="password">Senha nova</label>
-        <input
-          id="password"
-          type="password"
-          autoComplete="new-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Ao menos 8 caracteres"
-        />
+        <div className="input-wrap">
+          <input
+            id="password"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="new-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Ao menos 8 caracteres"
+          />
+          <button
+            className="input-toggle"
+            type="button"
+            aria-pressed={showPassword}
+            aria-label={showPassword ? 'Ocultar senha nova' : 'Mostrar senha nova'}
+            onClick={() => setShowPassword((v) => !v)}
+          >
+            <EyeIcon off={showPassword} />
+          </button>
+        </div>
       </div>
       <div className="field">
         <label htmlFor="confirm">Repita a senha nova</label>
-        <input
-          id="confirm"
-          type="password"
-          autoComplete="new-password"
-          required
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-        />
+        <div className="input-wrap">
+          <input
+            id="confirm"
+            type={showConfirm ? 'text' : 'password'}
+            autoComplete="new-password"
+            required
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+          />
+          <button
+            className="input-toggle"
+            type="button"
+            aria-pressed={showConfirm}
+            aria-label={showConfirm ? 'Ocultar confirmação da senha' : 'Mostrar confirmação da senha'}
+            onClick={() => setShowConfirm((v) => !v)}
+          >
+            <EyeIcon off={showConfirm} />
+          </button>
+        </div>
       </div>
       <p style={{ marginTop: 20 }}>
         <button className="btn" type="submit" disabled={busy} style={{ width: '100%' }}>
