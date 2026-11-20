@@ -110,7 +110,8 @@ export default function HomePage() {
                 <span className="drb-pill-tech">SHA-256 · REDIS 30S · LGPD</span>
               </div>
               <h1 className="drb-display-title">
-                A saída de alunos operada como torre de controle.
+                A saída de alunos operada como{' '}
+                <em className="editorial-serif">torre de controle</em>.
               </h1>
             </div>
 
@@ -121,10 +122,10 @@ export default function HomePage() {
                 criptográfica na grade, tudo sincronizado em tempo real.
               </p>
               <div className="drb-cta-cluster">
-                <Link className="btn btn-hero" href="/cadastro">
+                <Link className="btn" href="/cadastro">
                   Criar conta da escola — Grátis
                 </Link>
-                <Link className="btn btn-hero-ghost" href="/planos">
+                <Link className="btn secondary" href="/planos">
                   Simular mensalidade
                 </Link>
               </div>
@@ -328,7 +329,7 @@ export default function HomePage() {
               </p>
             </div>
             <div className="drb-pb-actions">
-              <Link className="btn" href="/cadastro">
+              <Link className="btn secondary" href="/cadastro">
                 Criar conta grátis
               </Link>
               <Link className="btn secondary" href="/planos">

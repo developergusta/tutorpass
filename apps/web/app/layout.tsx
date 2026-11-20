@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { IBM_Plex_Mono, Plus_Jakarta_Sans, Sora } from 'next/font/google';
+import { Instrument_Serif, Inter, JetBrains_Mono } from 'next/font/google';
 import Link from 'next/link';
 import Script from 'next/script';
 import type { ReactNode } from 'react';
@@ -7,24 +7,25 @@ import AuthNav from '../components/AuthNav';
 import TopbarScroll from '../components/TopbarScroll';
 import './globals.css';
 
-const plusJakarta = Plus_Jakarta_Sans({
+const inter = Inter({
   subsets: ['latin'],
   variable: '--font-sans',
   display: 'swap',
 });
 
-const sora = Sora({
+const instrumentSerif = Instrument_Serif({
   subsets: ['latin'],
-  variable: '--font-display',
+  variable: '--font-serif',
   display: 'swap',
-  weight: ['500', '600', '700'],
+  weight: '400',
+  style: ['normal', 'italic'],
 });
 
-const plexMono = IBM_Plex_Mono({
+const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
   display: 'swap',
-  weight: ['500', '600'],
+  weight: ['400', '500', '600', '700'],
 });
 
 export const metadata: Metadata = {
@@ -66,7 +67,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="pt-BR"
-      className={`${plusJakarta.variable} ${sora.variable} ${plexMono.variable}`}
+      className={`${inter.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
       <body>

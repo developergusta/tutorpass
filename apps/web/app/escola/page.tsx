@@ -168,12 +168,61 @@ function EscolaPanel() {
     tabs[next]?.click();
   }
 
+  const activeClassroomsCount = classrooms.filter((c) => c.isActive).length;
+  const linkedTutorsCount = tutors.filter((t) => Boolean(t.userId)).length;
+  const totalPickupLinks = tutors.reduce((sum, t) => sum + (t.studentCount ?? 0), 0);
+
   return (
-    <main id="conteudo" tabIndex={-1} className="container section">
-      <h1 className="section-title">Área da escola</h1>
-      <p className="muted">
-        Cadastro de turmas, alunos e responsáveis — é daqui que a fila da portaria nasce.
-      </p>
+    <main id="conteudo" tabIndex={-1} className="container container-wide section pandhowan-dashboard">
+      <header className="pandhowan-header">
+        <div>
+          <span className="eyebrow-mono">GESTÃO ESCOLAR · DIRETÓRIO &amp; OPERAÇÃO</span>
+          <h1 className="section-title">Área da escola</h1>
+          <p className="muted">
+            Cadastro de turmas, alunos e responsáveis — é daqui que a fila da portaria nasce.
+          </p>
+        </div>
+        <div className="pandhowan-header-actions">
+          <Link className="btn secondary small" href="/portaria">
+            Abrir portaria
+          </Link>
+          <Link className="btn secondary small" href="/telao">
+            Abrir telão
+          </Link>
+        </div>
+      </header>
+
+      {/* Pandhowan Metric Widgets — hierarquia clara de indicadores no topo */}
+      <section className="pandhowan-metrics" aria-label="Indicadores do cadastro escolar">
+        <div className="pandhowan-metric-card">
+          <span className="pm-label">TURMAS ATIVAS</span>
+          <strong className="pm-value">{activeClassroomsCount}</strong>
+          <span className="pm-meta">
+            de {classrooms.length} {classrooms.length === 1 ? 'turma cadastrada' : 'turmas cadastradas'}
+          </span>
+        </div>
+        <div className="pandhowan-metric-card">
+          <span className="pm-label">RESPONSÁVEIS</span>
+          <strong className="pm-value">{tutors.length}</strong>
+          <span className="pm-meta">
+            {tutors.filter((t) => !t.isBlocked).length} autorizados na portaria
+          </span>
+        </div>
+        <div className="pandhowan-metric-card">
+          <span className="pm-label">CONTAS VINCULADAS</span>
+          <strong className="pm-value">{linkedTutorsCount}</strong>
+          <span className="pm-meta">
+            com QR dinâmico ativo no celular
+          </span>
+        </div>
+        <div className="pandhowan-metric-card">
+          <span className="pm-label">VÍNCULOS DE RETIRADA</span>
+          <strong className="pm-value">{totalPickupLinks}</strong>
+          <span className="pm-meta">
+            autorizações família ↔ aluno
+          </span>
+        </div>
+      </section>
 
       {error ? (
         <p className="alert error" role="alert">
@@ -355,35 +404,43 @@ function TurmasTab({
         </p>
       ) : null}
 
-      <ul className="roster-list">
-        {classrooms.length === 0 ? (
-          <li className="muted">Nenhuma turma ainda — crie a primeira no formulário acima.</li>
-        ) : (
-          classrooms.map((c) => (
-            <li className="roster-row" key={c.id}>
-              <span>
-                <strong>{c.name}</strong>
-                {c.grade ? <span className="muted"> · {c.grade}</span> : null}
-                <span className="muted"> · {c.academicYear}</span>
-                {c.roomLocation ? <span className="muted"> · {c.roomLocation}</span> : null}
-                {counts ? (
-                  <span className="muted">
-                    {' '}
-                    · {counts[c.id] ?? 0} {(counts[c.id] ?? 0) === 1 ? 'aluno' : 'alunos'}
-                  </span>
-                ) : null}
-              </span>
-              {c.isActive ? (
-                <button className="btn secondary small" type="button" onClick={() => void onDeactivate(c)}>
-                  Desativar
-                </button>
-              ) : (
-                <span className="badge off">Desativada</span>
-              )}
-            </li>
-          ))
-        )}
-      </ul>
+      <div className="pandhowan-table-shell">
+        <div className="pandhowan-table-head" aria-hidden="true">
+          <span>TURMA / SÉRIE / LOCAL / EFETIVO</span>
+          <span>CONTROLE</span>
+        </div>
+        <ul className="roster-list">
+          {classrooms.length === 0 ? (
+            <li className="roster-empty muted">Nenhuma turma ainda — crie a primeira no formulário acima.</li>
+          ) : (
+            classrooms.map((c) => (
+              <li className="roster-row" key={c.id}>
+                <span>
+                  <strong>{c.name}</strong>
+                  {c.grade ? <span className="muted"> · {c.grade}</span> : null}
+                  <span className="muted"> · {c.academicYear}</span>
+                  {c.roomLocation ? <span className="muted"> · {c.roomLocation}</span> : null}
+                  {counts ? (
+                    <span className="muted">
+                      {' '}
+                      · {counts[c.id] ?? 0} {(counts[c.id] ?? 0) === 1 ? 'aluno' : 'alunos'}
+                    </span>
+                  ) : null}
+                </span>
+                <span className="row-actions">
+                  {c.isActive ? (
+                    <button className="btn secondary small" type="button" onClick={() => void onDeactivate(c)}>
+                      Desativar
+                    </button>
+                  ) : (
+                    <span className="badge off">Desativada</span>
+                  )}
+                </span>
+              </li>
+            ))
+          )}
+        </ul>
+      </div>
     </section>
   );
 }
@@ -402,6 +459,7 @@ function AlunosTab({
   const [students, setStudents] = useState<Student[]>([]);
   const [filterClassroom, setFilterClassroom] = useState('');
   const [search, setSearch] = useState('');
+  const [quickFilter, setQuickFilter] = useState<'all' | 'active' | 'no-tutor' | 'inactive'>('all');
   const [name, setName] = useState('');
   const [classroomId, setClassroomId] = useState('');
   const [enrollment, setEnrollment] = useState('');
@@ -578,21 +636,53 @@ function AlunosTab({
         </p>
       </form>
 
-      <div className="form-grid roster-filters">
-        <div className="field">
-          <label htmlFor="f-class">Filtrar por turma</label>
-          <select id="f-class" value={filterClassroom} onChange={(e) => setFilterClassroom(e.target.value)}>
-            <option value="">Todas</option>
-            {classrooms.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+      <div className="pandhowan-filter-bar">
+        <div className="form-grid roster-filters">
+          <div className="field">
+            <label htmlFor="f-class">Filtrar por turma</label>
+            <select id="f-class" value={filterClassroom} onChange={(e) => setFilterClassroom(e.target.value)}>
+              <option value="">Todas</option>
+              {classrooms.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="f-search">Buscar por nome</label>
+            <input id="f-search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Digite parte do nome" />
+          </div>
         </div>
-        <div className="field">
-          <label htmlFor="f-search">Buscar por nome</label>
-          <input id="f-search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Digite parte do nome" />
+        <div className="smart-filter-pills" role="group" aria-label="Filtros rápidos de alunos">
+          <button
+            type="button"
+            className={`smart-pill${quickFilter === 'all' ? ' is-active' : ''}`}
+            onClick={() => setQuickFilter('all')}
+          >
+            Todos ({students.length})
+          </button>
+          <button
+            type="button"
+            className={`smart-pill${quickFilter === 'active' ? ' is-active' : ''}`}
+            onClick={() => setQuickFilter('active')}
+          >
+            Ativos ({students.filter((s) => s.status === 'ACTIVE').length})
+          </button>
+          <button
+            type="button"
+            className={`smart-pill${quickFilter === 'no-tutor' ? ' is-active' : ''}`}
+            onClick={() => setQuickFilter('no-tutor')}
+          >
+            Sem responsável ({noTutorCount})
+          </button>
+          <button
+            type="button"
+            className={`smart-pill${quickFilter === 'inactive' ? ' is-active' : ''}`}
+            onClick={() => setQuickFilter('inactive')}
+          >
+            Inativos ({students.filter((s) => s.status !== 'ACTIVE').length})
+          </button>
         </div>
       </div>
 
@@ -604,11 +694,28 @@ function AlunosTab({
           — sem responsável, ninguém retira.
         </p>
       ) : null}
-      <ul className="roster-list">
-        {students.length === 0 ? (
-          <li className="muted">Nenhum aluno neste filtro.</li>
-        ) : (
-          students.map((s) => (
+      <div className="pandhowan-table-shell">
+        <div className="pandhowan-table-head" aria-hidden="true">
+          <span>ALUNO / TURMA / MATRÍCULA</span>
+          <span>AÇÕES DA LINHA</span>
+        </div>
+        <ul className="roster-list">
+          {students.filter((s) => {
+            if (quickFilter === 'active') return s.status === 'ACTIVE';
+            if (quickFilter === 'inactive') return s.status !== 'ACTIVE';
+            if (quickFilter === 'no-tutor') return tutorCounts[s.id] === 0;
+            return true;
+          }).length === 0 ? (
+            <li className="roster-empty muted">Nenhum aluno neste filtro.</li>
+          ) : (
+            students
+              .filter((s) => {
+                if (quickFilter === 'active') return s.status === 'ACTIVE';
+                if (quickFilter === 'inactive') return s.status !== 'ACTIVE';
+                if (quickFilter === 'no-tutor') return tutorCounts[s.id] === 0;
+                return true;
+              })
+              .map((s) => (
             <li className="roster-item" key={s.id}>
               <div className="roster-row">
                 <span>
@@ -691,7 +798,8 @@ function AlunosTab({
             </li>
           ))
         )}
-      </ul>
+        </ul>
+      </div>
     </section>
   );
 }
@@ -842,28 +950,34 @@ function TutoresTab({
         </p>
       ) : null}
 
-      <ul className="roster-list">
-        {tutors.length === 0 ? (
-          <li className="muted">Nenhum responsável ainda.</li>
-        ) : (
-          tutors.map((t) => (
-            <li className="roster-row" key={t.id}>
-              <span>
-                <strong>{t.name}</strong>
-                <span className="muted"> · {t.phone}</span>
-                {t.studentCount !== undefined ? (
-                  <span className="muted">
-                    {' '}
-                    · {t.studentCount} {t.studentCount === 1 ? 'aluno' : 'alunos'}
-                  </span>
-                ) : null}
-                {t.isBlocked ? <span className="badge danger">Bloqueado</span> : null}
-              </span>
-              <TutorAccountLink tutor={t} onChanged={onChanged} onError={onError} onNotice={onNotice} />
-            </li>
-          ))
-        )}
-      </ul>
+      <div className="pandhowan-table-shell">
+        <div className="pandhowan-table-head" aria-hidden="true">
+          <span>RESPONSÁVEL / TELEFONE / ALUNOS</span>
+          <span>CONTA DE ACESSO</span>
+        </div>
+        <ul className="roster-list">
+          {tutors.length === 0 ? (
+            <li className="roster-empty muted">Nenhum responsável ainda.</li>
+          ) : (
+            tutors.map((t) => (
+              <li className="roster-row" key={t.id}>
+                <span>
+                  <strong>{t.name}</strong>
+                  <span className="muted"> · {t.phone}</span>
+                  {t.studentCount !== undefined ? (
+                    <span className="muted">
+                      {' '}
+                      · {t.studentCount} {t.studentCount === 1 ? 'aluno' : 'alunos'}
+                    </span>
+                  ) : null}
+                  {t.isBlocked ? <span className="badge danger">Bloqueado</span> : null}
+                </span>
+                <TutorAccountLink tutor={t} onChanged={onChanged} onError={onError} onNotice={onNotice} />
+              </li>
+            ))
+          )}
+        </ul>
+      </div>
     </section>
   );
 }
@@ -1098,25 +1212,33 @@ function EquipeTab({
           {canAdd ? ' — vincule quem opera a portaria no formulário acima.' : '.'}
         </p>
       ) : (
-        <ul className="roster-list">
-          {members.map((m) => (
-            <li className="roster-row" key={`${m.userId}:${m.role}`}>
-              <span className="member-id">
-                <span className="member-avatar" aria-hidden="true">
-                  {(m.name || m.email).charAt(0).toUpperCase()}
+        <div className="pandhowan-table-shell">
+          <div className="pandhowan-table-head" aria-hidden="true">
+            <span>MEMBRO DA EQUIPE / E-MAIL</span>
+            <span>PAPEL &amp; STATUS</span>
+          </div>
+          <ul className="roster-list">
+            {members.map((m) => (
+              <li className="roster-row" key={`${m.userId}:${m.role}`}>
+                <span className="member-id">
+                  <span className="member-avatar" aria-hidden="true">
+                    {(m.name || m.email).charAt(0).toUpperCase()}
+                  </span>
+                  <span>
+                    <strong>{m.name || m.email}</strong>
+                    {m.name ? <span className="muted"> · {m.email}</span> : null}
+                  </span>
                 </span>
-                <span>
-                  <strong>{m.name || m.email}</strong>
-                  {m.name ? <span className="muted"> · {m.email}</span> : null}
+                <span className="row-actions">
                   <span className="badge">
                     {ROLES.find((r) => r.value === m.role)?.label ?? m.role}
                   </span>
                   {m.status !== 'ACTIVE' ? <span className="badge off">Inativo</span> : null}
                 </span>
-              </span>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </section>
   );

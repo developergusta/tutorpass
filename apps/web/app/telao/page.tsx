@@ -171,8 +171,10 @@ function TelaoPanel() {
 
 export default function TelaoPage() {
   return (
-    <RequireAuth area="telão">
-      <TelaoPanel />
-    </RequireAuth>
+    <div className="ops-surface">
+      <RequireAuth area="telão">
+        <TelaoPanel />
+      </RequireAuth>
+    </div>
   );
 }

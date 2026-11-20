@@ -93,8 +93,11 @@ function ResponsavelPanel() {
   const hasActive = info?.students.some((s) => s.activeEntry) ?? false;
 
   return (
-    <main id="conteudo" tabIndex={-1} className="container">
-      <h1>Área do responsável</h1>
+    <main id="conteudo" tabIndex={-1} className="container mercury-parent">
+      <header className="mercury-parent-header">
+        <span className="eyebrow-mono">PASSE DA FAMÍLIA · CREDENCIAL DE RETIRADA</span>
+        <h1>Área do responsável</h1>
+      </header>
 
       {error ? (
         <div className="state state-error" role="alert">
@@ -188,37 +191,53 @@ function StudentCard({
 
   return (
     <section className="card resp-student" aria-label={data.student.name}>
-      <h2>{data.student.name}</h2>
-      <p className="muted">
-        {data.classroomName ?? 'Sem turma'}
-        {' · '}
-        {RELATIONSHIP_LABEL[data.relationship] ?? 'Responsável'}
-        {data.student.pickupBlocked ? (
-          <>
+      <div className="resp-student-top">
+        <div>
+          <h2>{data.student.name}</h2>
+          <p className="muted resp-student-meta">
+            {data.classroomName ?? 'Sem turma'}
             {' · '}
-            <span className="badge danger">Retirada bloqueada</span>
-          </>
-        ) : null}
-      </p>
+            {RELATIONSHIP_LABEL[data.relationship] ?? 'Responsável'}
+            {data.student.pickupBlocked ? (
+              <>
+                {' · '}
+                <span className="badge danger">Retirada bloqueada</span>
+              </>
+            ) : null}
+          </p>
+        </div>
+        <div className="resp-eta-block" aria-label="Tempo estimado e estado">
+          <span className="resp-eta-label">TEMPO / ESTADO</span>
+          <strong className="resp-eta-value">
+            {entry
+              ? entry.status === 'CALLED'
+                ? '00:00 · AGORA'
+                : entry.status === 'VALIDATED'
+                  ? 'OK · LIBERADO'
+                  : '~02 min · FILA'
+              : '— · AGUARDANDO'}
+          </strong>
+        </div>
+      </div>
 
       {entry ? (
-        <>
-          <p>
+        <div className="resp-active-state">
+          <p className="resp-chip-row">
             <span className={`chip ${entry.status === 'QUEUED' ? '' : 'ok'}`}>
               {STATUS_LABEL[entry.status] ?? entry.status}
             </span>
             {entry.gate ? <span className="chip">{entry.gate}</span> : null}
           </p>
           {entry.status === 'QUEUED' || entry.status === 'CALLED' ? (
-            <p>
+            <p style={{ margin: 0 }}>
               <button className="btn secondary" type="button" disabled={busy} onClick={onCancel}>
                 {busy ? 'Cancelando…' : 'Desistir de buscar agora'}
               </button>
             </p>
           ) : null}
-        </>
+        </div>
       ) : data.canPickup ? (
-        <>
+        <div className="resp-checkin-flow">
           <div className="field">
             <label htmlFor={`gate-${data.student.id}`}>
               Portão (só se a escola separar por portões)
@@ -231,12 +250,12 @@ function StudentCard({
               maxLength={40}
             />
           </div>
-          <p>
-            <button className="btn" type="button" disabled={busy} onClick={onJoin}>
+          <p className="resp-arrival-wrap">
+            <button className="btn btn-arrival" type="button" disabled={busy} onClick={onJoin}>
               {busy ? 'Entrando…' : 'Estou chegando'}
             </button>
           </p>
-        </>
+        </div>
       ) : (
         <p className="muted">
           Você está cadastrado como contato, sem autorização de retirada para
@@ -291,7 +310,16 @@ function QrCard() {
 
   return (
     <section className="card qr-box" aria-label="Seu QR para a portaria">
-      <h2>Seu QR na portaria</h2>
+      <div className="qr-box-header">
+        <div>
+          <span className="eyebrow-mono">TOKEN EFÊMERO ANTI-PRINT</span>
+          <h2>Seu QR na portaria</h2>
+        </div>
+        <div className="qr-tabular-timer" aria-hidden="true">
+          <span className="qr-timer-num">{String(secondsLeft).padStart(2, '0')}s</span>
+          <span className="qr-timer-lbl">TTL ATIVO</span>
+        </div>
+      </div>
       {img ? (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}

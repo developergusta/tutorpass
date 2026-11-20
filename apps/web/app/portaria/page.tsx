@@ -244,14 +244,22 @@ function PortariaPanel() {
           : { tone: 'wait', label: 'API no ar · tempo real conectando…' };
 
   return (
-    <main id="conteudo" tabIndex={-1} className="container">
-      <h1>Painel da portaria</h1>
-      <p>
-        <span className={`conn-pill is-${conn.tone}`} role="status">
-          <span className="status-dot" aria-hidden="true" />
-          {conn.label}
-        </span>
-      </p>
+    <main id="conteudo" tabIndex={-1} className="container container-wide ops-main">
+      <header className="ops-header">
+        <div className="ops-header-title">
+          <span className="ops-eyebrow">TERMINAL DE PORTÃO · LINEAR OPS</span>
+          <h1>Painel da portaria</h1>
+        </div>
+        <div className="ops-header-controls">
+          <span className={`conn-pill is-${conn.tone}`} role="status">
+            <span className="status-dot" aria-hidden="true" />
+            {conn.label}
+          </span>
+          <Link className="btn secondary small" href="/telao">
+            Ver no telão
+          </Link>
+        </div>
+      </header>
 
       <SiblingGateAlert items={items} />
 
@@ -351,8 +359,10 @@ function PortariaPanel() {
 
 export default function PortariaPage() {
   return (
-    <RequireAuth area="portaria">
-      <PortariaPanel />
-    </RequireAuth>
+    <div className="ops-surface">
+      <RequireAuth area="portaria">
+        <PortariaPanel />
+      </RequireAuth>
+    </div>
   );
 }

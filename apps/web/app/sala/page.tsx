@@ -64,14 +64,19 @@ function SalaPanel() {
   }
 
   return (
-    <main id="conteudo" tabIndex={-1} className="container">
-      <h1>Sala de aula</h1>
-      <p>
-        <span className={`conn-pill is-${conn.tone}`} role="status">
-          <span className="status-dot" aria-hidden="true" />
-          {conn.label}
-        </span>
-      </p>
+    <main id="conteudo" tabIndex={-1} className="container container-wide ops-main">
+      <header className="ops-header">
+        <div className="ops-header-title">
+          <span className="ops-eyebrow">TERMINAL DOCENTE · LINEAR OPS</span>
+          <h1>Sala de aula</h1>
+        </div>
+        <div className="ops-header-controls">
+          <span className={`conn-pill is-${conn.tone}`} role="status">
+            <span className="status-dot" aria-hidden="true" />
+            {conn.label}
+          </span>
+        </div>
+      </header>
 
       {classrooms === null ? (
         <p role="status">Carregando as turmas…</p>
@@ -106,13 +111,18 @@ function SalaPanel() {
             </select>
           </div>
 
-          <section className="card queue-section" aria-label="Alunos chamados">
-            <h2>Indo para o portão ({called.length})</h2>
-            <p className="muted">
-              A portaria chamou — pode mandar estes alunos para o portão.
-            </p>
+          <section className="card queue-section is-ready" aria-label="Alunos chamados">
+            <div className="queue-section-head">
+              <div>
+                <h2>Indo para o portão ({called.length})</h2>
+                <p className="muted ops-section-sub">
+                  A portaria chamou — pode mandar estes alunos para o portão.
+                </p>
+              </div>
+              <span className="count-badge">{called.length}</span>
+            </div>
             {called.length === 0 ? (
-              <p className="muted">Nenhum aluno da sua turma foi chamado ainda.</p>
+              <p className="muted ops-empty-row">Nenhum aluno da sua turma foi chamado ainda.</p>
             ) : (
               <ul className="queue-list">
                 {called.map((item) => (
@@ -122,13 +132,18 @@ function SalaPanel() {
             )}
           </section>
 
-          <section className="card queue-section" aria-label="Alunos na fila">
-            <h2>Na fila ({queued.length})</h2>
-            <p className="muted">
-              O responsável já entrou na fila e está a caminho da escola.
-            </p>
+          <section className="card queue-section is-route" aria-label="Alunos na fila">
+            <div className="queue-section-head">
+              <div>
+                <h2>Na fila ({queued.length})</h2>
+                <p className="muted ops-section-sub">
+                  O responsável já entrou na fila e está a caminho da escola.
+                </p>
+              </div>
+              <span className="count-badge">{queued.length}</span>
+            </div>
             {queued.length === 0 ? (
-              <p className="muted">Ninguém da sua turma na fila agora.</p>
+              <p className="muted ops-empty-row">Ninguém da sua turma na fila agora.</p>
             ) : (
               <ul className="queue-list">
                 {queued.map((item) => (
@@ -155,8 +170,10 @@ function SalaRow({ item, highlight = false }: { item: QueueItem; highlight?: boo
 
 export default function SalaPage() {
   return (
-    <RequireAuth area="sala">
-      <SalaPanel />
-    </RequireAuth>
+    <div className="ops-surface">
+      <RequireAuth area="sala">
+        <SalaPanel />
+      </RequireAuth>
+    </div>
   );
 }
