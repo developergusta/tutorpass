@@ -1,359 +1,548 @@
+import {
+  ArrowUpRight,
+  Bell,
+  Calculator,
+  Check,
+  FileSpreadsheet,
+  Link2,
+  MapPin,
+  Monitor,
+  QrCode,
+  ShieldCheck,
+  Smartphone,
+  Tv,
+  Users,
+} from 'lucide-react';
 import Link from 'next/link';
 import HeroBoard from '../components/HeroBoard';
+import Reveal from '../components/Reveal';
 
-const telemetryRibbon = [
-  { value: '30 s', label: 'Janela máxima do QR', sub: 'Token efêmero no Redis, uso único' },
-  { value: '< 40 ms', label: 'Chamada sala ↔ portão', sub: 'WebSocket dedicado por turma' },
-  { value: '2 leituras', label: 'Filtro de cerca virtual', sub: 'Zero alarme falso de quem passa na rua' },
-  { value: '53 min', label: 'Implantação completa', sub: 'Importação CSV com prévia a seco' },
+const operationalStats = [
+  {
+    value: '30 s',
+    label: 'Rotação do QR code via HMAC',
+    detail: 'Expira a cada meio minuto e invalida print de tela no primeiro uso.',
+  },
+  {
+    value: '2 leituras',
+    label: 'Fila automática por geolocalização',
+    detail: 'O responsável entra na fila ao se aproximar do colégio, sem gravar histórico de rota.',
+  },
+  {
+    value: 'SHA-256',
+    label: 'Log imutável com hash encadeado',
+    detail: 'Cada entrega assina o hash anterior; ninguém altera quem retirou ou o horário.',
+  },
+  {
+    value: '< 1 s',
+    label: 'Telão na portaria + aviso aos pais',
+    detail: 'Chamada silenciosa na TV do portão e notificação instantânea na liberação.',
+  },
+];
+
+const releaseSequence = [
+  {
+    step: '01',
+    icon: MapPin,
+    time: 'A 150 m do portão',
+    title: 'Fila automática por geolocalização',
+    body: 'Quando o responsável se aproxima da escola, o aplicativo confirma duas leituras dentro do perímetro e posiciona o aluno na fila da portaria automaticamente — sem tocar no celular no trânsito e sem armazenar o trajeto da família.',
+    artifact: 'status: QUEUED · distância: 145 m · ETA: ~2 min',
+  },
+  {
+    step: '02',
+    icon: Tv,
+    time: 'Na chegada à baia',
+    title: 'Telão em tempo real na portaria e nas salas',
+    body: 'Sem microfone gritando no pátio. O nome da criança sobe na coluna "Pode retirar agora" do telão de alto contraste no portão e na tela silenciosa da professora, que libera apenas quem já tem o responsável aguardando.',
+    artifact: 'canal: /telao + /sala · latência WebSocket < 40 ms',
+  },
+  {
+    step: '03',
+    icon: QrCode,
+    time: 'Na grade do portão',
+    title: 'QR code dinâmico HMAC que muda a cada 30 segundos',
+    body: 'Crachá de papel ou QR fixo permite que qualquer pessoa com uma foto no WhatsApp retire o aluno. No TutorPass, o código é assinado via HMAC, rotaciona a cada 30 segundos e é destruído no milissegundo da primeira leitura.',
+    artifact: 'token: HMAC-84A2-91F0 · TTL: 30 s · uso único',
+  },
+  {
+    step: '04',
+    icon: Users,
+    time: 'Tios, avós e terceiros',
+    title: 'Delegação formal de pessoas autorizadas',
+    body: 'Os pais cadastram e delegam terceiros autorizados (avós, tios, motoristas) direto pela conta da família. Se o portador não estiver ativo na lista de autorizados do aluno, a leitora da portaria bloqueia a entrega na hora.',
+    artifact: 'vínculo: Avó autorizada · delegada por Mãe titular',
+  },
+  {
+    step: '05',
+    icon: Bell,
+    time: 'No segundo da entrega',
+    title: 'Notificação instantânea aos pais e log com hash encadeado',
+    body: 'Confirmada a saída pelo porteiro, os pais recebem uma notificação instantânea informando exatamente quem retirou a criança e em qual portão. O evento é gravado em um livro de custódia com hash SHA-256 encadeado ao registro anterior — impossível de editar ou apagar depois.',
+    artifact: 'sha256:9f3a8c12e81c ⟵ prev:4c127b09ab10',
+  },
 ];
 
 const roleTerminals = [
   {
     href: '/portaria',
-    code: '01',
     route: '/portaria',
-    role: 'Agente de portão',
+    role: 'Porteiro / Agente de portão',
     title: 'Mesa da Portaria',
-    desc: 'Chama a sala, valida o QR dinâmico de 30s, recebe alerta de irmãos separados e assina a entrega.',
-  },
-  {
-    href: '/sala',
-    code: '02',
-    route: '/sala',
-    role: 'Professor(a)',
-    title: 'Terminal de Sala',
-    desc: 'Filtra somente a turma atual e separa em tempo real quem deve descer para a baia.',
-  },
-  {
-    href: '/responsavel',
-    code: '03',
-    route: '/responsavel',
-    role: 'Família / Tutor',
-    title: 'Passe do Responsável',
-    desc: 'Avisa chegada com um toque, acompanha a chamada e exibe o QR anti-print na portaria.',
+    desc: 'Aciona a chamada para a sala, lê o QR dinâmico HMAC de 30s, confere terceiros delegados e assina a liberação.',
+    icon: ShieldCheck,
   },
   {
     href: '/telao',
-    code: '04',
     route: '/telao',
-    role: 'Pátio / Recepção',
-    title: 'Telão de Alto Contraste',
-    desc: 'Palco escuro em tela cheia com tipografia dimensionada para leitura a mais de 5 metros.',
+    role: 'Pátio / Portão de embarque',
+    title: 'Telão em Tempo Real',
+    desc: 'Painel de alto contraste para TV ou monitor no portão, separando quem pode sair agora de quem está chegando pelo GPS.',
+    icon: Monitor,
+  },
+  {
+    href: '/sala',
+    route: '/sala',
+    role: 'Professor(a) em sala',
+    title: 'Chamada Silenciosa de Sala',
+    desc: 'Filtra somente a turma da professora e destaca em verde quem deve descer para a portaria naquele instante.',
+    icon: Users,
+  },
+  {
+    href: '/responsavel',
+    route: '/responsavel',
+    role: 'Pais e pessoas autorizadas',
+    title: 'Passe do Responsável',
+    desc: 'Entrada na fila por aproximação, QR code HMAC rotativo de 30 segundos e aviso imediato quando o filho é entregue.',
+    icon: Smartphone,
   },
   {
     href: '/escola',
-    code: '05',
     route: '/escola',
-    role: 'Secretaria / Direção',
-    title: 'Cadastro & Implantação',
-    desc: 'Turmas, alunos, vínculo de contas de responsáveis, importação CSV e checklist guiado.',
+    role: 'Secretaria e direção',
+    title: 'Gestão da Escola e Log',
+    desc: 'Importação de turmas por planilha CSV, vínculo de responsáveis, delegação de autorizados e auditoria do log encadeado.',
+    icon: FileSpreadsheet,
   },
 ];
 
-const priceTiers = [
+const pricingTiers = [
   {
-    code: 'GRÁTIS',
+    name: 'Grátis',
     band: 'Até 30 alunos',
-    limit: 'Até 5 funcionários · fila ao vivo, QR 30s e relatório diário',
     price: 'R$ 0',
     period: '/mês para sempre',
-    featured: false,
+    highlight: false,
+    note: 'Até 5 funcionários · fila ao vivo, QR dinâmico HMAC de 30s e relatório diário por e-mail.',
+    ctaLabel: 'Começar grátis',
+    ctaHref: '/cadastro',
   },
   {
-    code: 'TESTE 30D',
-    band: 'Qualquer porte',
-    limit: 'Todos os recursos do PRO liberados por 30 dias sem cartão',
-    price: 'R$ 0',
-    period: 'por 30 dias',
-    featured: true,
-  },
-  {
-    code: 'PRO · FAIXA A',
+    name: 'Faixa 1 · PRO',
     band: 'Até 50 alunos',
-    limit: 'Todos os módulos · múltiplos portões · telão · van · LGPD',
     price: 'R$ 89',
     period: '/mês fixo',
-    featured: false,
+    highlight: false,
+    note: 'Todos os recursos liberados: fila por geolocalização, telão de TV no portão, delegação e log encadeado.',
+    ctaLabel: 'Testar 30 dias grátis',
+    ctaHref: '/cadastro',
   },
   {
-    code: 'PRO · FAIXA B',
+    name: 'Faixa 2 · PRO',
     band: '51 a 200 alunos',
-    limit: 'Todos os módulos · até 50 funcionários · relatórios de pico',
     price: 'R$ 199',
     period: '/mês fixo',
-    featured: false,
+    highlight: true,
+    note: 'Até 50 funcionários, múltiplos portões simultâneos, alerta de irmãos em portões distintos e relatórios de pico.',
+    ctaLabel: 'Testar 30 dias grátis',
+    ctaHref: '/cadastro',
   },
   {
-    code: 'PRO · FAIXA C',
-    band: '201 a 2.000 alunos',
-    limit: 'Operação de alto fluxo · condição de rede acima de 1.000',
+    name: 'Faixa 3 · PRO',
+    band: 'Acima de 200 alunos',
     price: 'R$ 349',
     period: '/mês fixo',
-    featured: false,
+    highlight: false,
+    note: 'Para colégios de médio e grande porte (até 2.000 alunos). Condição dedicada para redes acima de 1.000 alunos.',
+    ctaLabel: 'Testar 30 dias grátis',
+    ctaHref: '/cadastro',
   },
 ];
 
 export default function HomePage() {
   return (
-    <main id="conteudo" tabIndex={-1} className="drb-home">
-      {/* 1. PALCO EDITORIAL DRIBBBLE + COCKPIT INTERATIVO COM RADAR DE BAIAS */}
-      <section className="drb-hero-stage">
+    <main id="conteudo" tabIndex={-1} className="tp-landing">
+      {/* 1. HERO EDITORIAL ASSIMÉTRICO + MOCKUP REALISTA PORTARIA / TELÃO */}
+      <section className="tp-hero-section">
         <div className="container container-wide">
-          <div className="drb-masthead">
-            <div className="drb-masthead-left">
-              <div className="drb-pill-row">
-                <span className="drb-pill-live">
-                  <span className="drb-pulse-dot" aria-hidden="true" />
-                  DESPACHO ESCOLAR CRIPTOGRAFADO
-                </span>
-                <span className="drb-pill-tech">SHA-256 · REDIS 30S · LGPD</span>
+          <div className="tp-hero-header">
+            <div className="tp-hero-headline-col">
+              <div className="tp-kicker-line">
+                <span className="tp-kicker-dot" aria-hidden="true" />
+                <span>CONTROLE DE CUSTÓDIA NA SAÍDA ESCOLAR</span>
               </div>
-              <h1 className="drb-display-title">
-                A saída de alunos operada como{' '}
-                <em className="editorial-serif">torre de controle</em>.
+              <h1 className="tp-hero-title">
+                Quem retira cada aluno, provado por{' '}
+                <em>QR de 30 segundos</em> e log que ninguém pode alterar.
               </h1>
             </div>
 
-            <div className="drb-masthead-right">
-              <p className="drb-lead">
-                Zero microfone no pátio, zero fila dupla na calçada e zero QR
-                fixo clonado no WhatsApp. Da aproximação do carro até a assinatura
-                criptográfica na grade, tudo sincronizado em tempo real.
+            <div className="tp-hero-aside-col">
+              <p className="tp-hero-lead">
+                Os pais entram na fila automaticamente por geolocalização ao se
+                aproximar do colégio. O telão da portaria chama a sala em
+                silêncio, o porteiro valida o QR HMAC rotativo de quem foi
+                autorizado e a família recebe notificação instantânea na
+                liberação.
               </p>
-              <div className="drb-cta-cluster">
-                <Link className="btn" href="/cadastro">
-                  Criar conta da escola — Grátis
+              <div className="tp-hero-ctas">
+                <Link className="btn tp-btn-primary" href="/cadastro">
+                  Criar conta da escola — Grátis até 30 alunos
                 </Link>
-                <Link className="btn secondary" href="/planos">
-                  Simular mensalidade
+                <Link className="btn secondary tp-btn-secondary" href="/planos">
+                  <Calculator size={16} aria-hidden="true" />
+                  Simular faixa de preço
                 </Link>
               </div>
             </div>
           </div>
 
-          {/* O Cockpit interativo com Radar SVG + Cartão de Passe Tátil */}
+          {/* Mockup realista das telas de Portaria (/portaria) e Telão (/telao) */}
           <HeroBoard />
 
-          {/* Fita de telemetria acoplada à base do cockpit */}
-          <dl className="drb-telemetry-strip" aria-label="Métricas operacionais">
-            {telemetryRibbon.map((m) => (
-              <div key={m.label} className="drb-tel-cell">
-                <dd className="wb-mono drb-tel-val">{m.value}</dd>
-                <dt className="drb-tel-lbl">{m.label}</dt>
-                <span className="drb-tel-sub">{m.sub}</span>
+          {/* Barra de métricas com números tabulares acoplada à base */}
+          <dl className="tp-metrics-bar" aria-label="Parâmetros técnicos da operação">
+            {operationalStats.map((stat) => (
+              <div key={stat.label} className="tp-metric-item">
+                <dd className="wb-mono tp-metric-value">{stat.value}</dd>
+                <dt className="tp-metric-label">{stat.label}</dt>
+                <p className="tp-metric-detail">{stat.detail}</p>
               </div>
             ))}
           </dl>
         </div>
       </section>
 
-      {/* 2. MOSAICO BENTO DE HARDWARE & TELEMETRIA (DRIBBBLE BENTO ARCHITECTURE) */}
-      <section className="container container-wide drb-section">
-        <header className="drb-sec-head">
-          <div className="drb-sec-title-wrap">
-            <span className="drb-sec-index">01 / ARQUITETURA DE CAMPO</span>
-            <h2>Engenharia visual para os 25 minutos mais críticos do colégio</h2>
-          </div>
-          <p className="muted drb-sec-desc">
-            Cada peça do TutorPass resolve uma falha real de segurança física na
-            calçada — mostrada aqui com os próprios artefatos do sistema.
-          </p>
-        </header>
-
-        <div className="drb-bento-grid">
-          {/* Célula Bento 1 (8 colunas): Anti-Replay & QR de 30s */}
-          <article className="drb-bento-card span-8 is-dark-accent">
-            <div className="drb-bento-copy">
-              <span className="drb-bento-tag">ANTI-FRAUDE · NONCE EFÊMERO</span>
-              <h3>QR que expira em 30 segundos e bloqueia print de WhatsApp</h3>
-              <p>
-                Crachás plastificados ou códigos QR fixos permitem que qualquer
-                pessoa com uma foto retire a criança. No TutorPass, o token nasce
-                no Redis com TTL de 30s e é invalidado no milissegundo da
-                primeira leitura.
-              </p>
-            </div>
-            <div className="drb-bento-visual" aria-hidden="true">
-              <div className="drb-terminal-compare">
-                <div className="drb-tc-card is-ok">
-                  <div className="drb-tc-top">
-                    <span className="wb-mono">LEITURA #01 · PORTÃO A</span>
-                    <span className="drb-tc-badge ok">200 · LIBERADO</span>
-                  </div>
-                  <div className="wb-mono drb-tc-code">NONCE: 84A2-91F (TTL 24s)</div>
-                  <div className="drb-tc-foot">
-                    Mariana Martins (Mãe) → Alice Martins (3º B)
-                  </div>
-                </div>
-                <div className="drb-tc-card is-err">
-                  <div className="drb-tc-top">
-                    <span className="wb-mono">PRINT REPASSADO · +14s</span>
-                    <span className="drb-tc-badge err">401 · QR_REJECTED</span>
-                  </div>
-                  <div className="wb-mono drb-tc-code">NONCE: 84A2-91F (CONSUMIDO)</div>
-                  <div className="drb-tc-foot">
-                    Alerta gravado no log de segurança da direção
-                  </div>
-                </div>
-              </div>
-            </div>
-          </article>
-
-          {/* Célula Bento 2 (4 colunas): Alerta de Irmãos Separados */}
-          <article className="drb-bento-card span-4">
-            <div className="drb-bento-copy">
-              <span className="drb-bento-tag">MULTI-PORTÃO · SINCRONIA</span>
-              <h3>Radar de irmãos em portões diferentes</h3>
-              <p className="muted">
-                Se um responsável tem filhos no Infantil e no Fundamental, o
-                sistema cruza os portões ativos e alerta a portaria antes de
-                alguém ficar esperando no portão errado.
-              </p>
-            </div>
-            <div className="drb-sibling-widget" aria-hidden="true">
-              <div className="drb-sw-head">
-                <span className="drb-sw-dot" />
-                <strong>CONFLITO DE PORTÃO DETECTADO</strong>
-              </div>
-              <div className="drb-sw-rows">
-                <div className="drb-sw-row">
-                  <span>Portão Principal</span>
-                  <strong className="wb-mono">Alice M. (3º B)</strong>
-                </div>
-                <div className="drb-sw-row">
-                  <span>Portão Infantil</span>
-                  <strong className="wb-mono">Theo M. (Inf. IV)</strong>
-                </div>
-              </div>
-              <span className="drb-sw-hint">
-                Unificar entrega no Portão Infantil
-              </span>
-            </div>
-          </article>
-
-          {/* Célula Bento 3 (4 colunas): Cerca Virtual LGPD */}
-          <article className="drb-bento-card span-4">
-            <div className="drb-bento-copy">
-              <span className="drb-bento-tag">GEOFENCING 2X · LGPD NATIVA</span>
-              <h3>Dupla confirmação sem gravar o GPS da família</h3>
-              <p className="muted">
-                Exige 2 leituras consecutivas dentro do perímetro para confirmar
-                chegada e descarta a coordenada exata na hora — privacidade
-                total com atendimento ao art. 18 da LGPD.
-              </p>
-            </div>
-            <div className="drb-geo-widget" aria-hidden="true">
-              <div className="drb-geo-rings">
-                <div className="drb-geo-r1">
-                  <span>300m · 1ª leitura</span>
-                  <div className="drb-geo-r2">
-                    <span>150m · 2ª leitura ✓</span>
-                    <div className="drb-geo-core">FILA ATIVA</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </article>
-
-          {/* Célula Bento 4 (8 colunas): Cadeia SHA-256 & Credencial Física */}
-          <article className="drb-bento-card span-8">
-            <div className="drb-bento-split">
-              <div className="drb-bento-copy">
-                <span className="drb-bento-tag">PROVA JURÍDICA · CONTINGÊNCIA</span>
-                <h3>Livro de custódia SHA-256 e cartão físico para avós</h3>
-                <p className="muted">
-                  Cada chamada, leitura de QR ou código impresso de 6 dígitos
-                  (para portadores sem smartphone) gera um bloco assinado com o
-                  hash do evento anterior. Qualquer adulteração no banco quebra
-                  a verificação de integridade.
+      {/* 2. SEÇÃO EDITORIAL ASSIMÉTRICA: FLUXO PASSO A PASSO + NÚMERO ÂNCORA */}
+      <section className="tp-editorial-section">
+        <div className="container container-wide">
+          <div className="tp-editorial-layout">
+            {/* Coluna esquerda fixa: grande número editorial + resumo de segurança */}
+            <aside className="tp-editorial-rail">
+              <div className="tp-big-stat-block">
+                <span className="wb-mono tp-big-stat-number">30s</span>
+                <p className="tp-big-stat-caption">
+                  Tempo máximo de vida de cada código QR gerado por HMAC antes de
+                  expirar sozinho.
                 </p>
               </div>
-              <div className="drb-chain-widget" aria-hidden="true">
-                <div className="drb-chain-node">
-                  <span className="wb-mono drb-cn-id">BLOCO #0483 · VALIDATED</span>
-                  <span className="wb-mono drb-cn-hash">hash: 4c127b09…ab10</span>
-                </div>
-                <div className="drb-chain-link">↓ encadeamento criptográfico</div>
-                <div className="drb-chain-node is-latest">
-                  <span className="wb-mono drb-cn-id">BLOCO #0484 · RELEASED</span>
-                  <span className="wb-mono drb-cn-hash">prev: 4c127b09…ab10</span>
-                  <span className="wb-mono drb-cn-sig">sha256: 9f3a8c12…e81c ✓</span>
+              <div className="tp-rail-body">
+                <h2 className="tp-serif-heading">
+                  Da esquina da escola até a assinatura criptográfica no portão.
+                </h2>
+                <p className="muted">
+                  Em vez de microfone no pátio, fila dupla na rua e crachás
+                  plastificados que podem ser fotografados, o TutorPass amarra
+                  cinco verificações reais entre o celular da família, o telão da
+                  portaria e o banco de dados.
+                </p>
+                <div className="tp-rail-links">
+                  <Link href="/portaria" className="tp-inline-link">
+                    Abrir painel da portaria
+                    <ArrowUpRight size={15} aria-hidden="true" />
+                  </Link>
+                  <Link href="/telao" className="tp-inline-link">
+                    Abrir telão de TV
+                    <ArrowUpRight size={15} aria-hidden="true" />
+                  </Link>
                 </div>
               </div>
-            </div>
-          </article>
+            </aside>
+
+            {/* Coluna direita: lista editorial numerada de 5 passos */}
+            <ol className="tp-step-ledger">
+              {releaseSequence.map((item, idx) => {
+                const Icon = item.icon;
+                return (
+                  <li key={item.step} className="tp-step-row">
+                    <Reveal delay={idx * 45}>
+                      <div className="tp-step-inner">
+                        <div className="tp-step-num-col">
+                          <span className="wb-mono tp-step-num">{item.step}</span>
+                          <span className="tp-step-icon" aria-hidden="true">
+                            <Icon size={18} strokeWidth={1.75} />
+                          </span>
+                        </div>
+                        <div className="tp-step-content">
+                          <span className="wb-mono tp-step-time">{item.time}</span>
+                          <h3 className="tp-step-title">{item.title}</h3>
+                          <p className="tp-step-desc">{item.body}</p>
+                          <div className="wb-mono tp-step-artifact">
+                            {item.artifact}
+                          </div>
+                        </div>
+                      </div>
+                    </Reveal>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
         </div>
       </section>
 
-      {/* 3. DOCK DE TERMINAIS OPERACIONAIS (5 SUPERFÍCIES DEDICADAS) */}
-      <section className="container container-wide drb-section">
-        <header className="drb-sec-head">
-          <div className="drb-sec-title-wrap">
-            <span className="drb-sec-index">02 / ECOSSISTEMA AO VIVO</span>
-            <h2>Cinco terminais dedicados, conectados ao mesmo núcleo</h2>
-          </div>
-          <p className="muted drb-sec-desc">
-            Cada perfil entra direto na sua ferramenta de trabalho — sem menus
-            administrativos poluindo a tela de quem está no portão ou na sala.
-          </p>
-        </header>
+      {/* 3. ARQUITETURA ASSIMÉTRICA DE PROVAS REAIS (DELEGAÇÃO + LOG ENCADEADO) */}
+      <section className="tp-proof-section">
+        <div className="container container-wide">
+          <header className="tp-section-header">
+            <div>
+              <h2 className="tp-serif-heading">
+                Duas garantias que uma planilha ou crachá impresso nunca entregam.
+              </h2>
+            </div>
+            <p className="muted tp-section-sub">
+              Quando a direção precisa responder quem autorizou um terceiro ou
+              provar o horário exato em que um aluno cruzou o portão, a resposta
+              está gravada com verificação matemática.
+            </p>
+          </header>
 
-        <nav className="drb-terminal-dock" aria-label="Terminais do produto">
-          {roleTerminals.map((t) => (
-            <Link key={t.href} href={t.href} className="drb-dock-card">
-              <div className="drb-dock-top">
-                <span className="wb-mono drb-dock-num">{t.code}</span>
-                <span className="wb-mono drb-dock-route">{t.route}</span>
+          {/* Layout assimétrico 7 / 5 colunas (sem grade 3x2 de cartões iguais) */}
+          <div className="tp-asymmetric-proof">
+            {/* Bloco largo (7 colunas): Log imutável de retirada com hash encadeado */}
+            <article className="tp-proof-block is-wide">
+              <div className="tp-proof-copy">
+                <div className="tp-proof-title-row">
+                  <Link2 size={18} strokeWidth={1.75} aria-hidden="true" />
+                  <h3>Log imutável de saída com hash SHA-256 encadeado</h3>
+                </div>
+                <p>
+                  Cada evento de chamada, validação de QR code HMAC e liberação
+                  no portão calcula um hash criptográfico que inclui o hash do
+                  registro imediatamente anterior. Se alguém tentar alterar no
+                  banco de dados quem buscou uma criança ou mudar o horário, a
+                  cadeia inteira acusa violação na auditoria da escola.
+                </p>
               </div>
-              <span className="drb-dock-role">{t.role}</span>
-              <h3>{t.title}</h3>
-              <p className="muted">{t.desc}</p>
-              <span className="drb-dock-cta">Abrir terminal</span>
-            </Link>
-          ))}
-        </nav>
+
+              <div className="tp-hash-ledger" aria-label="Demonstração de blocos encadeados">
+                <div className="tp-hash-row">
+                  <div className="tp-hash-meta">
+                    <span className="wb-mono tp-hash-seq">REGISTRO #0482 · 17:41:10</span>
+                    <span className="wb-mono tp-hash-event">FILA_GEOLOCALIZACAO</span>
+                  </div>
+                  <p className="tp-hash-summary">
+                    Sofia Ribeiro (1º Ano A) · Aproximação confirmada a 140m do Portão Principal
+                  </p>
+                  <div className="wb-mono tp-hash-digest">
+                    <span>prev: 3e71c40d9a22</span>
+                    <strong>sha256: 7d8814f2c301</strong>
+                  </div>
+                </div>
+
+                <div className="tp-hash-row">
+                  <div className="tp-hash-meta">
+                    <span className="wb-mono tp-hash-seq">REGISTRO #0483 · 17:41:52</span>
+                    <span className="wb-mono tp-hash-event">QR_HMAC_VALIDADO</span>
+                  </div>
+                  <p className="tp-hash-summary">
+                    Pedro Santos (5º Ano A) · Portador: Ricardo Santos (Pai titular) · Token consumido
+                  </p>
+                  <div className="wb-mono tp-hash-digest">
+                    <span>prev: 7d8814f2c301</span>
+                    <strong>sha256: 4c127b09ab10</strong>
+                  </div>
+                </div>
+
+                <div className="tp-hash-row is-verified">
+                  <div className="tp-hash-meta">
+                    <span className="wb-mono tp-hash-seq">REGISTRO #0484 · 17:42:18</span>
+                    <span className="wb-mono tp-hash-event">SAIDA_LIBERADA_NOTIFICADA</span>
+                  </div>
+                  <p className="tp-hash-summary">
+                    Alice Martins (3º Ano B) · Entregue a Mariana Martins · Push enviado aos pais
+                  </p>
+                  <div className="wb-mono tp-hash-digest">
+                    <span>prev: 4c127b09ab10</span>
+                    <strong>sha256: 9f3a8c12e81c · ÍNTEGRO</strong>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            {/* Coluna vertical empilhada (5 colunas): Delegação + Anti-Replay HMAC */}
+            <div className="tp-proof-stack">
+              <article className="tp-proof-block">
+                <div className="tp-proof-copy">
+                  <div className="tp-proof-title-row">
+                    <Users size={18} strokeWidth={1.75} aria-hidden="true" />
+                    <h3>Delegação de pessoas autorizadas pela família</h3>
+                  </div>
+                  <p>
+                    Avós, tios, babás ou motoristas não dependem de bilhete na
+                    agenda nem de ligação de última hora para a secretaria. O
+                    responsável titular autoriza o terceiro no aplicativo e cada
+                    pessoa delegada apresenta seu próprio QR dinâmico ou código
+                    de retirada vinculado ao aluno.
+                  </p>
+                </div>
+                <div className="tp-delegation-table" aria-label="Exemplo de pessoas autorizadas">
+                  <div className="tp-del-row">
+                    <div>
+                      <strong>Mariana Martins</strong>
+                      <span>Mãe titular · QR HMAC ativo</span>
+                    </div>
+                    <span className="wb-mono tp-del-status is-ok">AUTORIZADA</span>
+                  </div>
+                  <div className="tp-del-row">
+                    <div>
+                      <strong>Helena Martins</strong>
+                      <span>Avó · Delegada pela mãe (terças e quintas)</span>
+                    </div>
+                    <span className="wb-mono tp-del-status is-ok">AUTORIZADA</span>
+                  </div>
+                  <div className="tp-del-row is-revoked">
+                    <div>
+                      <strong>Carlos Eduardo (Ex-transporte)</strong>
+                      <span>Permissão encerrada pela família em 12/11</span>
+                    </div>
+                    <span className="wb-mono tp-del-status is-err">BLOQUEADO</span>
+                  </div>
+                </div>
+              </article>
+
+              <article className="tp-proof-block">
+                <div className="tp-proof-copy">
+                  <div className="tp-proof-title-row">
+                    <QrCode size={18} strokeWidth={1.75} aria-hidden="true" />
+                    <h3>Por que o QR muda a cada 30 segundos (HMAC)</h3>
+                  </div>
+                  <p>
+                    Se alguém tirar print do código e encaminhar por mensagem, o
+                    código já estará expirado na chegada ao portão — e qualquer
+                    tentativa de reutilizar um token já lido retorna erro
+                    imediato na tela do porteiro.
+                  </p>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
       </section>
 
-      {/* 4. MATRIZ COMERCIAL ABERTA (TRANSPARÊNCIA DE PREÇO POR FAIXA) */}
-      <section className="container container-wide drb-section">
-        <div className="drb-pricing-board">
-          <div className="drb-pb-head">
+      {/* 4. SUPERFÍCIES DO SISTEMA (LINKS DIRETOS PARA CADA ROTA REAL) */}
+      <section className="tp-terminals-section">
+        <div className="container container-wide">
+          <header className="tp-section-header">
             <div>
-              <span className="drb-sec-index">03 / TABELA COMERCIAL PÚBLICA</span>
-              <h2>Mensalidade fixa por faixa de alunos — sem &ldquo;sob consulta&rdquo;</h2>
-              <p className="muted">
-                Sem taxa de implantação e sem cobrança por responsável
-                cadastrado. Comece grátis até 30 alunos ou ative 30 dias do PRO
-                sem cartão.
-              </p>
+              <h2 className="tp-serif-heading">
+                Cinco telas dedicadas para quem opera o portão, a sala e a secretaria.
+              </h2>
             </div>
-            <div className="drb-pb-actions">
-              <Link className="btn secondary" href="/cadastro">
-                Criar conta grátis
-              </Link>
-              <Link className="btn secondary" href="/planos">
-                Abrir calculadora de preço
-              </Link>
-            </div>
-          </div>
+            <p className="muted tp-section-sub">
+              Cada perfil acessa sua rota direta no navegador, celular ou TV, sem
+              menus administrativos na frente de quem precisa liberar alunos em
+              horário de pico.
+            </p>
+          </header>
 
-          <div className="drb-tier-strip" role="list" aria-label="Faixas de preço">
-            {priceTiers.map((t) => (
-              <div
-                key={t.code}
-                role="listitem"
-                className={`drb-tier-col${t.featured ? ' is-featured' : ''}`}
-              >
-                <span className="wb-mono drb-tier-code">{t.code}</span>
-                <strong className="drb-tier-band">{t.band}</strong>
-                <div className="drb-tier-price">
-                  <span className="wb-mono">{t.price}</span>
-                  <small>{t.period}</small>
-                </div>
-                <p className="muted">{t.limit}</p>
+          <nav className="tp-terminals-list" aria-label="Acesso rápido às telas do produto">
+            {roleTerminals.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link key={item.href} href={item.href} className="tp-terminal-row">
+                  <div className="tp-terminal-left">
+                    <span className="tp-terminal-icon" aria-hidden="true">
+                      <Icon size={18} strokeWidth={1.75} />
+                    </span>
+                    <div>
+                      <span className="tp-terminal-role">{item.role}</span>
+                      <h3 className="tp-terminal-title">{item.title}</h3>
+                    </div>
+                  </div>
+                  <p className="tp-terminal-desc">{item.desc}</p>
+                  <div className="tp-terminal-right">
+                    <span className="wb-mono tp-terminal-route">{item.route}</span>
+                    <span className="tp-terminal-go">
+                      Abrir
+                      <ArrowUpRight size={15} aria-hidden="true" />
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      </section>
+
+      {/* 5. PREÇO PÚBLICO EXATO POR FAIXA DE ALUNOS */}
+      <section className="tp-pricing-section" id="precos">
+        <div className="container container-wide">
+          <div className="tp-pricing-ledger">
+            <header className="tp-pricing-header">
+              <div>
+                <h2 className="tp-serif-heading">
+                  Preço público por faixa de alunos, sem orçamento escondido.
+                </h2>
+                <p className="muted">
+                  Grátis para sempre até 30 alunos. Acima disso, mensalidade fixa
+                  por faixa com todos os recursos incluídos (QR HMAC de 30s, fila
+                  por geolocalização, telão de TV, delegação de autorizados,
+                  notificação instantânea e log com hash encadeado) e 30 dias de
+                  teste grátis sem cartão.
+                </p>
               </div>
-            ))}
+              <div className="tp-pricing-header-actions">
+                <Link className="btn secondary" href="/planos">
+                  <Calculator size={16} aria-hidden="true" />
+                  Abrir calculadora por número de alunos
+                </Link>
+              </div>
+            </header>
+
+            <div className="tp-pricing-columns" role="list" aria-label="Tabela de preços por faixa de alunos">
+              {pricingTiers.map((tier) => (
+                <div
+                  key={tier.band}
+                  role="listitem"
+                  className={`tp-pricing-col${tier.highlight ? ' is-featured' : ''}`}
+                >
+                  <div className="tp-pricing-col-top">
+                    <span className="wb-mono tp-pricing-tier-name">{tier.name}</span>
+                    <h3 className="tp-pricing-band">{tier.band}</h3>
+                  </div>
+
+                  <div className="tp-pricing-amount">
+                    <span className="wb-mono tp-price-figure">{tier.price}</span>
+                    <span className="tp-price-period">{tier.period}</span>
+                  </div>
+
+                  <p className="tp-pricing-note">{tier.note}</p>
+
+                  <ul className="tp-pricing-checks">
+                    <li>
+                      <Check size={14} aria-hidden="true" />
+                      <span>QR dinâmico HMAC (30s)</span>
+                    </li>
+                    <li>
+                      <Check size={14} aria-hidden="true" />
+                      <span>Log imutável com hash encadeado</span>
+                    </li>
+                    <li>
+                      <Check size={14} aria-hidden="true" />
+                      <span>Notificação instantânea aos pais</span>
+                    </li>
+                  </ul>
+
+                  <Link
+                    href={tier.ctaHref}
+                    className={`btn ${tier.highlight ? '' : 'secondary'} tp-pricing-cta`}
+                  >
+                    {tier.ctaLabel}
+                  </Link>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

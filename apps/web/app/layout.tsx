@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next';
-import { Instrument_Serif, Inter, JetBrains_Mono } from 'next/font/google';
+import { GeistMono } from 'geist/font/mono';
+import { GeistSans } from 'geist/font/sans';
+import { Newsreader } from 'next/font/google';
 import Link from 'next/link';
 import Script from 'next/script';
 import type { ReactNode } from 'react';
@@ -7,25 +9,13 @@ import AuthNav from '../components/AuthNav';
 import TopbarScroll from '../components/TopbarScroll';
 import './globals.css';
 
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-sans',
-  display: 'swap',
-});
-
-const instrumentSerif = Instrument_Serif({
+const newsreader = Newsreader({
   subsets: ['latin'],
   variable: '--font-serif',
   display: 'swap',
-  weight: '400',
+  weight: ['400', '500', '600'],
   style: ['normal', 'italic'],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
-  variable: '--font-mono',
-  display: 'swap',
-  weight: ['400', '500', '600', '700'],
+  adjustFontFallback: false,
 });
 
 export const metadata: Metadata = {
@@ -67,7 +57,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="pt-BR"
-      className={`${inter.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable}`}
+      className={`${GeistSans.variable} ${newsreader.variable} ${GeistMono.variable}`}
       suppressHydrationWarning
     >
       <body>

@@ -1,5 +1,21 @@
 'use client';
 
+import { Chip } from '@heroui/react';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  Bell,
+  CheckCircle2,
+  Clock,
+  Lock,
+  MapPin,
+  Monitor,
+  QrCode,
+  RotateCcw,
+  ShieldAlert,
+  ShieldCheck,
+  Smartphone,
+  UserCheck,
+} from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 type StudentEntry = {
@@ -9,12 +25,12 @@ type StudentEntry = {
   classroom: string;
   tutorName: string;
   relation: string;
-  vehicle: string;
-  bay: string;
-  status: 'EN_ROUTE' | 'CALLED' | 'VALIDATED' | 'RELEASED';
-  eta: number;
+  delegatedBy?: string;
+  gate: string;
+  status: 'QUEUED' | 'CALLED' | 'VALIDATED' | 'RELEASED';
+  etaMinutes: number | null;
   distanceMeters: number;
-  nonce: string;
+  hmacToken: string;
   hash: string;
   prevHash: string;
   time: string;
@@ -25,7 +41,7 @@ type AuditRecord = {
   time: string;
   event: string;
   student: string;
-  gate: string;
+  actor: string;
   hash: string;
   prev: string;
 };
@@ -35,16 +51,15 @@ const INITIAL_ENTRIES: Record<string, StudentEntry[]> = {
     {
       id: 'st-1',
       name: 'Alice Martins',
-      grade: '3º B',
+      grade: '3º Ano B',
       classroom: 'Sala 14 · Bloco A',
       tutorName: 'Mariana Martins',
-      relation: 'Mãe',
-      vehicle: 'Baia 01 · Portão Norte',
-      bay: 'B-01',
+      relation: 'Mãe titular',
+      gate: 'Portão Principal',
       status: 'CALLED',
-      eta: 0,
+      etaMinutes: null,
       distanceMeters: 12,
-      nonce: '84A2-91F',
+      hmacToken: 'HMAC-84A2-91F0',
       hash: '9f3a8c12e81c',
       prevHash: '4c127b09ab10',
       time: '17:42:18',
@@ -52,52 +67,50 @@ const INITIAL_ENTRIES: Record<string, StudentEntry[]> = {
     {
       id: 'st-2',
       name: 'Pedro Santos',
-      grade: '5º A',
+      grade: '5º Ano A',
       classroom: 'Sala 22 · Bloco B',
       tutorName: 'Ricardo Santos',
-      relation: 'Pai',
-      vehicle: 'Baia 02 · Portão Norte',
-      bay: 'B-02',
+      relation: 'Pai titular',
+      gate: 'Portão Principal',
       status: 'VALIDATED',
-      eta: 0,
+      etaMinutes: null,
       distanceMeters: 4,
-      nonce: '31C9-04D',
+      hmacToken: 'HMAC-31C9-04D8',
       hash: '4c127b09ab10',
       prevHash: '7d8814f2c301',
       time: '17:41:52',
     },
     {
       id: 'st-3',
-      name: 'Lucas Almeida',
-      grade: '4º B',
-      classroom: 'Sala 18 · Bloco A',
-      tutorName: 'Cláudia Almeida',
-      relation: 'Mãe',
-      vehicle: 'Zona 150m · 2ª leitura OK',
-      bay: 'Z-150',
-      status: 'EN_ROUTE',
-      eta: 2,
-      distanceMeters: 145,
-      nonce: '77E1-52A',
-      hash: '3e71c40d9a22',
+      name: 'Sofia Ribeiro',
+      grade: '1º Ano A',
+      classroom: 'Sala 03 · Térreo',
+      tutorName: 'Helena Ribeiro',
+      relation: 'Avó autorizada',
+      delegatedBy: 'Autorizada por Camila Ribeiro (Mãe) até 18:30',
+      gate: 'Portão Principal',
+      status: 'QUEUED',
+      etaMinutes: 2,
+      distanceMeters: 140,
+      hmacToken: 'HMAC-19B4-88C2',
+      hash: '8a05f92b11e4',
       prevHash: '9f3a8c12e81c',
       time: '17:42:05',
     },
     {
       id: 'st-4',
-      name: 'Sofia Ribeiro',
-      grade: '1º A',
-      classroom: 'Sala 03 · Térreo',
-      tutorName: 'Helena Ribeiro',
-      relation: 'Avó autorizada',
-      vehicle: 'Tag impressa · #604918',
-      bay: 'Z-300',
-      status: 'EN_ROUTE',
-      eta: 4,
-      distanceMeters: 280,
-      nonce: '19B4-88C',
-      hash: '8a05f92b11e4',
-      prevHash: '3e71c40d9a22',
+      name: 'Lucas Almeida',
+      grade: '4º Ano B',
+      classroom: 'Sala 18 · Bloco A',
+      tutorName: 'Cláudia Almeida',
+      relation: 'Mãe titular',
+      gate: 'Portão Principal',
+      status: 'QUEUED',
+      etaMinutes: 4,
+      distanceMeters: 275,
+      hmacToken: 'HMAC-77E1-52A9',
+      hash: '3e71c40d9a22',
+      prevHash: '8a05f92b11e4',
       time: '17:40:49',
     },
   ],
@@ -109,12 +122,12 @@ const INITIAL_ENTRIES: Record<string, StudentEntry[]> = {
       classroom: 'Sala Girassol · Térreo',
       tutorName: 'Teresa Souza',
       relation: 'Avó autorizada',
-      vehicle: 'Recepção Infantil · Baia A',
-      bay: 'INF-A',
+      delegatedBy: 'Autorizada por Rodrigo Souza (Pai)',
+      gate: 'Educação Infantil',
       status: 'CALLED',
-      eta: 0,
+      etaMinutes: null,
       distanceMeters: 8,
-      nonce: '63D0-19E',
+      hmacToken: 'HMAC-63D0-19E5',
       hash: '7d8814f2c301',
       prevHash: '2c6391b408fa',
       time: '17:42:10',
@@ -125,13 +138,12 @@ const INITIAL_ENTRIES: Record<string, StudentEntry[]> = {
       grade: 'Infantil III',
       classroom: 'Sala Ipê · Térreo',
       tutorName: 'Felipe Oliveira',
-      relation: 'Pai',
-      vehicle: 'Zona 150m · 2ª leitura OK',
-      bay: 'Z-150',
-      status: 'EN_ROUTE',
-      eta: 3,
-      distanceMeters: 160,
-      nonce: '50F8-33B',
+      relation: 'Pai titular',
+      gate: 'Educação Infantil',
+      status: 'QUEUED',
+      etaMinutes: 3,
+      distanceMeters: 165,
+      hmacToken: 'HMAC-50F8-33B1',
       hash: '2c6391b408fa',
       prevHash: '5f49d08a77c1',
       time: '17:41:14',
@@ -143,43 +155,45 @@ const INITIAL_AUDIT: AuditRecord[] = [
   {
     seq: 484,
     time: '17:42:18',
-    event: 'STUDENT_CALLED',
-    student: 'Alice Martins (3º B)',
-    gate: 'Portão Principal',
-    hash: '9f3a…e81c',
-    prev: '4c12…ab10',
+    event: 'CHAMADO_PORTARIA',
+    student: 'Alice Martins (3º Ano B)',
+    actor: 'Mariana Martins (Mãe titular)',
+    hash: '9f3a8c12e81c',
+    prev: '4c127b09ab10',
   },
   {
     seq: 483,
     time: '17:41:52',
-    event: 'QR_NONCE_VALIDATED',
-    student: 'Pedro Santos (5º A)',
-    gate: 'Portão Principal',
-    hash: '4c12…ab10',
-    prev: '7d88…c301',
+    event: 'QR_HMAC_VALIDADO',
+    student: 'Pedro Santos (5º Ano A)',
+    actor: 'Ricardo Santos (Pai titular)',
+    hash: '4c127b09ab10',
+    prev: '7d8814f2c301',
   },
   {
     seq: 482,
     time: '17:41:10',
-    event: 'GEOFENCE_CONFIRMED_2X',
-    student: 'Lucas Almeida (4º B)',
-    gate: 'Portão Principal',
-    hash: '7d88…c301',
-    prev: '3e71…9a22',
+    event: 'FILA_GEOLOCALIZACAO',
+    student: 'Sofia Ribeiro (1º Ano A)',
+    actor: 'Helena Ribeiro (Avó autorizada)',
+    hash: '7d8814f2c301',
+    prev: '3e71c40d9a22',
   },
 ];
 
 const GATES = ['Portão Principal', 'Educação Infantil'] as const;
-type RoleTab = 'portaria' | 'sala' | 'familia' | 'telao' | 'custodia';
+type SurfaceMode = 'split' | 'portaria' | 'telao';
 
 export default function HeroBoard() {
   const [gate, setGate] = useState<(typeof GATES)[number]>('Portão Principal');
-  const [roleTab, setRoleTab] = useState<RoleTab>('portaria');
+  const [surface, setSurface] = useState<SurfaceMode>('split');
   const [entriesByGate, setEntriesByGate] = useState(INITIAL_ENTRIES);
   const [selectedId, setSelectedId] = useState<string>('st-1');
   const [auditLog, setAuditLog] = useState<AuditRecord[]>(INITIAL_AUDIT);
   const [qrSeconds, setQrSeconds] = useState(24);
-  const [replayBlocked, setReplayBlocked] = useState<string | null>(null);
+  const [parentNotice, setParentNotice] = useState<string | null>(
+    'Pedro Santos: QR HMAC validado na portaria. Aguardando assinatura final de entrega.',
+  );
 
   const currentList = entriesByGate[gate] ?? [];
   const activeStudent =
@@ -207,29 +221,28 @@ export default function HeroBoard() {
           time: timeStr,
           event,
           student: `${student.name} (${student.grade})`,
-          gate,
-          hash: `${newHash.slice(0, 4)}…${newHash.slice(-4)}`,
-          prev: prev[0]?.hash ?? '9f3a…e81c',
+          actor: `${student.tutorName} (${student.relation})`,
+          hash: newHash,
+          prev: prev[0]?.hash ?? '9f3a8c12e81c',
         },
-        ...prev.slice(0, 4),
+        ...prev.slice(0, 3),
       ]);
     },
-    [gate],
+    [],
   );
 
   function advanceStudent(student: StudentEntry) {
-    setReplayBlocked(null);
     const nextStatus: Record<StudentEntry['status'], StudentEntry['status']> = {
-      EN_ROUTE: 'CALLED',
+      QUEUED: 'CALLED',
       CALLED: 'VALIDATED',
       VALIDATED: 'RELEASED',
-      RELEASED: 'EN_ROUTE',
+      RELEASED: 'QUEUED',
     };
     const nextEvent: Record<StudentEntry['status'], string> = {
-      EN_ROUTE: 'STUDENT_CALLED',
-      CALLED: 'QR_NONCE_VALIDATED',
-      VALIDATED: 'CUSTODY_RELEASED',
-      RELEASED: 'GEOFENCE_CONFIRMED_2X',
+      QUEUED: 'CHAMADO_PORTARIA',
+      CALLED: 'QR_HMAC_VALIDADO',
+      VALIDATED: 'SAIDA_LIBERADA_NOTIFICADA',
+      RELEASED: 'FILA_GEOLOCALIZACAO',
     };
     const updatedStatus = nextStatus[student.status];
     const randomHex = Math.floor(Math.random() * 0xffffff)
@@ -244,12 +257,12 @@ export default function HeroBoard() {
           ? {
               ...item,
               status: updatedStatus,
-              eta: updatedStatus === 'EN_ROUTE' ? 3 : 0,
+              etaMinutes: updatedStatus === 'QUEUED' ? 3 : null,
               distanceMeters:
-                updatedStatus === 'EN_ROUTE'
+                updatedStatus === 'QUEUED'
                   ? 180
                   : updatedStatus === 'CALLED'
-                    ? 15
+                    ? 12
                     : 2,
               prevHash: item.hash,
               hash: newHash,
@@ -258,81 +271,92 @@ export default function HeroBoard() {
       ),
     }));
 
-    pushAudit(nextEvent[student.status], student, newHash);
-  }
+    if (updatedStatus === 'CALLED') {
+      setParentNotice(
+        `Telão atualizado: ${student.name} chamado(a) para o ${gate}. Sala avisada sem microfone.`,
+      );
+    } else if (updatedStatus === 'VALIDATED') {
+      setParentNotice(
+        `QR dinâmico HMAC de ${student.tutorName} (${student.relation}) validado em uso único.`,
+      );
+    } else if (updatedStatus === 'RELEASED') {
+      setParentNotice(
+        `Notificação instantânea enviada aos pais: ${student.name} entregue a ${student.tutorName} (${student.relation}) · hash sha256:${newHash}.`,
+      );
+    } else {
+      setParentNotice(
+        `${student.tutorName} aproximou-se da escola (180m) e entrou automaticamente na fila por geolocalização.`,
+      );
+    }
 
-  function simulateReplayAttack() {
-    if (!activeStudent) return;
-    setReplayBlocked(
-      `401 QR_REJECTED — Nonce #${activeStudent.nonce} já consumido. Print bloqueado e registrado no livro SHA-256.`,
-    );
-    pushAudit('REPLAY_ATTEMPT_BLOCKED', activeStudent, 'err401blocked');
+    pushAudit(nextEvent[student.status], student, newHash);
   }
 
   function resetDemo() {
     setEntriesByGate(INITIAL_ENTRIES);
     setAuditLog(INITIAL_AUDIT);
     setSelectedId('st-1');
-    setReplayBlocked(null);
+    setParentNotice(
+      'Pedro Santos: QR HMAC validado na portaria. Aguardando assinatura final de entrega.',
+    );
   }
 
   const readyList = currentList.filter(
     (i) => i.status === 'CALLED' || i.status === 'VALIDATED',
   );
-  const routeList = currentList.filter((i) => i.status === 'EN_ROUTE');
+  const routeList = currentList.filter((i) => i.status === 'QUEUED');
 
-  const statusBadge = (status: StudentEntry['status']) => {
+  const statusMeta = (status: StudentEntry['status']) => {
     switch (status) {
-      case 'EN_ROUTE':
-        return { label: 'A caminho', cls: 'st-route', stepIndex: 1 };
+      case 'QUEUED':
+        return {
+          label: 'Na fila (GPS)',
+          action: 'Chamar aluno p/ portaria',
+          cls: 'tp-chip-route',
+        };
       case 'CALLED':
-        return { label: 'Na baia', cls: 'st-called', stepIndex: 2 };
+        return {
+          label: 'Chamado no telão',
+          action: 'Validar QR HMAC (30s)',
+          cls: 'tp-chip-called',
+        };
       case 'VALIDATED':
-        return { label: 'QR validado', cls: 'st-validated', stepIndex: 3 };
+        return {
+          label: 'QR HMAC validado',
+          action: 'Confirmar retirada e notificar pais',
+          cls: 'tp-chip-valid',
+        };
       case 'RELEASED':
-        return { label: 'Entregue', cls: 'st-released', stepIndex: 4 };
+        return {
+          label: 'Saída concluída',
+          action: 'Simular nova chegada por GPS',
+          cls: 'tp-chip-done',
+        };
     }
   };
-
-  const actionButtonLabel = (status: StudentEntry['status']) => {
-    switch (status) {
-      case 'EN_ROUTE':
-        return 'Acionar chamada silenciosa na sala';
-      case 'CALLED':
-        return 'Validar QR de 30s do responsável';
-      case 'VALIDATED':
-        return 'Assinar entrega na cadeia SHA-256';
-      case 'RELEASED':
-        return 'Reiniciar ciclo deste aluno';
-    }
-  };
-
-  const progressRatio = (qrSeconds / 30) * 100;
 
   return (
     <div
-      className="drb-cockpit"
-      aria-label="Console interativo de saída escolar"
+      className="tp-mockup-frame"
+      aria-label="Demonstração realista das telas de Portaria e Telão em tempo real"
     >
-      {/* Topo da janela com moldura de hardware, seletor de portão e lentes */}
-      <div className="drb-chrome">
-        <div className="drb-chrome-left">
-          <div className="drb-lights" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </div>
-          <div className="drb-gate-switch" role="group" aria-label="Portão ativo">
+      {/* Barra superior da bancada com seleção de portão e modo de tela */}
+      <div className="tp-mockup-bar">
+        <div className="tp-mockup-bar-left">
+          <span className="tp-mockup-tag">
+            <span className="tp-live-dot" aria-hidden="true" />
+            OPERAÇÃO AO VIVO
+          </span>
+          <div className="tp-gate-tabs" role="group" aria-label="Selecionar portão">
             {GATES.map((g) => (
               <button
                 key={g}
                 type="button"
-                className={`drb-gate-pill${gate === g ? ' is-active' : ''}`}
+                className={`tp-gate-btn${gate === g ? ' is-active' : ''}`}
                 onClick={() => {
                   setGate(g);
                   const first = INITIAL_ENTRIES[g]?.[0];
                   if (first) setSelectedId(first.id);
-                  setReplayBlocked(null);
                 }}
               >
                 {g}
@@ -341,491 +365,280 @@ export default function HeroBoard() {
           </div>
         </div>
 
-        <div className="drb-lens-bar" role="tablist" aria-label="Superfície operacional">
-          {(
-            [
-              ['portaria', 'Portaria'],
-              ['sala', 'Sala de Aula'],
-              ['familia', 'App Família'],
-              ['telao', 'Telão TV'],
-              ['custodia', 'Cadeia SHA-256'],
-            ] as [RoleTab, string][]
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={roleTab === id}
-              className={`drb-lens-tab${roleTab === id ? ' is-active' : ''}`}
-              onClick={() => setRoleTab(id)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        <div className="drb-chrome-right">
-          <span className="drb-live-badge">
-            <span className="drb-pulse-dot" aria-hidden="true" />
-            INTERATIVO
-          </span>
+        <div className="tp-surface-switch" role="tablist" aria-label="Visualização das telas reais">
           <button
             type="button"
-            className="drb-reset"
-            onClick={resetDemo}
-            title="Restaurar simulação"
+            role="tab"
+            aria-selected={surface === 'split'}
+            className={`tp-surf-btn${surface === 'split' ? ' is-active' : ''}`}
+            onClick={() => setSurface('split')}
           >
-            Resetar
+            Portaria + Telão TV
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={surface === 'portaria'}
+            className={`tp-surf-btn${surface === 'portaria' ? ' is-active' : ''}`}
+            onClick={() => setSurface('portaria')}
+          >
+            <Smartphone size={14} aria-hidden="true" />
+            Tela da Portaria (/portaria)
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={surface === 'telao'}
+            className={`tp-surf-btn${surface === 'telao' ? ' is-active' : ''}`}
+            onClick={() => setSurface('telao')}
+          >
+            <Monitor size={14} aria-hidden="true" />
+            Telão da Portaria (/telao)
           </button>
         </div>
+
+        <button
+          type="button"
+          className="tp-reset-btn"
+          onClick={resetDemo}
+          title="Restaurar estado inicial da fila"
+        >
+          <RotateCcw size={13} aria-hidden="true" />
+          Reiniciar fila
+        </button>
       </div>
 
-      {/* Palco principal do cockpit */}
-      <div className="drb-stage">
-        {/* Coluna esquerda: Radar de baias + lista de fila */}
-        <div className="drb-radar-col">
-          <div className="drb-col-header">
-            <span>RADAR DE BAIAS · {gate.toUpperCase()}</span>
-            <span className="wb-mono">
-              {readyList.length} PRONTOS / {routeList.length} A CAMINHO
-            </span>
-          </div>
+      {/* Palco realista: Portaria à esquerda + Telão TV à direita */}
+      <div className={`tp-mockup-grid is-${surface}`}>
+        {/* 1. TELA REAL DA PORTARIA (/portaria) */}
+        {surface !== 'telao' && (
+          <section className="tp-screen-portaria" aria-label="Tela operacional da portaria">
+            <header className="tp-scr-head">
+              <div>
+                <span className="tp-scr-route">/portaria · Agente no portão</span>
+                <h3 className="tp-scr-title">Fila de saída e validação QR HMAC</h3>
+              </div>
+              <div className="tp-qr-ticker" title="Janela de rotação do QR dinâmico HMAC">
+                <QrCode size={15} aria-hidden="true" />
+                <span className="wb-mono">
+                  HMAC <strong>{String(qrSeconds).padStart(2, '0')}s</strong>
+                </span>
+              </div>
+            </header>
 
-          {/* Esquemático visual SVG da zona de embarque (Dribbble telemetry signature) */}
-          <div className="drb-zone-map" aria-hidden="true">
-            <svg viewBox="0 0 380 86" className="drb-zone-svg">
-              {/* Anéis de aproximação */}
-              <rect
-                x="4"
-                y="8"
-                width="372"
-                height="70"
-                rx="10"
-                fill="rgba(255,255,255,0.02)"
-                stroke="rgba(255,255,255,0.08)"
-              />
-              <line
-                x1="130"
-                y1="8"
-                x2="130"
-                y2="78"
-                stroke="rgba(52, 211, 153, 0.25)"
-                strokeDasharray="3 3"
-              />
-              <line
-                x1="255"
-                y1="8"
-                x2="255"
-                y2="78"
-                stroke="rgba(255,255,255,0.12)"
-                strokeDasharray="3 3"
-              />
-              <text x="14" y="24" fill="#7fe0ae" fontSize="9" fontWeight="700" fontFamily="monospace">
-                BAIA DE EMBARQUE (0-20m)
-              </text>
-              <text x="140" y="24" fill="#9fc9b4" fontSize="9" fontFamily="monospace">
-                ZONA GEOFENCE 2X (150m)
-              </text>
-              <text x="265" y="24" fill="#7c9c8c" fontSize="9" fontFamily="monospace">
-                EM ROTA (300m+)
-              </text>
-
-              {/* Pinos dinâmicos dos alunos no mapa */}
-              {currentList.map((st, idx) => {
-                const isSel = activeStudent?.id === st.id;
-                const xPos =
-                  st.status === 'VALIDATED'
-                    ? 36
-                    : st.status === 'CALLED'
-                      ? 84
-                      : st.status === 'RELEASED'
-                        ? 20
-                        : st.eta <= 2
-                          ? 185
-                          : 305;
-                const yPos = 44 + (idx % 2) * 18;
-                const fill =
-                  st.status === 'CALLED' || st.status === 'VALIDATED'
-                    ? '#34d399'
-                    : st.status === 'RELEASED'
-                      ? '#6b8a7a'
-                      : '#f5c56b';
+            {/* Lista de alunos na fila (Prontos + A caminho por geolocalização) */}
+            <ul className="tp-portaria-list" aria-label="Alunos na fila da portaria">
+              {currentList.map((item, idx) => {
+                const meta = statusMeta(item.status);
+                const isSelected = activeStudent?.id === item.id;
                 return (
-                  <g key={st.id}>
-                    {isSel ? (
-                      <circle
-                        cx={xPos}
-                        cy={yPos}
-                        r="11"
-                        fill="none"
-                        stroke={fill}
-                        strokeWidth="1.5"
-                        opacity="0.65"
-                      />
-                    ) : null}
-                    <circle cx={xPos} cy={yPos} r="5.5" fill={fill} />
-                    <text
-                      x={xPos + 9}
-                      y={yPos + 3}
-                      fill={isSel ? '#ffffff' : '#b7dcc8'}
-                      fontSize="9.5"
-                      fontWeight={isSel ? '700' : '500'}
-                      fontFamily="sans-serif"
-                    >
-                      {st.name.split(' ')[0]} ({st.bay})
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
-
-          <ul className="drb-queue-cards" aria-label="Fila de alunos">
-            {currentList.map((item) => {
-              const badge = statusBadge(item.status);
-              const isSelected = activeStudent?.id === item.id;
-              return (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    className={`drb-q-card${isSelected ? ' is-selected' : ''}`}
-                    onClick={() => {
-                      setSelectedId(item.id);
-                      setReplayBlocked(null);
-                    }}
+                  <li
+                    key={item.id}
+                    className={`tp-portaria-row${isSelected ? ' is-selected' : ''}`}
                   >
-                    <span className="drb-q-bay">{item.bay}</span>
-                    <div className="drb-q-info">
-                      <span className="drb-q-name">{item.name}</span>
-                      <span className="drb-q-sub">
-                        {item.grade} · {item.tutorName} ({item.relation})
-                      </span>
-                    </div>
-                    <div className="drb-q-meta">
-                      <span className={`wb-status-chip ${badge.cls}`}>
-                        {badge.label}
-                      </span>
-                      <span className="wb-mono drb-q-dist">
-                        {item.status === 'EN_ROUTE'
-                          ? `${item.distanceMeters}m · ~${item.eta}m`
-                          : `#${item.nonce.slice(0, 4)}`}
-                      </span>
-                    </div>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-
-        {/* Coluna direita: Cartão de Custódia Tátil & Lente Ativa */}
-        <div className="drb-focus-col">
-          {activeStudent ? (
-            <>
-              {roleTab === 'portaria' && (
-                <div className="drb-pass-card">
-                  <div className="drb-pass-header">
-                    <div>
-                      <span className="drb-pass-kicker">
-                        CREDENCIAL DE LIBERAÇÃO · {activeStudent.bay}
-                      </span>
-                      <h3 className="drb-pass-title">{activeStudent.name}</h3>
-                      <p className="drb-pass-room">
-                        {activeStudent.grade} · {activeStudent.classroom}
-                      </p>
-                    </div>
-                    <div className="drb-ttl-ring">
-                      <span className="wb-mono drb-ttl-num">
-                        {String(qrSeconds).padStart(2, '0')}s
-                      </span>
-                      <span className="drb-ttl-label">TTL QR</span>
-                      <div className="drb-ttl-bar">
-                        <span style={{ width: `${progressRatio}%` }} />
+                    <div
+                      className="tp-row-main"
+                      onClick={() => setSelectedId(item.id)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setSelectedId(item.id);
+                        }
+                      }}
+                    >
+                      <span className="wb-mono tp-row-pos">{idx + 1}</span>
+                      <div className="tp-row-identity">
+                        <div className="tp-row-name-line">
+                          <strong>{item.name}</strong>
+                          <span className="tp-row-grade">{item.grade}</span>
+                        </div>
+                        <div className="tp-row-tutor-line">
+                          <UserCheck size={13} aria-hidden="true" />
+                          <span>
+                            {item.tutorName} ({item.relation})
+                          </span>
+                          {item.delegatedBy ? (
+                            <span className="tp-delegated-pill">Delegado</span>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="tp-row-right">
+                        <Chip
+                          size="sm"
+                          variant="flat"
+                          className={`tp-status-chip ${meta.cls}`}
+                        >
+                          {meta.label}
+                        </Chip>
+                        <span className="wb-mono tp-row-telemetry">
+                          {item.status === 'QUEUED' ? (
+                            <>
+                              <MapPin size={11} aria-hidden="true" /> {item.distanceMeters}m · ~
+                              {item.etaMinutes} min
+                            </>
+                          ) : (
+                            item.hmacToken
+                          )}
+                        </span>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Trilha visual das 4 etapas da máquina de estados */}
-                  <div className="drb-state-track" aria-label="Progresso da retirada">
-                    {[
-                      { step: 1, label: 'Geofence 2x' },
-                      { step: 2, label: 'Chamado' },
-                      { step: 3, label: 'QR 30s OK' },
-                      { step: 4, label: 'SHA-256' },
-                    ].map((s) => {
-                      const activeIdx = statusBadge(activeStudent.status).stepIndex;
-                      const done = s.step <= activeIdx;
-                      const current = s.step === activeIdx;
-                      return (
-                        <div
-                          key={s.step}
-                          className={`drb-st-node${done ? ' is-done' : ''}${current ? ' is-current' : ''}`}
-                        >
-                          <span className="drb-st-dot">{done ? '✓' : s.step}</span>
-                          <span className="drb-st-text">{s.label}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="drb-pass-specs">
-                    <div className="drb-spec-cell">
-                      <span>PORTADOR VERIFICADO</span>
-                      <strong>
-                        {activeStudent.tutorName} ({activeStudent.relation})
-                      </strong>
-                    </div>
-                    <div className="drb-spec-cell">
-                      <span>TOKEN EFÊMERO REDIS</span>
-                      <strong className="wb-mono">
-                        NONCE #{activeStudent.nonce}
-                      </strong>
-                    </div>
-                    <div className="drb-spec-cell">
-                      <span>ASSINATURA DO EVENTO</span>
-                      <strong className="wb-mono">
-                        sha256:{activeStudent.hash}
-                      </strong>
-                    </div>
-                    <div className="drb-spec-cell">
-                      <span>ELO ANTERIOR</span>
-                      <strong className="wb-mono">
-                        prev:{activeStudent.prevHash}
-                      </strong>
-                    </div>
-                  </div>
-
-                  {replayBlocked ? (
-                    <div className="wb-alert-err" role="alert">
-                      {replayBlocked}
-                    </div>
-                  ) : null}
-
-                  <div className="drb-pass-actions">
-                    <button
-                      type="button"
-                      className="drb-btn-advance"
-                      onClick={() => advanceStudent(activeStudent)}
-                    >
-                      {actionButtonLabel(activeStudent.status)}
-                    </button>
-                    <button
-                      type="button"
-                      className="drb-btn-attack"
-                      onClick={simulateReplayAttack}
-                    >
-                      Simular print clonado (401)
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {roleTab === 'sala' && (
-                <div className="drb-pass-card">
-                  <div className="drb-col-header">
-                    <span>TERMINAL SILENCIOSO DA TURMA (/SALA)</span>
-                    <span className="wb-mono">{activeStudent.classroom}</span>
-                  </div>
-                  <p className="wb-pane-intro">
-                    Zero microfone no pátio. A tela da professora destaca em verde
-                    somente quem já está com o responsável parado na baia:
-                  </p>
-                  <div className="wb-classroom-board">
-                    <div className="wb-cb-group">
-                      <span className="wb-cb-title">
-                        LIBERAR IMEDIATAMENTE PARA O PORTÃO ({readyList.length})
-                      </span>
-                      {readyList.length === 0 ? (
-                        <p className="wb-cb-empty">
-                          Nenhum aluno aguardando na baia agora.
-                        </p>
-                      ) : (
-                        readyList.map((s) => (
-                          <div key={s.id} className="wb-cb-row is-urgent">
-                            <strong>
-                              {s.name} ({s.grade})
-                            </strong>
-                            <span className="wb-mono">
-                              {s.bay} · {s.tutorName}
-                            </span>
+                    {isSelected && (
+                      <div className="tp-row-inspector">
+                        {item.delegatedBy ? (
+                          <div className="tp-inspector-delegation">
+                            <ShieldCheck size={14} aria-hidden="true" />
+                            <span>{item.delegatedBy}</span>
                           </div>
-                        ))
-                      )}
-                    </div>
-                    <div className="wb-cb-group">
-                      <span className="wb-cb-title">
-                        PREPARAR MOCHILA — EM APROXIMAÇÃO ({routeList.length})
-                      </span>
-                      {routeList.map((s) => (
-                        <div key={s.id} className="wb-cb-row">
-                          <span>
-                            {s.name} ({s.grade})
-                          </span>
+                        ) : null}
+                        <div className="tp-inspector-chain">
                           <span className="wb-mono">
-                            {s.distanceMeters}m · ~{s.eta} min
+                            <Lock size={12} aria-hidden="true" /> hash:{item.hash}
                           </span>
+                          <span className="wb-mono">prev:{item.prevHash}</span>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="drb-pass-actions">
-                    <button
-                      type="button"
-                      className="drb-btn-advance"
-                      onClick={() => advanceStudent(activeStudent)}
-                    >
-                      {actionButtonLabel(activeStudent.status)}
-                    </button>
-                  </div>
-                </div>
-              )}
+                        <button
+                          type="button"
+                          className="tp-action-btn"
+                          onClick={() => advanceStudent(item)}
+                        >
+                          {meta.action}
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
 
-              {roleTab === 'familia' && (
-                <div className="drb-pass-card">
-                  <div className="drb-col-header">
-                    <span>CARTÃO DIGITAL DA FAMÍLIA (/RESPONSAVEL)</span>
-                    <span className="wb-mono">{activeStudent.tutorName}</span>
+            {/* Notificação instantânea disparada aos pais na liberação */}
+            <AnimatePresence mode="wait">
+              {parentNotice ? (
+                <motion.div
+                  key={parentNotice}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                  className="tp-parent-push"
+                  role="status"
+                >
+                  <Bell size={15} aria-hidden="true" />
+                  <div>
+                    <span className="tp-push-kicker">NOTIFICAÇÃO INSTANTÂNEA AOS PAIS</span>
+                    <p>{parentNotice}</p>
                   </div>
-                  <div className="wb-qr-sim">
-                    <svg
-                      viewBox="0 0 64 64"
-                      width="92"
-                      height="92"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3.5"
-                      aria-hidden="true"
-                    >
-                      <rect x="6" y="6" width="18" height="18" />
-                      <rect x="40" y="6" width="18" height="18" />
-                      <rect x="6" y="40" width="18" height="18" />
-                      <path d="M13 13h4v4h-4zM47 13h4v4h-4zM13 47h4v4h-4zM32 10v14M32 32h14M40 44h16M32 48v10" />
-                    </svg>
-                    <div className="wb-qr-meta">
-                      <span className="wb-mono wb-qr-nonce">
-                        NONCE #{activeStudent.nonce} · {activeStudent.bay}
-                      </span>
-                      <span className="wb-qr-timer">
-                        Rotaciona em{' '}
-                        <strong>{String(qrSeconds).padStart(2, '0')}s</strong> (anti-print)
-                      </span>
-                      <span className="wb-qr-status">
-                        Aluno: <strong>{activeStudent.name}</strong> (
-                        {statusBadge(activeStudent.status).label})
-                      </span>
-                    </div>
-                  </div>
-                  <p className="wb-pane-intro">
-                    Com um toque em &ldquo;Estou chegando&rdquo;, o responsável entra na fila
-                    do portão certo e apresenta este QR dinâmico na janela do carro.
-                  </p>
-                  <div className="drb-pass-actions">
-                    <button
-                      type="button"
-                      className="drb-btn-advance"
-                      onClick={() => advanceStudent(activeStudent)}
-                    >
-                      {actionButtonLabel(activeStudent.status)}
-                    </button>
-                  </div>
-                </div>
-              )}
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+          </section>
+        )}
 
-              {roleTab === 'telao' && (
-                <div className="drb-pass-card">
-                  <div className="drb-col-header">
-                    <span>PAINEL DE ALTO CONTRASTE (/TELAO)</span>
-                    <span className="wb-mono">TV DO PÁTIO · 5+ METROS</span>
-                  </div>
-                  <div className="wb-telao-mini">
-                    <div className="wb-tm-col is-ready">
-                      <span className="wb-tm-head">
-                        PODE RETIRAR AGORA ({readyList.length})
-                      </span>
-                      {readyList.length === 0 ? (
-                        <span className="wb-tm-empty">Aguardando chamada</span>
-                      ) : (
-                        readyList.map((s, idx) => (
-                          <div key={s.id} className="wb-tm-row">
-                            <strong>{s.name}</strong>
-                            <span>{idx === 0 ? 'AGORA' : s.grade}</span>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                    <div className="wb-tm-col">
-                      <span className="wb-tm-head">
-                        A CAMINHO ({routeList.length})
-                      </span>
-                      {routeList.map((s) => (
-                        <div key={s.id} className="wb-tm-row">
-                          <strong>{s.name}</strong>
-                          <span>~{s.eta} min</span>
+        {/* 2. TELA REAL DO TELÃO TV (/telao) NO PORTÃO E NAS SALAS */}
+        {surface !== 'portaria' && (
+          <section className="tp-screen-telao" aria-label="Telão de TV em tempo real na portaria">
+            <header className="tp-tv-top">
+              <div className="tp-tv-brand">
+                <span className="tp-tv-icon" aria-hidden="true">
+                  <Monitor size={16} />
+                </span>
+                <div>
+                  <strong>TutorPass · Telão do Portão</strong>
+                  <span className="wb-mono">/telao · {gate}</span>
+                </div>
+              </div>
+              <div className="tp-tv-clock">
+                <span className="tp-tv-live">
+                  <span className="tp-live-dot" aria-hidden="true" />
+                  TEMPO REAL
+                </span>
+                <strong className="wb-mono">17:42</strong>
+              </div>
+            </header>
+
+            <div className="tp-tv-columns">
+              {/* Coluna 1: PODE RETIRAR AGORA */}
+              <div className="tp-tv-panel is-ready">
+                <div className="tp-tv-panel-head">
+                  <span>PODE RETIRAR AGORA</span>
+                  <strong className="wb-mono">{readyList.length}</strong>
+                </div>
+                {readyList.length === 0 ? (
+                  <p className="tp-tv-empty">Nenhum aluno chamado no momento.</p>
+                ) : (
+                  <ul className="tp-tv-list">
+                    {readyList.map((item, i) => (
+                      <li
+                        key={item.id}
+                        className={i === 0 ? 'is-now' : undefined}
+                      >
+                        <div className="tp-tv-student">
+                          <strong>{item.name}</strong>
+                          <span>{item.classroom}</span>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="drb-pass-actions">
-                    <button
-                      type="button"
-                      className="drb-btn-advance"
-                      onClick={() => advanceStudent(activeStudent)}
-                    >
-                      {actionButtonLabel(activeStudent.status)}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {roleTab === 'custodia' && (
-                <div className="drb-pass-card">
-                  <div className="drb-col-header">
-                    <span>LIVRO DE CUSTÓDIA IMUTÁVEL</span>
-                    <span className="wb-mono">CADEIA SHA-256</span>
-                  </div>
-                  <ul className="wb-audit-list">
-                    {auditLog.map((log) => (
-                      <li key={log.seq} className="wb-audit-item">
-                        <span className="wb-mono wb-audit-seq">
-                          #{String(log.seq).padStart(4, '0')} · {log.time}
-                        </span>
-                        <strong className="wb-mono wb-audit-evt">
-                          {log.event}
-                        </strong>
-                        <span className="wb-audit-st">{log.student}</span>
-                        <span className="wb-mono wb-audit-hash">
-                          sha256:{log.hash} ⟵ {log.prev}
-                        </span>
+                        <div className="tp-tv-badges">
+                          {i === 0 ? (
+                            <span className="tp-tv-badge-now">AGORA</span>
+                          ) : null}
+                          <span className="tp-tv-badge-room">{item.grade}</span>
+                        </div>
                       </li>
                     ))}
                   </ul>
-                  <div className="drb-pass-actions">
-                    <button
-                      type="button"
-                      className="drb-btn-advance"
-                      onClick={() => advanceStudent(activeStudent)}
-                    >
-                      Registrar novo elo na cadeia SHA-256
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
-          ) : null}
-        </div>
-      </div>
+                )}
+              </div>
 
-      {/* Fita inferior do livro criptográfico */}
-      <div className="wb-audit-tape" aria-live="polite">
-        <span className="wb-tape-tag">LEDGER SHA-256 AO VIVO</span>
-        <span className="wb-mono">
-          evt_#{String(auditLog[0]?.seq ?? 484).padStart(4, '0')} · {auditLog[0]?.time}
-        </span>
-        <strong className="wb-mono">{auditLog[0]?.event}</strong>
-        <span>{auditLog[0]?.student}</span>
-        <span className="wb-mono wb-tape-hash">
-          sha256:{auditLog[0]?.hash} ⟵ prev:{auditLog[0]?.prev}
-        </span>
+              {/* Coluna 2: A CAMINHO (GEOLOCALIZAÇÃO) */}
+              <div className="tp-tv-panel is-route">
+                <div className="tp-tv-panel-head">
+                  <span>A CAMINHO · FILA POR GPS</span>
+                  <strong className="wb-mono">{routeList.length}</strong>
+                </div>
+                {routeList.length === 0 ? (
+                  <p className="tp-tv-empty">Nenhum responsável em aproximação.</p>
+                ) : (
+                  <ul className="tp-tv-list">
+                    {routeList.map((item) => (
+                      <li key={item.id}>
+                        <div className="tp-tv-student">
+                          <strong>{item.name}</strong>
+                          <span>
+                            {item.tutorName} ({item.relation})
+                          </span>
+                        </div>
+                        <div className="tp-tv-badges">
+                          <span className="wb-mono tp-tv-badge-eta">
+                            <Clock size={11} aria-hidden="true" /> ~{item.etaMinutes} min
+                          </span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            {/* Rodapé do telão: Fita do log imutável com hash encadeado */}
+            <footer className="tp-tv-ledger" aria-label="Último registro no log imutável">
+              <div className="tp-ledger-head">
+                <CheckCircle2 size={13} aria-hidden="true" />
+                <span className="wb-mono">LOG IMUTÁVEL (HASH ENCADEADO)</span>
+              </div>
+              {auditLog[0] ? (
+                <div className="wb-mono tp-ledger-line">
+                  <span>#{auditLog[0].seq}</span>
+                  <strong>{auditLog[0].event}</strong>
+                  <span>{auditLog[0].student}</span>
+                  <span className="tp-ledger-hash">
+                    sha256:{auditLog[0].hash} ⟵ {auditLog[0].prev}
+                  </span>
+                </div>
+              ) : null}
+            </footer>
+          </section>
+        )}
       </div>
     </div>
   );

@@ -1,15 +1,8 @@
 'use client';
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import type { ReactNode } from 'react';
 
-/**
- * Reveal on scroll (o clássico de landing page): o conteúdo sobe e
- * aparece quando entra na viewport, uma vez só.
- *
- * Sem JS, nada fica invisível: a classe `armed` (que esconde) só é
- * adicionada pelo efeito, no cliente — e quem pede menos movimento
- * no sistema recebe o conteúdo direto, sem transição.
- */
 export default function Reveal({
   children,
   delay = 0,
@@ -17,34 +10,25 @@ export default function Reveal({
   children: ReactNode;
   delay?: number;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = useReducedMotion();
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      el.classList.add('is-in');
-      return;
-    }
-    el.classList.add('armed');
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            el.classList.add('is-in');
-            io.disconnect();
-          }
-        }
-      },
-      { threshold: 0.12, rootMargin: '0px 0px -32px 0px' },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
+  if (prefersReducedMotion) {
+    return <div className="reveal">{children}</div>;
+  }
 
   return (
-    <div ref={ref} className="reveal" style={{ transitionDelay: `${delay}ms` }}>
+    <motion.div
+      className="reveal"
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.14 }}
+      transition={{
+        duration: 0.42,
+        delay: delay / 1000,
+        ease: [0.22, 1, 0.36, 1],
+      }}
+    >
       {children}
-    </div>
+    </motion.div>
   );
 }
