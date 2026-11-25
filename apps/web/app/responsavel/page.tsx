@@ -84,6 +84,7 @@ function ResponsavelPanel() {
     const bump = () => void reload();
     socket.on('queue.entry.created', bump);
     socket.on('queue.entry.status_changed', bump);
+    socket.on('attendance.updated', bump);
     return () => {
       socket.removeAllListeners();
       socket.disconnect();
@@ -128,6 +129,41 @@ function ResponsavelPanel() {
             toque em <strong>Estou chegando</strong> — a portaria te chama pelo
             nome e você mostra o QR abaixo no portão.
           </p>
+
+          {info.notifications && info.notifications.length > 0 ? (
+            <section
+              className="card"
+              aria-label="Notificações da creche/escola"
+              style={{ marginBottom: 16 }}
+            >
+              <span className="eyebrow-mono">AVISOS RECENTES</span>
+              <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 0', display: 'grid', gap: 8 }}>
+                {info.notifications.slice(0, 3).map((n) => (
+                  <li
+                    key={n.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: 12,
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <span>
+                      <strong>{n.title}:</strong> {n.body}
+                    </span>
+                    <span className="chip ok">
+                      {new Date(n.createdAt).toLocaleTimeString('pt-BR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        timeZone: 'America/Sao_Paulo',
+                      })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
           {info.students.length === 0 ? (
             <div className="state" role="status">
@@ -202,6 +238,29 @@ function StudentCard({
               <>
                 {' · '}
                 <span className="badge danger">Retirada bloqueada</span>
+              </>
+            ) : null}
+            {data.todayAttendance ? (
+              <>
+                {' · '}
+                <span className="chip ok">
+                  Check-in às{' '}
+                  {new Date(data.todayAttendance.checkInAt).toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'America/Sao_Paulo',
+                  })}
+                  {data.todayAttendance.checkOutAt
+                    ? ` · Saída às ${new Date(data.todayAttendance.checkOutAt).toLocaleTimeString(
+                        'pt-BR',
+                        {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          timeZone: 'America/Sao_Paulo',
+                        },
+                      )}`
+                    : ''}
+                </span>
               </>
             ) : null}
           </p>

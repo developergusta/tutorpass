@@ -3,14 +3,18 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  Inject,
   NotFoundException,
+  Optional,
   Param,
   Post,
   UseGuards,
 } from '@nestjs/common';
 import { PickupService, type PickupQueueEntry } from './pickup.service';
+import { DayAttendanceService, formatIsoDateInTimezone } from './day-attendance.service';
 import { RosterService, type TutorRecord } from '../roster/roster.service';
 import { QrTokenService } from '../qr/qr-token.service';
+import { NotificationService } from '../notifications/notification.service';
 import { JoinMineDto } from './dto/join-mine.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -33,6 +37,8 @@ export class TutorMeController {
     private readonly pickup: PickupService,
     private readonly roster: RosterService,
     private readonly qr: QrTokenService,
+    @Optional() @Inject(DayAttendanceService) private readonly attendance?: DayAttendanceService,
+    @Optional() @Inject(NotificationService) private readonly notifications?: NotificationService,
   ) {}
 
   private linkedTutor(schoolId: string, user: AccessTokenPayload): TutorRecord {
@@ -59,7 +65,15 @@ export class TutorMeController {
   @Get()
   me(@Param('schoolId') schoolId: string, @CurrentUser() user: AccessTokenPayload) {
     const tutor = this.roster.getTutorByUserId(schoolId, user.sub);
-    if (!tutor) return { tutor: null, students: [] };
+    if (!tutor) {
+      return {
+        tutor: null,
+        students: [],
+        ...(this.notifications ? { notifications: [] } : {}),
+      };
+    }
+    const tz = this.roster.getSchool(schoolId)?.timezone ?? 'America/Sao_Paulo';
+    const todayDate = formatIsoDateInTimezone(new Date(), tz);
     const students = this.roster.listStudentsOfTutor(tutor.id).map((link) => {
       const classroom = this.roster
         .listClassrooms(schoolId, { includeInactive: true })
@@ -71,9 +85,24 @@ export class TutorMeController {
         isPrimary: link.isPrimary,
         canPickup: link.canPickup,
         activeEntry: this.activeEntry(schoolId, link.studentId),
+        ...(this.attendance
+          ? {
+              todayAttendance: this.attendance.getForStudentOnDate(
+                schoolId,
+                link.studentId,
+                todayDate,
+              ),
+            }
+          : {}),
       };
     });
-    return { tutor, students };
+    return {
+      tutor,
+      students,
+      ...(this.notifications
+        ? { notifications: this.notifications.listForRecipient(tutor.id) }
+        : {}),
+    };
   }
 
   /** "Estou chegando": entra na fila pelo meu filho. */

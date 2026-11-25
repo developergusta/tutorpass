@@ -11,6 +11,7 @@ import { GateAlertService } from '../gate-alerts/gate-alert.service';
 import { QrTokenService } from '../qr/qr-token.service';
 import { RealtimeService } from '../../realtime/realtime.service';
 import { RosterService } from '../roster/roster.service';
+import { DayAttendanceService } from './day-attendance.service';
 
 // Núcleo do Step 2 — fila de retirada da portaria (REST pickup):
 // join manual/geofence, call, validate-qr, release, cancel + PickupLog com
@@ -187,6 +188,7 @@ export class PickupService {
     @Optional() @Inject(GateAlertService) private readonly gateAlerts?: GateAlertService,
     @Optional() @Inject(RealtimeService) private readonly realtime?: RealtimeService,
     @Optional() @Inject(RosterService) private readonly roster?: RosterService,
+    @Optional() @Inject(DayAttendanceService) private readonly attendance?: DayAttendanceService,
   ) {}
 
   /** Payload que vai pras telas: a entrada + nome/turma do aluno. */
@@ -272,11 +274,18 @@ export class PickupService {
       createdAt: new Date(now),
     };
     this.entries.set(entry.id, entry);
-    this.appendLog(entry, 'QUEUE_JOINED', null, entry.tutorId, {
-      source: entry.source,
-      authorizationId: entry.authorizationId,
-      gate: entry.gate,
-    });
+    this.appendLog(
+      entry,
+      'QUEUE_JOINED',
+      null,
+      entry.tutorId,
+      {
+        source: entry.source,
+        authorizationId: entry.authorizationId,
+        gate: entry.gate,
+      },
+      entry.joinedAt,
+    );
     // Apita o celular da portaria (ntfy) — fire-and-forget: o serviço nunca
     // lança e a fila não espera a rede p/ responder ao tutor.
     void this.gateAlerts?.tutorJoinedQueue(entry.schoolId, entry.gate);
@@ -294,9 +303,16 @@ export class PickupService {
     }
     entry.status = 'CALLED';
     entry.calledAt = new Date(now);
-    this.appendLog(entry, 'QUEUE_CALLED', staffId, entry.tutorId, {
-      calledAt: entry.calledAt.toISOString(),
-    });
+    this.appendLog(
+      entry,
+      'QUEUE_CALLED',
+      staffId,
+      entry.tutorId,
+      {
+        calledAt: entry.calledAt.toISOString(),
+      },
+      entry.calledAt,
+    );
     this.emitStatus(entry);
     return entry;
   }
@@ -342,10 +358,17 @@ export class PickupService {
     }
     entry.status = 'VALIDATED';
     entry.validatedAt = new Date(now);
-    this.appendLog(entry, 'QR_SCANNED', staffId, entry.tutorId, {
-      validatedAt: entry.validatedAt.toISOString(),
-      nonce: payload.nonce,
-    });
+    this.appendLog(
+      entry,
+      'QR_SCANNED',
+      staffId,
+      entry.tutorId,
+      {
+        validatedAt: entry.validatedAt.toISOString(),
+        nonce: payload.nonce,
+      },
+      entry.validatedAt,
+    );
     this.emitStatus(entry);
     return entry;
   }
@@ -363,11 +386,26 @@ export class PickupService {
     entry.waitSeconds = Math.round(
       (entry.releasedAt.getTime() - entry.joinedAt.getTime()) / 1000,
     );
-    this.appendLog(entry, 'RELEASED', staffId, entry.tutorId, {
-      releasedAt: entry.releasedAt.toISOString(),
-      calledAt: entry.calledAt?.toISOString() ?? null,
-      validatedAt: entry.validatedAt?.toISOString() ?? null,
-      waitSeconds: entry.waitSeconds,
+    const releaseLog = this.appendLog(
+      entry,
+      'RELEASED',
+      staffId,
+      entry.tutorId,
+      {
+        releasedAt: entry.releasedAt.toISOString(),
+        calledAt: entry.calledAt?.toISOString() ?? null,
+        validatedAt: entry.validatedAt?.toISOString() ?? null,
+        waitSeconds: entry.waitSeconds,
+      },
+      entry.releasedAt,
+    );
+    // Fecha automaticamente o check-in do dia (DayAttendance), se houver,
+    // sem alterar o comportamento do fluxo de retirada.
+    this.attendance?.closeOnPickupRelease({
+      schoolId: entry.schoolId,
+      studentId: entry.studentId,
+      releasedAt: entry.releasedAt,
+      pickupLogId: releaseLog.id,
     });
     this.emitStatus(entry);
     return entry;

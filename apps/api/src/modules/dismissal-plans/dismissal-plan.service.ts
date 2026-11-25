@@ -1,4 +1,14 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  OnModuleDestroy,
+  OnModuleInit,
+  Optional,
+} from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { PrismaService } from '../../prisma/prisma.service';
 
 // Plano de saída padrão por aluno + exceção do dia com cutoff — ver
 // docs/product/IDEAS.md, frente (a)/(d): é A dor nº 1 das secretarias e o motivo de
@@ -192,7 +202,7 @@ function validateModeDetails(
 }
 
 @Injectable()
-export class DismissalPlanService {
+export class DismissalPlanService implements OnModuleInit, OnModuleDestroy {
   private readonly defaults = new Map<string, DismissalDefaultPlan>();
   private readonly exceptions = new Map<string, DismissalException>();
   private readonly changeLog: DismissalPlanChange[] = [];
@@ -200,6 +210,83 @@ export class DismissalPlanService {
   private readonly cutoffs = new Map<string, string>();
   private counter = 0;
   private changeCounter = 0;
+
+  constructor(
+    @Optional() @Inject(PrismaService) private readonly prisma?: PrismaService,
+  ) {}
+
+  async onModuleInit(): Promise<void> {
+    if (!this.prisma?.dismissalDefaultPlan) return;
+    const rows = await this.prisma.dismissalDefaultPlan.findMany();
+    this.defaults.clear();
+    for (const r of rows) {
+      this.defaults.set(`${r.studentId}:${r.weekday}`, {
+        id: r.id,
+        schoolId: r.schoolId,
+        studentId: r.studentId,
+        weekday: r.weekday,
+        mode: r.mode as DismissalMode,
+        busLine: r.busLine ?? null,
+        pickupBy: r.pickupBy ?? null,
+        note: r.note ?? null,
+        setBy: r.setBy,
+        setByRole: (r.setByRole as DismissalActorRole) ?? 'STAFF',
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+      });
+    }
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    await this.prisma?.flushWrites();
+  }
+
+  private persistDefault(plan: DismissalDefaultPlan): void {
+    if (!this.prisma?.dismissalDefaultPlan) return;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      plan.id,
+    );
+    const id = isUuid ? plan.id : randomUUID();
+    const setByUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      plan.setBy,
+    )
+      ? plan.setBy
+      : randomUUID();
+    this.prisma.enqueueWrite((p?: PrismaService) => {
+      const client = p ?? this.prisma!;
+      return client.dismissalDefaultPlan.upsert({
+        where: {
+          studentId_weekday: {
+            studentId: plan.studentId,
+            weekday: plan.weekday,
+          },
+        },
+        update: {
+          mode: plan.mode,
+          busLine: plan.busLine,
+          pickupBy: plan.pickupBy,
+          note: plan.note,
+          setBy: setByUuid,
+          setByRole: plan.setByRole,
+          updatedAt: plan.updatedAt,
+        },
+        create: {
+          id,
+          schoolId: plan.schoolId,
+          studentId: plan.studentId,
+          weekday: plan.weekday,
+          mode: plan.mode,
+          busLine: plan.busLine,
+          pickupBy: plan.pickupBy,
+          note: plan.note,
+          setBy: setByUuid,
+          setByRole: plan.setByRole,
+          createdAt: plan.createdAt,
+          updatedAt: plan.updatedAt,
+        },
+      });
+    });
+  }
 
   /** Horário-limite da escola p/ mudanças no mesmo dia (configurado pela secretaria). */
   setCutoff(schoolId: string, cutoff: string): string {
@@ -241,6 +328,7 @@ export class DismissalPlanService {
       updatedAt: new Date(now),
     };
     this.defaults.set(key, plan);
+    this.persistDefault(plan);
     this.logChange({
       schoolId: input.schoolId,
       studentId: input.studentId,

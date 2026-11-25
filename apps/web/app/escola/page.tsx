@@ -723,6 +723,20 @@ function AlunosTab({
                   <span className="muted"> · {classroomName(s.classroomId)}</span>
                   {s.enrollmentCode ? <span className="muted"> · matr. {s.enrollmentCode}</span> : null}
                   {s.pickupBlocked ? <span className="badge danger">Retirada bloqueada</span> : null}
+                  {s.clinicalAlerts?.hasExpiredVaccination ? (
+                    <span className="badge danger" title={`Vacina vencida: ${s.clinicalAlerts.expiredVaccines.join(', ')}`}>
+                      Vacina vencida
+                    </span>
+                  ) : s.clinicalAlerts?.hasExpiringVaccination ? (
+                    <span className="badge warn" title={`Vence em até 30d: ${s.clinicalAlerts.expiringVaccines.join(', ')}`}>
+                      Vacina vence &lt;30d
+                    </span>
+                  ) : null}
+                  {s.clinicalAlerts?.hasDaycareMedication ? (
+                    <span className="badge warn" title={s.clinicalAlerts.medicationSummary ?? ''}>
+                      Medicação
+                    </span>
+                  ) : null}
                   {s.status !== 'ACTIVE' ? <span className="badge off">Inativo</span> : null}
                   {tutorCounts[s.id] === 0 ? (
                     <span className="badge warn">
@@ -736,6 +750,9 @@ function AlunosTab({
                   ) : null}
                 </span>
                 <span className="row-actions">
+                  <Link className="btn secondary small" href={`/escola/ficha/${s.id}`}>
+                    Ficha do Pet
+                  </Link>
                   <button className="btn secondary small" type="button" onClick={() => void onOpenTutors(s)}>
                     Responsáveis
                   </button>

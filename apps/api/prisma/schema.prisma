@@ -132,6 +132,9 @@ model School {
   vanRoutes       VanRoute[]
   dataSubjectRequests DataSubjectRequest[]
   releaseDisputes ReleaseDispute[]
+  petProfiles     PetProfile[]
+  petVaccinations PetVaccination[]
+  dayAttendances  DayAttendance[]
 }
 
 enum NotificationKind {
@@ -140,6 +143,7 @@ enum NotificationKind {
   PLAN_CHANGED
   AUTHORIZATION_CREATED
   PICKUP_COMPLETED
+  PET_ARRIVED
 }
 
 enum NotificationPushStatus {
@@ -290,6 +294,9 @@ model Student {
   exceptions      DismissalException[]
   vanRouteStops   VanRouteStop[]
   releaseDisputes ReleaseDispute[]
+  petProfile      PetProfile?
+  petVaccinations PetVaccination[]
+  dayAttendances  DayAttendance[]
 
   @@unique([schoolId, enrollmentCode])
   @@index([schoolId, classroomId, status])
@@ -513,6 +520,7 @@ model PickupLog {
   school       School            @relation(fields: [schoolId], references: [id])
   student      Student           @relation(fields: [studentId], references: [id])
   queueEntry   PickupQueueEntry? @relation(fields: [queueEntryId], references: [id])
+  dayAttendance DayAttendance?
 
   @@index([schoolId, studentId, createdAt])
   @@index([schoolId, createdAt])
@@ -867,3 +875,88 @@ model ReleaseDisputeEvent {
 
   @@index([disputeId, at])
 }
+
+enum PetSize {
+  PEQUENO
+  MEDIO
+  GRANDE
+}
+
+// Ficha do Pet (Fase 1 — adaptação creche/hotel canino, 100% aditiva e opcional):
+// escolas tradicionais ignoram; creches caninas (ex.: CantoPet) preenchem os
+// dados clínicos, comportamentais, de alimentação, medicação e emergência.
+model PetProfile {
+  id                    String    @id @default(uuid()) @db.Uuid
+  schoolId              String    @db.Uuid
+  studentId             String    @unique @db.Uuid
+  breed                 String?
+  size                  PetSize?
+  sex                   String?
+  weightKg              Float?
+  isNeutered            Boolean?
+  behaviorNotes         String?
+  restrictions          String?
+  feedingFood           String?
+  feedingPortionGrams   Int?
+  feedingTimes          String[]  @default([])
+  vetName               String?
+  vetClinic             String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  dewormingUpToDate     Boolean?
+  dewormingLastDate     DateTime? @db.Date
+  fleaControlUpToDate   Boolean?
+  fleaControlLastDate   DateTime? @db.Date
+  allergies             String?
+  medicationName        String?
+  medicationDosage      String?
+  medicationSchedule    String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  school                School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student               Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+}
+
+model PetVaccination {
+  id          String    @id @default(uuid()) @db.Uuid
+  schoolId    String    @db.Uuid
+  studentId   String    @db.Uuid
+  vaccineName String
+  appliedAt   DateTime? @db.Date
+  expiresAt   DateTime? @db.Date
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  school      School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId, studentId])
+  @@index([studentId, expiresAt])
+}
+
+// Check-in da manhã / presença diária (Fase 2 — chegada à creche/escola):
+// uma linha por pet/aluno por dia (studentId + date único), criada no check-in
+// da recepção ("Registrar chegada") e encerrada automaticamente quando a
+// retirada existente (PickupService.release) é confirmada (checkOutAt + pickupLogId).
+model DayAttendance {
+  id          String     @id @default(uuid()) @db.Uuid
+  schoolId    String     @db.Uuid
+  studentId   String     @db.Uuid
+  date        DateTime   @db.Date
+  checkInAt   DateTime   @default(now())
+  checkInBy   String     @db.Uuid
+  checkOutAt  DateTime?
+  pickupLogId String?    @unique @db.Uuid
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  school      School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student     Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  pickupLog   PickupLog? @relation(fields: [pickupLogId], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, date])
+  @@index([schoolId, date])
+}
+
+

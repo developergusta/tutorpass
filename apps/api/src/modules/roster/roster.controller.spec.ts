@@ -128,4 +128,81 @@ describe('RosterController', () => {
     expect(controller.listClassrooms(teacher).length).toBeGreaterThanOrEqual(1);
     expect(Array.isArray(controller.listStudents(teacher))).toBe(true);
   });
+
+  it('ficha do pet (PetProfile + PetVaccination) suporta CRUD completo, isolamento de tenant e cálculo de alertas clínicos', () => {
+    const aluno = controller.listStudents(adminA)[0];
+    const inicial = controller.getPetProfile(adminA, aluno.id);
+    expect(inicial.profile).toBeNull();
+    expect(inicial.vaccinations).toEqual([]);
+    expect(inicial.clinicalAlerts.hasExpiredVaccination).toBe(false);
+    expect(inicial.clinicalAlerts.hasDaycareMedication).toBe(false);
+
+    // Salva a ficha do pet (1:1 com Student)
+    const salvo = controller.upsertPetProfile(adminA, aluno.id, {
+      breed: 'Spitz Alemão',
+      size: 'PEQUENO',
+      sex: 'Fêmea',
+      weightKg: 3.4,
+      isNeutered: true,
+      behaviorNotes: 'Dócil e sociável com o grupo',
+      restrictions: 'Sensibilidade a barulho alto',
+      feedingFood: 'Ração Super Premium Mini',
+      feedingPortionGrams: 55,
+      feedingTimes: ['12:00', '16:30'],
+      vetName: 'Dra. Helena',
+      vetClinic: 'Clínica Vet Suzano',
+      emergencyContactName: 'Camila',
+      emergencyContactPhone: '11971001001',
+      dewormingUpToDate: true,
+      dewormingLastDate: '2026-10-15',
+      fleaControlUpToDate: true,
+      fleaControlLastDate: '2026-11-01',
+      allergies: 'Nenhuma alergia conhecida',
+      medicationName: 'Suplemento Articular',
+      medicationDosage: '1/2 comprimido',
+      medicationSchedule: '12:30 (após o almoço na creche)',
+    });
+    expect(salvo.breed).toBe('Spitz Alemão');
+    expect(salvo.size).toBe('PEQUENO');
+    expect(salvo.feedingTimes).toEqual(['12:00', '16:30']);
+
+    // Adiciona vacina vencida e vacina em dia
+    const v1 = controller.addPetVaccination(adminA, aluno.id, {
+      vaccineName: 'Antirrábica',
+      appliedAt: '2025-01-10',
+      expiresAt: '2026-01-10',
+      notes: 'Reforço anual pendente',
+    });
+    const v2 = controller.addPetVaccination(adminA, aluno.id, {
+      vaccineName: 'V10',
+      appliedAt: '2026-06-01',
+      expiresAt: '2027-06-01',
+    });
+    expect(controller.listPetVaccinations(adminA, aluno.id)).toHaveLength(2);
+
+    // Alerta clínico detecta vacina vencida + medicação durante o horário da creche (07:00–18:00)
+    const ficha = controller.getPetProfile(adminA, aluno.id);
+    expect(ficha.clinicalAlerts.hasExpiredVaccination).toBe(true);
+    expect(ficha.clinicalAlerts.expiredVaccines).toEqual(['Antirrábica']);
+    expect(ficha.clinicalAlerts.hasDaycareMedication).toBe(true);
+    expect(ficha.clinicalAlerts.medicationSummary).toContain('Suplemento Articular');
+
+    // Outra escola recebe 404
+    expect(() => controller.getPetProfile(adminB, aluno.id)).toThrow(NotFoundException);
+    expect(() =>
+      controller.updatePetVaccination(adminB, aluno.id, v1.id, { vaccineName: 'V8' }),
+    ).toThrow(NotFoundException);
+
+    // Atualiza vacina vencida para data futura e remove a segunda
+    controller.updatePetVaccination(adminA, aluno.id, v1.id, {
+      expiresAt: '2027-08-10',
+    });
+    expect(controller.getPetProfile(adminA, aluno.id).clinicalAlerts.hasExpiredVaccination).toBe(
+      false,
+    );
+    expect(controller.removePetVaccination(adminA, aluno.id, v2.id)).toEqual({
+      removed: true,
+    });
+    expect(controller.listPetVaccinations(adminA, aluno.id)).toHaveLength(1);
+  });
 });

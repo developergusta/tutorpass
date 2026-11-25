@@ -1,19 +1,24 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   ForbiddenException,
   Get,
+  Inject,
   NotFoundException,
+  Optional,
   Param,
   Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
 import { PickupService } from './pickup.service';
+import { DayAttendanceService } from './day-attendance.service';
 import { RosterService } from '../roster/roster.service';
 import { JoinQueueDto } from './dto/join-queue.dto';
 import { ValidateQrDto } from './dto/validate-qr.dto';
 import { BlockStudentDto } from './dto/block-student.dto';
+import { CheckInDto } from './dto/check-in.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { TenantGuard } from '../auth/tenant.guard';
@@ -53,6 +58,7 @@ export class PickupController {
   constructor(
     private readonly pickup: PickupService,
     private readonly roster: RosterService,
+    @Optional() @Inject(DayAttendanceService) private readonly attendance?: DayAttendanceService,
   ) {}
 
   private isTutorOnly(user: AccessTokenPayload): boolean {
@@ -205,5 +211,38 @@ export class PickupController {
   ) {
     this.pickup.unblock(schoolId, studentId);
     return { ok: true, blocked: false };
+  }
+
+  // ------------------------------------------------ check-in da manhã (Fase 2)
+
+  @Roles('GATE_AGENT', 'COORDINATOR', 'ADMIN', 'TEACHER')
+  @Get('attendance/today')
+  todayArrivals(
+    @Param('schoolId') schoolId: string,
+    @Query('date') date?: string,
+  ) {
+    if (!this.attendance) {
+      throw new BadRequestException('Serviço de presença diária não configurado.');
+    }
+    return this.attendance.getTodayArrivalsSummary(schoolId, { date });
+  }
+
+  @Roles('GATE_AGENT', 'COORDINATOR', 'ADMIN')
+  @Post('attendance/check-in')
+  async checkIn(
+    @Param('schoolId') schoolId: string,
+    @Body() dto: CheckInDto,
+    @CurrentUser() user: AccessTokenPayload,
+  ) {
+    if (!this.attendance) {
+      throw new BadRequestException('Serviço de presença diária não configurado.');
+    }
+    return this.attendance.checkIn({
+      schoolId,
+      studentId: dto.studentId,
+      checkInBy: user.sub,
+      date: dto.date,
+      checkInAt: dto.checkInAt ? new Date(dto.checkInAt) : undefined,
+    });
   }
 }

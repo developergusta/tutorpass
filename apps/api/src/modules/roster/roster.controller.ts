@@ -4,10 +4,13 @@ import {
   Controller,
   Delete,
   Get,
+  Inject,
   NotFoundException,
+  Optional,
   Param,
   Patch,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -16,16 +19,21 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { DismissalPlanService } from '../dismissal-plans/dismissal-plan.service';
 import {
   CreateClassroomDto,
+  CreatePetVaccinationDto,
   CreateStudentDto,
   CreateTutorDto,
   ImportStudentsDto,
   LinkTutorDto,
   LinkTutorUserDto,
   RenameClassroomDto,
+  SetDefaultPlanDto,
   SetStudentStatusDto,
+  UpdatePetVaccinationDto,
   UpdateStudentDto,
+  UpsertPetProfileDto,
 } from './dto/roster.dto';
 import { RosterService } from './roster.service';
 
@@ -43,6 +51,7 @@ export class RosterController {
   constructor(
     private readonly roster: RosterService,
     private readonly auth: AuthService,
+    @Optional() @Inject(DismissalPlanService) private readonly dismissalPlans?: DismissalPlanService,
   ) {}
 
   private schoolId(user: AccessTokenPayload): string {
@@ -132,7 +141,135 @@ export class RosterController {
       .map((s) => ({
         ...s,
         tutorCount: this.roster.listTutorsOfStudent(s.id).length,
+        clinicalAlerts: this.roster.getPetClinicalAlerts(s.id),
       }));
+  }
+
+  @Get('students/:id')
+  @Roles('ADMIN', 'COORDINATOR', 'GATE_AGENT', 'TEACHER')
+  getStudent(@CurrentUser() user: AccessTokenPayload, @Param('id') id: string) {
+    const student = this.ownStudent(user, id);
+    return {
+      ...student,
+      tutorCount: this.roster.listTutorsOfStudent(student.id).length,
+      clinicalAlerts: this.roster.getPetClinicalAlerts(student.id),
+    };
+  }
+
+  // ------------------------------------------------ ficha do pet & vacinas (Fase 1)
+
+  @Get('students/:id/pet-profile')
+  @Roles('ADMIN', 'COORDINATOR', 'GATE_AGENT', 'TEACHER')
+  getPetProfile(@CurrentUser() user: AccessTokenPayload, @Param('id') id: string) {
+    const student = this.ownStudent(user, id);
+    return {
+      student,
+      profile: this.roster.getPetProfile(student.id),
+      vaccinations: this.roster.listPetVaccinations(student.id),
+      clinicalAlerts: this.roster.getPetClinicalAlerts(student.id),
+    };
+  }
+
+  @Put('students/:id/pet-profile')
+  @Roles('ADMIN', 'COORDINATOR')
+  upsertPetProfile(
+    @CurrentUser() user: AccessTokenPayload,
+    @Param('id') id: string,
+    @Body() dto: UpsertPetProfileDto,
+  ) {
+    const student = this.ownStudent(user, id);
+    return this.roster.upsertPetProfile(student.id, dto);
+  }
+
+  @Get('students/:id/vaccinations')
+  @Roles('ADMIN', 'COORDINATOR', 'GATE_AGENT', 'TEACHER')
+  listPetVaccinations(@CurrentUser() user: AccessTokenPayload, @Param('id') id: string) {
+    const student = this.ownStudent(user, id);
+    return this.roster.listPetVaccinations(student.id);
+  }
+
+  @Post('students/:id/vaccinations')
+  @Roles('ADMIN', 'COORDINATOR')
+  addPetVaccination(
+    @CurrentUser() user: AccessTokenPayload,
+    @Param('id') id: string,
+    @Body() dto: CreatePetVaccinationDto,
+  ) {
+    const student = this.ownStudent(user, id);
+    return this.roster.addPetVaccination(student.id, dto);
+  }
+
+  @Patch('students/:id/vaccinations/:vaccinationId')
+  @Roles('ADMIN', 'COORDINATOR')
+  updatePetVaccination(
+    @CurrentUser() user: AccessTokenPayload,
+    @Param('id') id: string,
+    @Param('vaccinationId') vaccinationId: string,
+    @Body() dto: UpdatePetVaccinationDto,
+  ) {
+    const student = this.ownStudent(user, id);
+    const existing = this.roster
+      .listPetVaccinations(student.id)
+      .find((v) => v.id === vaccinationId);
+    if (!existing) throw new NotFoundException('Vacina não encontrada para este aluno');
+    return this.roster.updatePetVaccination(vaccinationId, dto);
+  }
+
+  @Delete('students/:id/vaccinations/:vaccinationId')
+  @Roles('ADMIN', 'COORDINATOR')
+  removePetVaccination(
+    @CurrentUser() user: AccessTokenPayload,
+    @Param('id') id: string,
+    @Param('vaccinationId') vaccinationId: string,
+  ) {
+    const student = this.ownStudent(user, id);
+    const existing = this.roster
+      .listPetVaccinations(student.id)
+      .find((v) => v.id === vaccinationId);
+    if (!existing) throw new NotFoundException('Vacina não encontrada para este aluno');
+    return { removed: this.roster.removePetVaccination(vaccinationId) };
+  }
+
+  @Get('students/:id/default-plans')
+  @Roles('ADMIN', 'COORDINATOR', 'GATE_AGENT', 'TEACHER')
+  listDefaultPlans(@CurrentUser() user: AccessTokenPayload, @Param('id') id: string) {
+    const student = this.ownStudent(user, id);
+    return this.dismissalPlans?.listDefaultsForStudent(student.id) ?? [];
+  }
+
+  @Put('students/:id/default-plans')
+  @Roles('ADMIN', 'COORDINATOR')
+  setDefaultPlan(
+    @CurrentUser() user: AccessTokenPayload,
+    @Param('id') id: string,
+    @Body() dto: SetDefaultPlanDto,
+  ) {
+    const student = this.ownStudent(user, id);
+    if (!this.dismissalPlans) {
+      throw new BadRequestException('Serviço de planos padrão não disponível.');
+    }
+    const primary = this.dismissalPlans.setDefault({
+      schoolId: student.schoolId,
+      studentId: student.id,
+      weekday: dto.weekday,
+      mode: dto.mode,
+      busLine: dto.busLine,
+      pickupBy: dto.pickupBy,
+      note: dto.note,
+      setBy: user.sub,
+      setByRole: 'STAFF',
+    });
+    if (dto.copyToWeekdays) {
+      const targetWeekdays = [0, 1, 2, 3, 4, 5, 6].filter((w) => w !== dto.weekday);
+      this.dismissalPlans.copyDefault(
+        student.schoolId,
+        student.id,
+        dto.weekday,
+        targetWeekdays,
+        user.sub,
+      );
+    }
+    return this.dismissalPlans.listDefaultsForStudent(student.id);
   }
 
   @Post('students')

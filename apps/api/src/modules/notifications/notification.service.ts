@@ -44,7 +44,8 @@ export type NotificationKind =
   | 'STUDENT_CALLED'
   | 'PLAN_CHANGED'
   | 'AUTHORIZATION_CREATED'
-  | 'PICKUP_COMPLETED';
+  | 'PICKUP_COMPLETED'
+  | 'PET_ARRIVED';
 
 export type PushStatus =
   | 'QUEUED'

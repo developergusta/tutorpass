@@ -4,7 +4,10 @@ import { AuthModule } from '../auth/auth.module';
 import { GateAlertsModule } from '../gate-alerts/gate-alerts.module';
 import { RosterModule } from '../roster/roster.module';
 import { RealtimeModule } from '../../realtime/realtime.module';
+import { DismissalPlansModule } from '../dismissal-plans/dismissal-plans.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { PickupService } from './pickup.service';
+import { DayAttendanceService } from './day-attendance.service';
 import { PickupController } from './pickup.controller';
 import { TutorMeController } from './tutor-me.controller';
 
@@ -14,9 +17,17 @@ import { TutorMeController } from './tutor-me.controller';
 // import o PickupService não recebia o RealtimeService e nenhuma
 // entrada chegava às telas (bug crítico achado em 17/11/2026).
 @Module({
-  imports: [QrModule, AuthModule, GateAlertsModule, RosterModule, RealtimeModule],
+  imports: [
+    QrModule,
+    AuthModule,
+    GateAlertsModule,
+    RosterModule,
+    RealtimeModule,
+    DismissalPlansModule,
+    NotificationsModule,
+  ],
   controllers: [PickupController, TutorMeController],
-  providers: [PickupService],
-  exports: [PickupService],
+  providers: [DayAttendanceService, PickupService],
+  exports: [DayAttendanceService, PickupService],
 })
 export class PickupModule {}

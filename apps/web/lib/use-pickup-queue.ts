@@ -26,6 +26,7 @@ import {
   listClassrooms,
   listQueueSnapshot,
   listStudents,
+  type PetClinicalAlertSummary,
 } from './api';
 
 export type QueueGroup = 'ready' | 'enRoute';
@@ -45,12 +46,19 @@ export interface QueueItem {
   /** Status bruto da entrada (QUEUED/CALLED/VALIDATED/...) — a portaria
    * usa p/ saber quais ações oferecer; null quando o evento não trouxe. */
   status: string | null;
+  /** Resumo de alertas clínicos opcionais (vacina vencida / medicação na creche). */
+  clinicalAlerts?: PetClinicalAlertSummary;
 }
 
 type RawEntry = Record<string, unknown>;
 
-/** Nome + turma vindos do cadastro — a fonte de verdade p/ exibir. */
-type RosterEntry = { name: string; classroomId: string | null; classroomName: string | null };
+/** Nome + turma + alertas clínicos vindos do cadastro — a fonte de verdade p/ exibir. */
+type RosterEntry = {
+  name: string;
+  classroomId: string | null;
+  classroomName: string | null;
+  clinicalAlerts?: PetClinicalAlertSummary;
+};
 type RosterMap = Map<string, RosterEntry>;
 
 function pickString(obj: RawEntry, keys: string[]): string | null {
@@ -124,6 +132,7 @@ function normalize(raw: unknown, fallback: QueueGroup, roster?: RosterMap): Queu
     group: groupFromStatus(rawStatus, fallback),
     etaMinutes: typeof etaRaw === 'number' ? etaRaw : null,
     status: rawStatus ? rawStatus.toUpperCase() : null,
+    clinicalAlerts: resolved?.clinicalAlerts,
   };
 }
 
@@ -136,7 +145,8 @@ function enrichItem(item: QueueItem, roster: RosterMap): QueueItem {
   if (
     item.studentName === resolved.name &&
     item.classroomName === resolved.classroomName &&
-    item.classroomId === resolved.classroomId
+    item.classroomId === resolved.classroomId &&
+    item.clinicalAlerts === resolved.clinicalAlerts
   ) {
     return item;
   }
@@ -145,6 +155,7 @@ function enrichItem(item: QueueItem, roster: RosterMap): QueueItem {
     studentName: resolved.name,
     classroomName: resolved.classroomName,
     classroomId: resolved.classroomId,
+    clinicalAlerts: resolved.clinicalAlerts,
   };
 }
 
@@ -212,6 +223,7 @@ export function usePickupQueue(options?: PickupQueueOptions): PickupQueueState {
               name: s.name,
               classroomId: s.classroomId,
               classroomName: classroomName.get(s.classroomId) ?? null,
+              clinicalAlerts: s.clinicalAlerts,
             },
           ]),
         );

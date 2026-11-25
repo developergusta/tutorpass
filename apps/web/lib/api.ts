@@ -445,6 +445,66 @@ export interface Classroom {
   isActive: boolean;
 }
 
+export type PetSize = 'PEQUENO' | 'MEDIO' | 'GRANDE';
+
+export interface PetClinicalAlertSummary {
+  hasExpiredVaccination: boolean;
+  expiredVaccines: string[];
+  hasExpiringVaccination: boolean;
+  expiringVaccines: string[];
+  hasDaycareMedication: boolean;
+  medicationSummary: string | null;
+}
+
+export interface PetProfile {
+  id: string;
+  schoolId: string;
+  studentId: string;
+  breed?: string;
+  size?: PetSize;
+  sex?: string;
+  weightKg?: number;
+  isNeutered?: boolean;
+  behaviorNotes?: string;
+  restrictions?: string;
+  feedingFood?: string;
+  feedingPortionGrams?: number;
+  feedingTimes: string[];
+  vetName?: string;
+  vetClinic?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  dewormingUpToDate?: boolean;
+  dewormingLastDate?: string;
+  fleaControlUpToDate?: boolean;
+  fleaControlLastDate?: string;
+  allergies?: string;
+  medicationName?: string;
+  medicationDosage?: string;
+  medicationSchedule?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PetVaccination {
+  id: string;
+  schoolId: string;
+  studentId: string;
+  vaccineName: string;
+  appliedAt?: string;
+  expiresAt?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PetProfileBundle {
+  student: Student;
+  profile: PetProfile | null;
+  vaccinations: PetVaccination[];
+  clinicalAlerts: PetClinicalAlertSummary;
+}
+
 export interface Student {
   id: string;
   name: string;
@@ -455,6 +515,8 @@ export interface Student {
   pickupBlocked: boolean;
   /** Quantos responsáveis estão vinculados a este aluno (0 = ninguém retira). */
   tutorCount?: number;
+  /** Resumo opcional de alertas clínicos (vacina vencida / medicação na creche). */
+  clinicalAlerts?: PetClinicalAlertSummary;
 }
 
 export interface Tutor {
@@ -614,6 +676,60 @@ export function importStudents(csv: string, dryRun: boolean): Promise<ImportRepo
   });
 }
 
+// ------------------------------------------------ ficha do pet & vacinas (Fase 1)
+
+export function getPetProfileBundle(studentId: string): Promise<PetProfileBundle> {
+  return authedJson<PetProfileBundle>(`/roster/students/${studentId}/pet-profile`);
+}
+
+export function upsertPetProfile(
+  studentId: string,
+  input: Partial<Omit<PetProfile, 'id' | 'schoolId' | 'studentId' | 'createdAt' | 'updatedAt'>>,
+): Promise<PetProfile> {
+  return authedJson<PetProfile>(`/roster/students/${studentId}/pet-profile`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  });
+}
+
+export function listPetVaccinations(studentId: string): Promise<PetVaccination[]> {
+  return authedJson<PetVaccination[]>(`/roster/students/${studentId}/vaccinations`);
+}
+
+export function addPetVaccination(
+  studentId: string,
+  input: { vaccineName: string; appliedAt?: string; expiresAt?: string; notes?: string },
+): Promise<PetVaccination> {
+  return authedJson<PetVaccination>(`/roster/students/${studentId}/vaccinations`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updatePetVaccination(
+  studentId: string,
+  vaccinationId: string,
+  input: { vaccineName?: string; appliedAt?: string | null; expiresAt?: string | null; notes?: string | null },
+): Promise<PetVaccination> {
+  return authedJson<PetVaccination>(
+    `/roster/students/${studentId}/vaccinations/${vaccinationId}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function removePetVaccination(
+  studentId: string,
+  vaccinationId: string,
+): Promise<{ removed: boolean }> {
+  return authedJson<{ removed: boolean }>(
+    `/roster/students/${studentId}/vaccinations/${vaccinationId}`,
+    { method: 'DELETE' },
+  );
+}
+
 // ------------------------------------------------------------ portaria
 // Ações da fila (PickupController): o schoolId vai na ROTA e sai da
 // sessão — o servidor confere tenant e papel (GATE_AGENT/COORD/ADMIN).
@@ -643,6 +759,99 @@ export function releaseQueueEntry(entryId: string): Promise<unknown> {
 
 export function cancelQueueEntry(entryId: string): Promise<unknown> {
   return pickupAction(entryId, 'cancel');
+}
+
+// ------------------------------------------------ check-in da manhã (Fase 2)
+
+export interface DayAttendanceRecord {
+  id: string;
+  schoolId: string;
+  studentId: string;
+  date: string;
+  checkInAt: string;
+  checkInBy: string;
+  checkOutAt: string | null;
+  pickupLogId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ResolvedDismissalPlan {
+  source: 'EXCEPTION' | 'DEFAULT' | 'NONE';
+  mode: 'CAR' | 'WALK' | 'BUS' | 'AFTER_SCHOOL' | null;
+  busLine: string | null;
+  pickupBy: string | null;
+  note: string | null;
+  exceptionId: string | null;
+}
+
+export type TodayArrivalStatus = 'ARRIVED' | 'CHECKED_OUT' | 'EXPECTED' | 'NOT_ARRIVED';
+
+export interface TodayArrivalItem {
+  studentId: string;
+  studentName: string;
+  enrollmentCode: string | null;
+  classroomId: string;
+  classroomName: string | null;
+  isExpectedFromPlan: boolean;
+  expectedPlan: ResolvedDismissalPlan;
+  status: TodayArrivalStatus;
+  attendance: DayAttendanceRecord | null;
+  clinicalAlerts: PetClinicalAlertSummary;
+}
+
+export interface TodayArrivalsSummary {
+  schoolId: string;
+  date: string;
+  counts: {
+    arrived: number;
+    checkedOut: number;
+    expected: number;
+    notArrived: number;
+    totalActiveStudents: number;
+  };
+  items: TodayArrivalItem[];
+}
+
+export interface CheckInResult {
+  attendance: DayAttendanceRecord;
+  notifications: Array<{
+    id: string;
+    recipientId: string;
+    kind: string;
+    title: string;
+    body: string;
+    createdAt: string;
+  }>;
+}
+
+export async function getTodayArrivals(date?: string): Promise<TodayArrivalsSummary> {
+  const session = loadSession() ?? (await refreshSession());
+  if (!session?.schoolId) {
+    throw new Error('Sessão sem escola — entre de novo selecionando a escola.');
+  }
+  const q = date ? `?date=${encodeURIComponent(date)}` : '';
+  return authedJson<TodayArrivalsSummary>(
+    `/pickup/schools/${session.schoolId}/attendance/today${q}`,
+  );
+}
+
+export async function registerMorningCheckIn(input: {
+  studentId: string;
+  date?: string;
+  checkInAt?: string;
+}): Promise<CheckInResult> {
+  const session = loadSession() ?? (await refreshSession());
+  if (!session?.schoolId) {
+    throw new Error('Sessão sem escola — entre de novo selecionando a escola.');
+  }
+  return authedJson<CheckInResult>(
+    `/pickup/schools/${session.schoolId}/attendance/check-in`,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 // Irmãos em portões diferentes (PickupController): GET
@@ -713,11 +922,25 @@ export interface MyStudent {
   isPrimary: boolean;
   canPickup: boolean;
   activeEntry: QueueEntryRaw | null;
+  todayAttendance?: DayAttendanceRecord | null;
+}
+
+export interface TutorNotification {
+  id: string;
+  schoolId: string;
+  recipientId: string;
+  kind: string;
+  title: string;
+  body: string;
+  refId: string | null;
+  readAt: string | null;
+  createdAt: string;
 }
 
 export interface MyTutorInfo {
   tutor: Tutor | null;
   students: MyStudent[];
+  notifications?: TutorNotification[];
 }
 
 async function myPath(suffix: string): Promise<string> {

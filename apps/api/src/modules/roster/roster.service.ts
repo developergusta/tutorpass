@@ -32,6 +32,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 //   PlanService.canAddStudent; sem limite configurado, não há teto.
 
 export type StudentStatus = 'ACTIVE' | 'INACTIVE' | 'TRANSFERRED';
+export type PetSize = 'PEQUENO' | 'MEDIO' | 'GRANDE';
 export type Relationship =
   | 'FATHER'
   | 'MOTHER'
@@ -39,6 +40,96 @@ export type Relationship =
   | 'SIBLING'
   | 'GUARDIAN'
   | 'OTHER';
+
+export interface PetProfileRecord {
+  id: string;
+  schoolId: string;
+  studentId: string;
+  breed?: string;
+  size?: PetSize;
+  sex?: string;
+  weightKg?: number;
+  isNeutered?: boolean;
+  behaviorNotes?: string;
+  restrictions?: string;
+  feedingFood?: string;
+  feedingPortionGrams?: number;
+  feedingTimes: string[];
+  vetName?: string;
+  vetClinic?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  dewormingUpToDate?: boolean;
+  dewormingLastDate?: string; // YYYY-MM-DD
+  fleaControlUpToDate?: boolean;
+  fleaControlLastDate?: string; // YYYY-MM-DD
+  allergies?: string;
+  medicationName?: string;
+  medicationDosage?: string;
+  medicationSchedule?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PetVaccinationRecord {
+  id: string;
+  schoolId: string;
+  studentId: string;
+  vaccineName: string;
+  appliedAt?: string; // YYYY-MM-DD
+  expiresAt?: string; // YYYY-MM-DD
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PetClinicalAlertSummary {
+  hasExpiredVaccination: boolean;
+  expiredVaccines: string[];
+  hasExpiringVaccination: boolean;
+  expiringVaccines: string[];
+  hasDaycareMedication: boolean;
+  medicationSummary: string | null;
+}
+
+export interface UpsertPetProfileInput {
+  breed?: string | null;
+  size?: PetSize | null;
+  sex?: string | null;
+  weightKg?: number | null;
+  isNeutered?: boolean | null;
+  behaviorNotes?: string | null;
+  restrictions?: string | null;
+  feedingFood?: string | null;
+  feedingPortionGrams?: number | null;
+  feedingTimes?: string[] | null;
+  vetName?: string | null;
+  vetClinic?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  dewormingUpToDate?: boolean | null;
+  dewormingLastDate?: string | null;
+  fleaControlUpToDate?: boolean | null;
+  fleaControlLastDate?: string | null;
+  allergies?: string | null;
+  medicationName?: string | null;
+  medicationDosage?: string | null;
+  medicationSchedule?: string | null;
+}
+
+export interface CreatePetVaccinationInput {
+  vaccineName: string;
+  appliedAt?: string | null;
+  expiresAt?: string | null;
+  notes?: string | null;
+}
+
+export interface UpdatePetVaccinationInput {
+  vaccineName?: string;
+  appliedAt?: string | null;
+  expiresAt?: string | null;
+  notes?: string | null;
+}
 
 export interface SchoolRecord {
   id: string;
@@ -283,6 +374,64 @@ function parseCsv(text: string): string[][] {
   return rows.filter((r) => r.some((c) => c.trim().length > 0));
 }
 
+function parseFlexibleDate(raw: string): string {
+  const trimmed = raw.trim();
+  const ddmmyyyy = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(trimmed);
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+  let y: number;
+  let m: number;
+  let d: number;
+  if (ddmmyyyy) {
+    [, d, m, y] = ddmmyyyy.map(Number);
+  } else if (iso) {
+    [, y, m, d] = iso.map(Number);
+  } else {
+    throw new BadRequestException(
+      `Data inválida: "${raw}" — use DD/MM/AAAA ou AAAA-MM-DD`,
+    );
+  }
+  const date = new Date(Date.UTC(y, m - 1, d));
+  if (
+    date.getUTCFullYear() !== y ||
+    date.getUTCMonth() !== m - 1 ||
+    date.getUTCDate() !== d
+  ) {
+    throw new BadRequestException(`Data inexistente: "${raw}"`);
+  }
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+/** Verifica se o agendamento de medicação menciona horário comercial da creche (07:00–18:00). */
+export function isMedicationDuringDaycareHours(schedule: string | undefined | null): boolean {
+  if (!schedule || !schedule.trim()) return false;
+  const text = schedule.toLowerCase();
+  const timeMatches = [...text.matchAll(/\b([01]?\d|2[0-3])(?:[:h]([0-5]\d))?\b/g)];
+  let sawExplicitTime = false;
+  for (const match of timeMatches) {
+    const rawToken = match[0];
+    if (!rawToken.includes(':') && !rawToken.includes('h')) continue;
+    sawExplicitTime = true;
+    const hour = Number(match[1]);
+    const min = match[2] ? Number(match[2]) : 0;
+    const totalMinutes = hour * 60 + min;
+    if (totalMinutes >= 7 * 60 && totalMinutes <= 18 * 60) {
+      return true;
+    }
+  }
+  if (sawExplicitTime) return false;
+  if (
+    text.includes('creche') ||
+    text.includes('almoço') ||
+    text.includes('almoco') ||
+    text.includes('tarde') ||
+    text.includes('manhã') ||
+    text.includes('manha')
+  ) {
+    return true;
+  }
+  return true;
+}
+
 @Injectable()
 export class RosterService implements OnModuleInit, OnModuleDestroy {
   private schools: SchoolRecord[] = [];
@@ -290,6 +439,8 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
   private students: StudentRecord[] = [];
   private tutors: TutorRecord[] = [];
   private links: TutorLink[] = [];
+  private petProfiles = new Map<string, PetProfileRecord>(); // studentId -> PetProfileRecord
+  private petVaccinations: PetVaccinationRecord[] = [];
   private studentLimits = new Map<string, number>();
 
   // Persistência (Step 2): com o PrismaService presente, o cadastro
@@ -367,6 +518,59 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
       canPickup: l.canPickup,
       createdAt: l.createdAt,
     }));
+    if (this.prisma.petProfile && this.prisma.petVaccination) {
+      const [profileRows, vaccinationRows] = await Promise.all([
+        this.prisma.petProfile.findMany(),
+        this.prisma.petVaccination.findMany(),
+      ]);
+      this.petProfiles.clear();
+      for (const p of profileRows) {
+        this.petProfiles.set(p.studentId, {
+          id: p.id,
+          schoolId: p.schoolId,
+          studentId: p.studentId,
+          breed: p.breed ?? undefined,
+          size: (p.size as PetSize | null) ?? undefined,
+          sex: p.sex ?? undefined,
+          weightKg: p.weightKg ?? undefined,
+          isNeutered: p.isNeutered ?? undefined,
+          behaviorNotes: p.behaviorNotes ?? undefined,
+          restrictions: p.restrictions ?? undefined,
+          feedingFood: p.feedingFood ?? undefined,
+          feedingPortionGrams: p.feedingPortionGrams ?? undefined,
+          feedingTimes: Array.isArray(p.feedingTimes) ? [...p.feedingTimes] : [],
+          vetName: p.vetName ?? undefined,
+          vetClinic: p.vetClinic ?? undefined,
+          emergencyContactName: p.emergencyContactName ?? undefined,
+          emergencyContactPhone: p.emergencyContactPhone ?? undefined,
+          dewormingUpToDate: p.dewormingUpToDate ?? undefined,
+          dewormingLastDate: p.dewormingLastDate
+            ? p.dewormingLastDate.toISOString().slice(0, 10)
+            : undefined,
+          fleaControlUpToDate: p.fleaControlUpToDate ?? undefined,
+          fleaControlLastDate: p.fleaControlLastDate
+            ? p.fleaControlLastDate.toISOString().slice(0, 10)
+            : undefined,
+          allergies: p.allergies ?? undefined,
+          medicationName: p.medicationName ?? undefined,
+          medicationDosage: p.medicationDosage ?? undefined,
+          medicationSchedule: p.medicationSchedule ?? undefined,
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt,
+        });
+      }
+      this.petVaccinations = vaccinationRows.map((v) => ({
+        id: v.id,
+        schoolId: v.schoolId,
+        studentId: v.studentId,
+        vaccineName: v.vaccineName,
+        appliedAt: v.appliedAt ? v.appliedAt.toISOString().slice(0, 10) : undefined,
+        expiresAt: v.expiresAt ? v.expiresAt.toISOString().slice(0, 10) : undefined,
+        notes: v.notes ?? undefined,
+        createdAt: v.createdAt,
+        updatedAt: v.updatedAt,
+      }));
+    }
     // eslint-disable-next-line no-console
     console.log(
       `[RosterService] hidratação: ${rows.length} escola(s), ${this.classrooms.length} turma(s), ${this.students.length} aluno(s), ${this.tutors.length} tutor(es) do Postgres`,
@@ -458,6 +662,70 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
         create: { tutorId: l.tutorId, studentId: l.studentId, ...data, createdAt: l.createdAt },
         update: data,
       }),
+    );
+  }
+
+  private persistPetProfile(p: PetProfileRecord): void {
+    const data = {
+      schoolId: p.schoolId,
+      studentId: p.studentId,
+      breed: p.breed ?? null,
+      size: p.size ?? null,
+      sex: p.sex ?? null,
+      weightKg: p.weightKg ?? null,
+      isNeutered: p.isNeutered ?? null,
+      behaviorNotes: p.behaviorNotes ?? null,
+      restrictions: p.restrictions ?? null,
+      feedingFood: p.feedingFood ?? null,
+      feedingPortionGrams: p.feedingPortionGrams ?? null,
+      feedingTimes: [...p.feedingTimes],
+      vetName: p.vetName ?? null,
+      vetClinic: p.vetClinic ?? null,
+      emergencyContactName: p.emergencyContactName ?? null,
+      emergencyContactPhone: p.emergencyContactPhone ?? null,
+      dewormingUpToDate: p.dewormingUpToDate ?? null,
+      dewormingLastDate: p.dewormingLastDate
+        ? new Date(`${p.dewormingLastDate}T00:00:00.000Z`)
+        : null,
+      fleaControlUpToDate: p.fleaControlUpToDate ?? null,
+      fleaControlLastDate: p.fleaControlLastDate
+        ? new Date(`${p.fleaControlLastDate}T00:00:00.000Z`)
+        : null,
+      allergies: p.allergies ?? null,
+      medicationName: p.medicationName ?? null,
+      medicationDosage: p.medicationDosage ?? null,
+      medicationSchedule: p.medicationSchedule ?? null,
+      updatedAt: p.updatedAt,
+    };
+    this.persist((prisma) =>
+      prisma.petProfile
+        ? prisma.petProfile.upsert({
+            where: { studentId: p.studentId },
+            create: { id: p.id, ...data, createdAt: p.createdAt },
+            update: data,
+          })
+        : Promise.resolve(),
+    );
+  }
+
+  private persistPetVaccination(v: PetVaccinationRecord): void {
+    const data = {
+      schoolId: v.schoolId,
+      studentId: v.studentId,
+      vaccineName: v.vaccineName,
+      appliedAt: v.appliedAt ? new Date(`${v.appliedAt}T00:00:00.000Z`) : null,
+      expiresAt: v.expiresAt ? new Date(`${v.expiresAt}T00:00:00.000Z`) : null,
+      notes: v.notes ?? null,
+      updatedAt: v.updatedAt,
+    };
+    this.persist((prisma) =>
+      prisma.petVaccination
+        ? prisma.petVaccination.upsert({
+            where: { id: v.id },
+            create: { id: v.id, ...data, createdAt: v.createdAt },
+            update: data,
+          })
+        : Promise.resolve(),
     );
   }
 
@@ -1082,6 +1350,267 @@ export class RosterService implements OnModuleInit, OnModuleDestroy {
         ...l,
         student: { ...(this.students.find((s) => s.id === l.studentId) as StudentRecord) },
       }));
+  }
+
+  // ------------------------------------------------ ficha do pet & vacinas (Fase 1)
+
+  getPetProfile(studentId: string): PetProfileRecord | null {
+    this.requireStudent(studentId);
+    const profile = this.petProfiles.get(studentId);
+    return profile
+      ? { ...profile, feedingTimes: [...profile.feedingTimes] }
+      : null;
+  }
+
+  upsertPetProfile(
+    studentId: string,
+    input: UpsertPetProfileInput,
+    now: Date = new Date(),
+  ): PetProfileRecord {
+    const student = this.requireStudent(studentId);
+    const existing = this.petProfiles.get(studentId);
+
+    if (
+      input.size !== undefined &&
+      input.size !== null &&
+      !['PEQUENO', 'MEDIO', 'GRANDE'].includes(input.size)
+    ) {
+      throw new BadRequestException('Porte inválido — use PEQUENO, MEDIO ou GRANDE');
+    }
+    if (input.weightKg !== undefined && input.weightKg !== null && input.weightKg <= 0) {
+      throw new BadRequestException('Peso em kg deve ser maior que zero');
+    }
+    if (
+      input.feedingPortionGrams !== undefined &&
+      input.feedingPortionGrams !== null &&
+      (!Number.isInteger(input.feedingPortionGrams) || input.feedingPortionGrams <= 0)
+    ) {
+      throw new BadRequestException('Porção em gramas deve ser um inteiro positivo');
+    }
+
+    const resolveStr = (val: string | null | undefined, prev: string | undefined) => {
+      if (val === undefined) return prev;
+      if (val === null) return undefined;
+      const trimmed = val.trim();
+      return trimmed.length > 0 ? trimmed : undefined;
+    };
+
+    const resolveDate = (val: string | null | undefined, prev: string | undefined) => {
+      if (val === undefined) return prev;
+      if (val === null || val.trim() === '') return undefined;
+      return parseFlexibleDate(val);
+    };
+
+    const feedingTimes =
+      input.feedingTimes === undefined
+        ? (existing?.feedingTimes ?? [])
+        : input.feedingTimes === null
+          ? []
+          : input.feedingTimes.map((t) => t.trim()).filter((t) => t.length > 0);
+
+    const record: PetProfileRecord = {
+      id: existing?.id ?? randomUUID(),
+      schoolId: student.schoolId,
+      studentId: student.id,
+      breed: resolveStr(input.breed, existing?.breed),
+      size:
+        input.size === undefined
+          ? existing?.size
+          : (input.size ?? undefined),
+      sex: resolveStr(input.sex, existing?.sex),
+      weightKg:
+        input.weightKg === undefined
+          ? existing?.weightKg
+          : (input.weightKg ?? undefined),
+      isNeutered:
+        input.isNeutered === undefined
+          ? existing?.isNeutered
+          : (input.isNeutered ?? undefined),
+      behaviorNotes: resolveStr(input.behaviorNotes, existing?.behaviorNotes),
+      restrictions: resolveStr(input.restrictions, existing?.restrictions),
+      feedingFood: resolveStr(input.feedingFood, existing?.feedingFood),
+      feedingPortionGrams:
+        input.feedingPortionGrams === undefined
+          ? existing?.feedingPortionGrams
+          : (input.feedingPortionGrams ?? undefined),
+      feedingTimes,
+      vetName: resolveStr(input.vetName, existing?.vetName),
+      vetClinic: resolveStr(input.vetClinic, existing?.vetClinic),
+      emergencyContactName: resolveStr(
+        input.emergencyContactName,
+        existing?.emergencyContactName,
+      ),
+      emergencyContactPhone: resolveStr(
+        input.emergencyContactPhone,
+        existing?.emergencyContactPhone,
+      ),
+      dewormingUpToDate:
+        input.dewormingUpToDate === undefined
+          ? existing?.dewormingUpToDate
+          : (input.dewormingUpToDate ?? undefined),
+      dewormingLastDate: resolveDate(input.dewormingLastDate, existing?.dewormingLastDate),
+      fleaControlUpToDate:
+        input.fleaControlUpToDate === undefined
+          ? existing?.fleaControlUpToDate
+          : (input.fleaControlUpToDate ?? undefined),
+      fleaControlLastDate: resolveDate(
+        input.fleaControlLastDate,
+        existing?.fleaControlLastDate,
+      ),
+      allergies: resolveStr(input.allergies, existing?.allergies),
+      medicationName: resolveStr(input.medicationName, existing?.medicationName),
+      medicationDosage: resolveStr(input.medicationDosage, existing?.medicationDosage),
+      medicationSchedule: resolveStr(
+        input.medicationSchedule,
+        existing?.medicationSchedule,
+      ),
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+
+    this.petProfiles.set(student.id, record);
+    this.persistPetProfile(record);
+    return { ...record, feedingTimes: [...record.feedingTimes] };
+  }
+
+  listPetVaccinations(studentId: string): PetVaccinationRecord[] {
+    this.requireStudent(studentId);
+    return this.petVaccinations
+      .filter((v) => v.studentId === studentId)
+      .sort((a, b) => (a.expiresAt ?? '9999-12-31').localeCompare(b.expiresAt ?? '9999-12-31'))
+      .map((v) => ({ ...v }));
+  }
+
+  addPetVaccination(
+    studentId: string,
+    input: CreatePetVaccinationInput,
+    now: Date = new Date(),
+  ): PetVaccinationRecord {
+    const student = this.requireStudent(studentId);
+    const vaccineName = input.vaccineName?.trim();
+    if (!vaccineName || vaccineName.length < 2) {
+      throw new BadRequestException('Nome da vacina obrigatório (mín. 2 caracteres)');
+    }
+    const appliedAt =
+      input.appliedAt && input.appliedAt.trim().length > 0
+        ? parseFlexibleDate(input.appliedAt)
+        : undefined;
+    const expiresAt =
+      input.expiresAt && input.expiresAt.trim().length > 0
+        ? parseFlexibleDate(input.expiresAt)
+        : undefined;
+    const notes = input.notes?.trim() || undefined;
+
+    const record: PetVaccinationRecord = {
+      id: randomUUID(),
+      schoolId: student.schoolId,
+      studentId: student.id,
+      vaccineName,
+      appliedAt,
+      expiresAt,
+      notes,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.petVaccinations.push(record);
+    this.persistPetVaccination(record);
+    return { ...record };
+  }
+
+  updatePetVaccination(
+    vaccinationId: string,
+    input: UpdatePetVaccinationInput,
+    now: Date = new Date(),
+  ): PetVaccinationRecord {
+    const record = this.petVaccinations.find((v) => v.id === vaccinationId);
+    if (!record) {
+      throw new NotFoundException(`Vacina não encontrada: ${vaccinationId}`);
+    }
+    if (input.vaccineName !== undefined) {
+      const trimmed = input.vaccineName.trim();
+      if (trimmed.length < 2) {
+        throw new BadRequestException('Nome da vacina obrigatório (mín. 2 caracteres)');
+      }
+      record.vaccineName = trimmed;
+    }
+    if (input.appliedAt !== undefined) {
+      record.appliedAt =
+        input.appliedAt && input.appliedAt.trim().length > 0
+          ? parseFlexibleDate(input.appliedAt)
+          : undefined;
+    }
+    if (input.expiresAt !== undefined) {
+      record.expiresAt =
+        input.expiresAt && input.expiresAt.trim().length > 0
+          ? parseFlexibleDate(input.expiresAt)
+          : undefined;
+    }
+    if (input.notes !== undefined) {
+      record.notes =
+        input.notes && input.notes.trim().length > 0 ? input.notes.trim() : undefined;
+    }
+    record.updatedAt = now;
+    this.persistPetVaccination(record);
+    return { ...record };
+  }
+
+  removePetVaccination(vaccinationId: string): boolean {
+    const idx = this.petVaccinations.findIndex((v) => v.id === vaccinationId);
+    if (idx === -1) return false;
+    this.petVaccinations.splice(idx, 1);
+    this.persist((prisma) =>
+      prisma.petVaccination
+        ? prisma.petVaccination.delete({ where: { id: vaccinationId } })
+        : Promise.resolve(),
+    );
+    return true;
+  }
+
+  /**
+   * Resumo clínico para alertas na recepção/portaria e na lista de alunos:
+   * - Vacina vencida (expiresAt < hoje) -> alerta vermelho
+   * - Vacina vencendo em até 30 dias -> alerta amarelo
+   * - Medicação programada durante o horário da creche (07:00–18:00) -> alerta na fila
+   */
+  getPetClinicalAlerts(
+    studentId: string,
+    now: Date = new Date(),
+  ): PetClinicalAlertSummary {
+    const profile = this.petProfiles.get(studentId);
+    const vaccinations = this.petVaccinations.filter((v) => v.studentId === studentId);
+    const todayIso = now.toISOString().slice(0, 10);
+    const in30DaysIso = new Date(now.getTime() + 30 * 86_400_000).toISOString().slice(0, 10);
+
+    const expiredVaccines: string[] = [];
+    const expiringVaccines: string[] = [];
+    for (const v of vaccinations) {
+      if (!v.expiresAt) continue;
+      if (v.expiresAt < todayIso) {
+        expiredVaccines.push(v.vaccineName);
+      } else if (v.expiresAt <= in30DaysIso) {
+        expiringVaccines.push(v.vaccineName);
+      }
+    }
+
+    const hasDaycareMedication = Boolean(
+      profile?.medicationName &&
+        isMedicationDuringDaycareHours(profile.medicationSchedule ?? 'horário da creche'),
+    );
+    const medicationSummary =
+      profile?.medicationName
+        ? [profile.medicationName, profile.medicationDosage, profile.medicationSchedule]
+            .filter(Boolean)
+            .join(' · ')
+        : null;
+
+    return {
+      hasExpiredVaccination: expiredVaccines.length > 0,
+      expiredVaccines,
+      hasExpiringVaccination: expiringVaccines.length > 0,
+      expiringVaccines,
+      hasDaycareMedication,
+      medicationSummary,
+    };
   }
 
   // ------------------------------------------------------- importação CSV
